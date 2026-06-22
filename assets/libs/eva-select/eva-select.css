@@ -1,0 +1,163 @@
+/* Eva UI 库 · eva-select 样式（遵循 ui-style-guard：5px 圆角、令牌色、扁平、暗色自适配） */
+.eva-select {
+  position: relative;
+  width: 100%;
+}
+
+.eva-select-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 11px;
+  border: 1px solid var(--eva-border);
+  border-radius: var(--eva-radius);
+  background: var(--eva-soft);
+  color: var(--eva-text);
+  font-size: 13.5px;
+  font-family: inherit;
+  line-height: 1.5;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--eva-ease), box-shadow var(--eva-ease), background var(--eva-ease);
+}
+
+.eva-select-trigger:hover {
+  border-color: var(--eva-text-sub);
+  background: var(--eva-surface);
+}
+
+.eva-select.is-open .eva-select-trigger,
+.eva-select-trigger:focus-visible {
+  outline: none;
+  background: var(--eva-surface);
+  border-color: var(--eva-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--eva-primary) 18%, transparent);
+}
+
+.eva-select-value {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.eva-select-value.is-placeholder {
+  color: var(--eva-text-mute);
+}
+
+.eva-select-arrow {
+  flex: none;
+  font-size: 16px;
+  color: var(--eva-text-mute);
+  transition: transform var(--eva-ease);
+}
+
+.eva-select.is-open .eva-select-arrow {
+  transform: rotate(180deg);
+}
+
+/* 下拉面板：包住「搜索框 + 滚动菜单」，整体定位/描边/阴影。 */
+.eva-select-panel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 30;
+  overflow: hidden;
+  border: 1px solid var(--eva-border);
+  border-radius: var(--eva-radius);
+  background: var(--eva-surface);
+  box-shadow: var(--eva-shadow-menu);
+}
+
+/* 下拉内搜索框 */
+.eva-select-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--eva-border);
+  color: var(--eva-text-mute);
+}
+
+.eva-select-search > i {
+  flex: none;
+  font-size: 15px;
+}
+
+.eva-select-search-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--eva-text);
+  font-size: 13px;
+  font-family: inherit;
+  line-height: 1.5;
+}
+
+.eva-select-search-input::placeholder {
+  color: var(--eva-text-mute);
+}
+
+.eva-select-menu {
+  max-height: 240px;
+  margin: 0;
+  padding: 4px;
+  overflow-y: auto;
+  list-style: none;
+}
+
+/* 分组标题（optgroup） */
+.eva-select-group {
+  padding: 7px 9px 3px;
+  color: var(--eva-text-mute);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.eva-select-option {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 9px;
+  border-radius: var(--eva-radius);
+  color: var(--eva-text-sub);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background var(--eva-ease), color var(--eva-ease);
+}
+
+.eva-select-option.is-active {
+  background: var(--eva-soft);
+  color: var(--eva-text);
+}
+
+.eva-select-option.is-selected {
+  color: var(--eva-primary);
+  font-weight: 600;
+}
+
+.eva-select-check {
+  flex: none;
+  width: 16px;
+  font-size: 15px;
+  visibility: hidden;
+}
+
+.eva-select-option.is-selected .eva-select-check {
+  visibility: visible;
+}
+
+/* 空状态 / 无搜索结果 */
+.eva-select-empty {
+  padding: 14px 9px;
+  text-align: center;
+  color: var(--eva-text-mute);
+  font-size: 12.5px;
+}

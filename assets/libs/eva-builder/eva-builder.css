@@ -1,0 +1,324 @@
+/* Eva UI 库 · eva-builder 样式（遵循 ui-style-guard：5px 圆角、令牌色、扁平、暗色自适配） */
+.eva-builder {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* 顶部区块工具栏 */
+.eva-builder-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--eva-border);
+  border-radius: var(--eva-radius);
+  background: var(--eva-soft);
+}
+
+.eva-builder-bar-label {
+  margin-right: 4px;
+  color: var(--eva-text-mute);
+  font-size: 12px;
+}
+
+.eva-builder-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--eva-border);
+  border-radius: var(--eva-radius);
+  background: var(--eva-surface);
+  color: var(--eva-text-sub);
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color var(--eva-ease), color var(--eva-ease), background var(--eva-ease);
+}
+
+.eva-builder-add:hover {
+  border-color: var(--eva-primary);
+  color: var(--eva-primary);
+}
+
+.eva-builder-add i { font-size: 14px; }
+
+.eva-builder-add:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.eva-builder-add.eva-builder-icobtn {
+  width: 28px;
+  padding: 0;
+  justify-content: center;
+}
+
+.eva-builder-bar-sp { flex: 1 1 auto; }
+
+/* 画布：12 栅格 */
+.eva-builder-canvas {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 10px;
+  min-height: 96px;
+  padding: 10px;
+  border: 1px dashed var(--eva-border);
+  border-radius: var(--eva-radius);
+  background: var(--eva-bg);
+}
+
+.eva-builder-empty {
+  grid-column: 1 / -1;
+  display: grid;
+  place-items: center;
+  min-height: 76px;
+  padding: 12px;
+  color: var(--eva-text-mute);
+  font-size: 12.5px;
+  text-align: center;
+}
+
+/* 区块卡片 */
+.eva-builder-block {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  min-width: 0;
+  border: 1px solid var(--eva-border);
+  border-radius: var(--eva-radius);
+  background: var(--eva-surface);
+  cursor: pointer;
+  transition: border-color var(--eva-ease), box-shadow var(--eva-ease);
+}
+
+.eva-builder-block.is-sel {
+  border-color: var(--eva-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--eva-primary) 16%, transparent);
+}
+
+.eva-builder-block.is-over { border-color: var(--eva-primary); }
+.eva-builder-block.is-drag { opacity: 0.5; }
+
+.eva-builder-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 4px 8px;
+  border-bottom: 1px solid var(--eva-border);
+  cursor: move;
+}
+
+.eva-builder-grip {
+  flex: none;
+  font-size: 15px;
+  color: var(--eva-text-mute);
+}
+
+.eva-builder-type {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--eva-text-sub);
+  font-size: 11.5px;
+}
+
+.eva-builder-mini {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--eva-radius);
+  background: transparent;
+  color: var(--eva-text-mute);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background var(--eva-ease), color var(--eva-ease);
+}
+
+.eva-builder-mini:hover {
+  background: var(--eva-soft);
+  color: var(--eva-text);
+}
+
+/* 所见即所得预览 */
+.eva-builder-preview {
+  padding: 10px;
+  min-width: 0;
+}
+
+.eva-bk-heading {
+  font-weight: 700;
+  line-height: 1.3;
+  color: inherit;
+}
+
+.eva-bk-text {
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  color: inherit;
+}
+
+.eva-bk-image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.eva-bk-ph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 56px;
+  border: 1px dashed var(--eva-border);
+  border-radius: var(--eva-radius);
+  color: var(--eva-text-mute);
+  font-size: 12.5px;
+}
+
+.eva-bk-ph i { font-size: 18px; }
+
+.eva-bk-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 14px;
+  border-radius: var(--eva-radius);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.eva-bk-btn.is-primary {
+  background: var(--eva-primary);
+  color: #fff;
+}
+
+.eva-bk-btn.is-ghost {
+  border: 1px solid var(--eva-primary);
+  color: var(--eva-primary);
+}
+
+.eva-bk-hr {
+  height: 0;
+  border-top: 1px solid var(--eva-border);
+}
+
+.eva-bk-spacer {
+  display: grid;
+  place-items: center;
+  border: 1px dashed var(--eva-border);
+  border-radius: var(--eva-radius);
+  color: var(--eva-text-mute);
+  font-size: 11px;
+}
+
+/* 右下角列宽手柄 */
+.eva-builder-resize {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 16px;
+  height: 16px;
+  cursor: ew-resize;
+  touch-action: none;
+}
+
+.eva-builder-resize::after {
+  content: "";
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid var(--eva-text-mute);
+  border-bottom: 2px solid var(--eva-text-mute);
+}
+
+/* 属性面板 */
+.eva-builder-panel {
+  border: 1px solid var(--eva-border);
+  border-radius: var(--eva-radius);
+  background: var(--eva-surface);
+  overflow: hidden;
+}
+
+.eva-builder-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--eva-border);
+  background: var(--eva-soft);
+  color: var(--eva-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.eva-builder-panel-head > i { color: var(--eva-primary); font-size: 16px; }
+.eva-builder-panel-head > span { flex: 1; min-width: 0; }
+
+.eva-builder-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 12px;
+  padding: 12px;
+}
+
+.eva-builder-f {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.eva-builder-f--full { grid-column: 1 / -1; }
+
+.eva-builder-f > span {
+  color: var(--eva-text-sub);
+  font-size: 12px;
+}
+
+/* 对齐分段按钮组 */
+.eva-builder-seg {
+  display: inline-flex;
+  border: 1px solid var(--eva-border);
+  border-radius: var(--eva-radius);
+  overflow: hidden;
+}
+
+.eva-builder-seg button {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 30px;
+  border: 0;
+  border-left: 1px solid var(--eva-border);
+  background: var(--eva-soft);
+  color: var(--eva-text-sub);
+  font-size: 15px;
+  cursor: pointer;
+  transition: background var(--eva-ease), color var(--eva-ease);
+}
+
+.eva-builder-seg button:first-child { border-left: 0; }
+
+.eva-builder-seg button:hover { color: var(--eva-text); }
+
+.eva-builder-seg button.is-on {
+  background: var(--eva-primary-050);
+  color: var(--eva-primary);
+}
+
+/* 移动端：画布与属性面板单列 */
+@media (max-width: 782px) {
+  .eva-builder-canvas .eva-builder-block { grid-column: 1 / -1; }
+  .eva-builder-grid { grid-template-columns: minmax(0, 1fr); }
+}
