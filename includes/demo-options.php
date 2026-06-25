@@ -1,15 +1,148 @@
 <?php
 
 /**
- * 内置演示：注册一个干净的设置页骨架（外框架先行，暂不含任何字段）。
- * 后续用 \Eva::createSection('eva_demo', [...]) 往里追加分组与字段。
- * 可整文件删除，不影响框架本体。
+ * 内置演示（仅作示例，可整文件删除，不影响框架本体）。
+ *
+ * 作用：用 \Eva::createOptions / addMenuItem / createSection 演示「如何用 Eva 注册一个设置页」，
+ *       同时附带三个演示用辅助函数（解析更新日志 / 友好时间 / 近期动态）。
+ *
+ * 迁移到主题时：删除本文件，并移除 eva-framework.php 末尾对它的 require；改用主题真实容器 id 注册。
+ * 详见插件根目录《迁移到主题使用指南.md》第 7 节。
  */
 
+// 阻断对该文件的直接 HTTP 访问，必须经由 WordPress 加载。
 if (! defined('ABSPATH')) {
     exit;
 }
 
+// 用 function_exists 守卫，避免与主题/其它插件的同名函数冲突。
+if (! function_exists('eva_demo_parse_update_logs')) {
+    /**
+     * 解析本地 Markdown 更新日志为结构化数组（演示「版本计划」字段的数据来源）。
+     *
+     * 识别规则：
+     * - `# YYYY-MM-DD - Version x.y` 开启一个版本块；
+     * - `#### ~ ######` 标题开启该版本下的一个小节；
+     * - `-`/`*`/`+` 为无序条目，`1.` 为有序条目。
+     *
+     * @param string $file 日志文件绝对路径。
+     * @return array       版本块列表（每块含 version/date/sections）。
+     */
+    function eva_demo_parse_update_logs($file)
+    {
+        // 文件不可读直接返回空，调用方据此显示「暂无日志」。
+        if (! is_readable($file)) {
+            return [];
+        }
+
+        // 逐行解析：$current 累积当前版本块，$section 标记当前小节标题。
+        $lines = explode("\n", (string) file_get_contents($file));
+        $logs = [];
+        $current = [];
+        $section = '';
+
+        foreach ($lines as $line) {
+            $line = trim($line);
+            // 跳过空行。
+            if ($line === '') {
+                continue;
+            }
+
+            if (preg_match('/^#\s*(\d{4}-\d{2}-\d{2})\s*-\s*Version\s*(.+)$/u', $line, $m)) {
+                // 遇到版本标题：先把上一个版本块收尾入列，再开启新块。
+                if (! empty($current)) {
+                    $logs[] = $current;
+                }
+                $current = [
+                    'version'  => trim($m[2]),
+                    'date'     => trim($m[1]),
+                    'sections' => [],
+                ];
+                $section = '';
+            } elseif (! empty($current) && preg_match('/^#{4,6}\s*(.+)$/u', $line, $m)) {
+                // 小节标题（####~######）：在当前版本块下建一个默认无序的小节。
+                $section = trim($m[1]);
+                $current['sections'][$section] = [
+                    'type'  => 'unordered',
+                    'items' => [],
+                ];
+            } elseif ($section && preg_match('/^[-*+]\s+(.+)$/u', $line, $m)) {
+                // 无序条目：追加到当前小节。
+                $current['sections'][$section]['items'][] = trim($m[1]);
+            } elseif ($section && preg_match('/^\d+\.\s+(.+)$/u', $line, $m)) {
+                // 有序条目：标记小节为有序并追加。
+                $current['sections'][$section]['type'] = 'ordered';
+                $current['sections'][$section]['items'][] = trim($m[1]);
+            }
+        }
+
+        // 收尾：把最后一个版本块入列。
+        if (! empty($current)) {
+            $logs[] = $current;
+        }
+
+        return $logs;
+    }
+}
+
+if (! function_exists('eva_demo_activity_time')) {
+    /**
+     * 把时间戳转成「N 前」的人类可读相对时间。
+     *
+     * @param int $timestamp Unix 时间戳。
+     * @return string        形如「3 小时前」；无效时间返回「—」。
+     */
+    function eva_demo_activity_time($timestamp)
+    {
+        $timestamp = (int) $timestamp;
+        // 非正时间戳视为无效。
+        if ($timestamp <= 0) {
+            return '—';
+        }
+
+        // 借 WP 的 human_time_diff 计算与当前时间的差，并加「前」字。
+        return human_time_diff($timestamp, current_time('timestamp')) . '前';
+    }
+}
+
+if (! function_exists('eva_demo_recent_activities')) {
+    /**
+     * 取最近 3 条更新动态（演示「版本计划」里的活动流）。
+     *
+     * @param array $logs  解析后的更新日志（此演示未直接使用，仅占位对齐签名）。
+     * @param mixed $theme 当前主题对象（此演示未直接使用）。
+     * @return array       最多 3 条 [title/desc/time] 记录，按时间倒序。
+     */
+    function eva_demo_recent_activities($logs, $theme)
+    {
+        // 动态数据存于 option；非数组直接返回空。
+        $items = get_option('lentasy_update_activities', []);
+        if (! is_array($items)) {
+            return [];
+        }
+
+        // 按时间戳倒序（新→旧）。
+        usort($items, function ($a, $b) {
+            return (int) ($b['ts'] ?? 0) <=> (int) ($a['ts'] ?? 0);
+        });
+
+        // 规整字段并截取前 3 条返回。
+        return array_slice(array_map(function ($item) {
+            return [
+                'title' => isset($item['title']) ? sanitize_text_field($item['title']) : '',
+                'desc'  => isset($item['desc']) ? sanitize_text_field($item['desc']) : '',
+                'time'  => eva_demo_activity_time($item['ts'] ?? 0),
+            ];
+        }, $items), 0, 3);
+    }
+}
+
+// ============================================================================
+// 演示设置页注册：先建容器（createOptions），再加左侧菜单树（addMenuItem），
+// 最后逐区追加字段（createSection）。
+// ============================================================================
+
+// 1) 创建演示设置页容器：顶部工具栏入口 + 独立页模式。
 \Eva::createOptions('eva_demo', [
     'menu_title' => 'Eva Framework',
     'menu_slug'  => 'eva-framework',
@@ -18,7 +151,7 @@ if (! defined('ABSPATH')) {
     'subtitle'   => '轻量 · 现代 · 好看的 WordPress 设置框架',
 ]);
 
-// 左侧主菜单：复刻 CSF「LF主题设置」的菜单树（图标映射为 Remix Icon）。
+// 2) 左侧主菜单：复刻 CSF「LF主题设置」的菜单树（图标映射为 Remix Icon）。
 // 「常规设置」对应下方同 id 的设置分组（有表单）；其余分区暂为菜单/占位，字段迁移后续逐区补。
 \Eva::addMenuItem('eva_demo', ['id' => 'general', 'label' => '常规设置', 'icon' => 'ri-equalizer-line']);
 \Eva::addMenuItem('eva_demo', ['id' => 'module', 'label' => '容器设置', 'icon' => 'ri-layout-2-line', 'children' => [
@@ -52,8 +185,8 @@ if (! defined('ABSPATH')) {
     ['id' => 'renewal-help', 'label' => '帮助中心', 'icon' => 'ri-book-open-line'],
 ]]);
 \Eva::addMenuItem('eva_demo', ['id' => 'backup', 'label' => '备份恢复', 'icon' => 'ri-database-2-line']);
-\Eva::addMenuItem('eva_demo', ['id' => 'panel', 'label' => '设置面板', 'icon' => 'ri-window-line']);
 
+// 3) 常规设置分组：演示 text / switcher / select（含分组+可搜索）/ textarea 等基础字段。
 \Eva::createSection('eva_demo', [
     'id'     => 'general',
     'title'  => '常规设置',
@@ -80,48 +213,72 @@ if (! defined('ABSPATH')) {
     ],
 ]);
 
-// 扩展模块 / 版本计划 / 备份恢复：CSF 里是「独立 Vue 应用挂载点」(callback 只 echo 一个 div)。
-// 挂载点已搬过来，但要真正渲染需加载主题对应前端 JS（standalone 页默认没有），故此处为占位。
+// 扩展模块 / 版本计划：沿用 CSF 的 callback 页面模式，callback 只输出挂载点。
+// 备份恢复可作为 Eva 字段，因为它本身就是一个可复用的单字段应用。
 \Eva::createSection('eva_demo', [
     'id'     => 'extended',
     'title'  => '扩展模块',
     'fields' => [
+        // callback 字段：运行时执行此闭包，输出会被 prepare_sections 转成 html 注入前端。
         ['id' => 'ext_app', 'type' => 'callback', 'width' => 'full', 'function' => function () {
+            // 实时读取已启用扩展数量，演示 callback 可访问运行时数据。
             $mods = (array) get_option('lentasy_enabled_modules', []);
             $on   = array_filter($mods, function ($m) { return ((is_array($m) ? ($m['state'] ?? '') : '') === 'enabled'); });
             echo '<div class="eva-embed-card"><strong>扩展模块 · callback 实时读取</strong>';
             echo '<p class="eva-html-note">已启用扩展：<b>' . count($on) . '</b> 个（来自 option <code>lentasy_enabled_modules</code>）。</p>';
+            // 完整扩展市场是主题独立 Vue 应用，这里只放其挂载点。
             echo '<div id="extended" class="extended-page"></div>';
             echo '<p class="eva-html-note">完整扩展市场是主题独立 Vue 应用，挂载点 <code>#extended</code>（REST <code>lf/v2/getallExtendeds</code>），需其前端 JS。</p></div>';
         }],
     ],
 ]);
+// 取当前主题对象，供下方版本计划 callback 通过 use 捕获使用。
+$eva_demo_theme = wp_get_theme();
 \Eva::createSection('eva_demo', [
     'id'     => 'renewal-version',
     'title'  => '版本计划',
     'fields' => [
-        ['id' => 'update_app', 'type' => 'callback', 'width' => 'full', 'function' => function () {
-            $en   = get_option('update_schedule_enabled', false);
-            $time = get_option('update_schedule_time', '03:00');
-            $freq = get_option('update_schedule_frequency', 'everyday');
-            echo '<div class="eva-embed-card"><strong>版本计划 · callback 实时读取</strong>';
-            echo '<p class="eva-html-note">计划更新：<b>' . ($en ? '已开启' : '未开启') . '</b>，时间 ' . esc_html($time) . '，频率 ' . esc_html($freq) . '。</p>';
-            echo '<div id="update" class="update-blcok"></div>';
-            echo '<p class="eva-html-note">完整更新 UI 是主题独立 Vue 应用，挂载点 <code>#update</code>（REST <code>lf/v2/GetUpdateProgress</code>），需其前端 JS。</p></div>';
-        }],
+        [
+            'id'       => 'update_app',
+            'type'     => 'callback',
+            'width'    => 'full',
+            // callback：组装版本/计划/动态数据，输出更新页 Vue 应用的挂载点（带 data-* 传参）。
+            'function' => function () use ($eva_demo_theme) {
+                // 解析主题目录下的 update_logs.md。
+                $logs = eva_demo_parse_update_logs(get_template_directory() . '/update_logs.md');
+                // 最新版本：优先取日志首条，否则退回主题头版本号。
+                $latest = ! empty($logs[0]['version'])
+                    ? 'Version ' . $logs[0]['version']
+                    : 'Version ' . ($eva_demo_theme->get('Version') ?: '1.0.0');
+                // 自动更新计划（来自各 option）。
+                $schedule = [
+                    'enabled'   => (bool) get_option('update_schedule_enabled', false),
+                    'time'      => get_option('update_schedule_time', '03:00'),
+                    'frequency' => get_option('update_schedule_frequency', 'everyday'),
+                ];
+                // 近期动态。
+                $activities = eva_demo_recent_activities($logs, $eva_demo_theme);
+
+                // 输出挂载点：所有数据经 esc_attr/json 编码后塞进 data-* 供前端读取。
+                printf(
+                    '<div id="update" class="update-blcok" data-eva-update-page="1" data-version="%s" data-last-update="%s" data-latest-version="%s" data-update-info="%s" data-schedule="%s" data-logs="%s" data-activities="%s"></div>',
+                    esc_attr($eva_demo_theme->get('Version') ?: '1.0.0'),
+                    esc_attr(date('Y-m-d H:i', @filemtime(get_template_directory() . '/style.css') ?: time())),
+                    esc_attr($latest),
+                    esc_attr($logs ? '读取本地 update_logs.md' : '暂无本地更新日志'),
+                    esc_attr(wp_json_encode($schedule)),
+                    esc_attr(wp_json_encode($logs)),
+                    esc_attr(wp_json_encode($activities))
+                );
+            },
+        ],
     ],
 ]);
+// 备份恢复：单字段应用，演示自定义字段类型 backup。
 \Eva::createSection('eva_demo', [
     'id'     => 'backup',
     'title'  => '备份恢复',
     'fields' => [
-        ['id' => 'backup_app', 'type' => 'callback', 'width' => 'full', 'function' => function () {
-            $list   = (array) get_option('theme_backups_list', []);
-            $latest = isset($list[0]['time']) ? $list[0]['time'] : '—';
-            echo '<div class="eva-embed-card"><strong>备份恢复 · callback 实时读取</strong>';
-            echo '<p class="eva-html-note">现有备份：<b>' . count($list) . '</b> 份，最近备份：' . esc_html($latest) . '（来自 option <code>theme_backups_list</code>）。</p>';
-            echo '<div id="backup" class="backup-blcok"></div>';
-            echo '<p class="eva-html-note">完整备份 UI 是主题独立 Vue 应用，挂载点 <code>#backup</code>（AJAX <code>backupData</code>），需其前端 JS。</p></div>';
-        }],
+        ['id' => 'backup_ui', 'type' => 'backup', 'width' => 'full'],
     ],
 ]);

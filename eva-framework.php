@@ -30,18 +30,39 @@ if (! defined('EVA_FW_DEV')) {
     define('EVA_FW_DEV', true);
 }
 
-// 核心：对外注册 API + 后台渲染器
+// 门面：对外注册 API（注册表，置于 includes/ 根）
 require_once EVA_FW_DIR . 'includes/class-eva.php';
-require_once EVA_FW_DIR . 'includes/class-eva-admin.php';
-require_once EVA_FW_DIR . 'includes/class-eva-standalone.php';
-require_once EVA_FW_DIR . 'includes/class-eva-floating.php';
-require_once EVA_FW_DIR . 'includes/class-eva-data.php';
+// 数据层：清洗 + 保存
+require_once EVA_FW_DIR . 'includes/core/class-eva-data.php';
+// 后台呈现：设置页渲染 / 独立页路由 / 后台悬浮窗
+require_once EVA_FW_DIR . 'includes/admin/class-eva-admin.php';
+require_once EVA_FW_DIR . 'includes/admin/class-eva-standalone.php';
+require_once EVA_FW_DIR . 'includes/admin/class-eva-floating.php';
+// 嵌入式容器（对齐 CSF 的 9 种容器：metabox / 分类法 / 导航菜单 / 用户资料 / 评论 / 定制器 / 短代码 / 小工具）
+require_once EVA_FW_DIR . 'includes/containers/class-eva-metabox.php';
+require_once EVA_FW_DIR . 'includes/containers/class-eva-taxonomy.php';
+require_once EVA_FW_DIR . 'includes/containers/class-eva-nav-menu.php';
+require_once EVA_FW_DIR . 'includes/containers/class-eva-profile.php';
+require_once EVA_FW_DIR . 'includes/containers/class-eva-comment.php';
+require_once EVA_FW_DIR . 'includes/containers/class-eva-customize.php';
+require_once EVA_FW_DIR . 'includes/containers/class-eva-shortcoder.php';
+require_once EVA_FW_DIR . 'includes/containers/class-eva-widget.php';
 
 // 前后台都实例化：admin_menu / enqueue 仅后台触发，admin_bar_menu 与独立页路由前台也需挂载
 new \Eva\Framework\Admin();
 new \Eva\Framework\Standalone();
 new \Eva\Framework\Floating();
 new \Eva\Framework\Data();
+
+// 嵌入式容器：均挂各自 WP 原生钩子（编辑页 metabox / 分类法 / 导航菜单 / 用户资料 / 评论 / 定制器 / 短代码 / 小工具）
+new \Eva\Framework\Metabox();
+new \Eva\Framework\Taxonomy();
+new \Eva\Framework\NavMenu();
+new \Eva\Framework\Profile();
+new \Eva\Framework\Comment();
+new \Eva\Framework\Customize();
+new \Eva\Framework\Shortcoder();
+new \Eva\Framework\Widget();
 
 // 插件激活时刷新伪静态规则（规则由 Standalone 在 init 依据注册表动态生成；
 // 主题内嵌等无激活钩子的场景由 Standalone 的「规则签名」机制兜底 flush）

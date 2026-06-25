@@ -1,0 +1,16 @@
+/* Eva UI 库 · eva-tooltip 样式（骨架 / 占位，遵循 ui-style-guard：5px 圆角、--eva-* 令牌、暗色自适配）。待实现。 */
+.eva-tooltip {
+  position: relative;
+  display: inline-flex;
+  /* TODO: 气泡体（--eva-tooltip-bg）、小箭头、方向定位、淡入过渡 */
+}
+
+/* 占位提示（实现后删除） */
+.eva-tooltip-placeholder {
+  padding: 2px 8px;
+  border: 1px dashed var(--eva-border);
+  border-radius: var(--eva-radius);
+  background: var(--eva-soft);
+  color: var(--eva-text-mute);
+  font-size: 12.5px;
+}

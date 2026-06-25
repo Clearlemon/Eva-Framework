@@ -1,0 +1,16 @@
+/* Eva UI 库 · eva-color 样式（骨架 / 占位，遵循 ui-style-guard：5px 圆角、--eva-* 令牌、暗色自适配）。待实现。 */
+.eva-color {
+  position: relative;
+  width: 100%;
+  /* TODO: 触发器（色块+取值）、弹出面板、预设色板等样式 */
+}
+
+/* 占位提示（实现后删除） */
+.eva-color-placeholder {
+  padding: 12px;
+  border: 1px dashed var(--eva-border);
+  border-radius: var(--eva-radius);
+  background: var(--eva-soft);
+  color: var(--eva-text-mute);
+  font-size: 12.5px;
+}

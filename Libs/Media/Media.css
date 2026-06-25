@@ -1,0 +1,15 @@
+/* Eva UI 库 · eva-media 样式（骨架 / 占位，遵循 ui-style-guard：5px 圆角、--eva-* 令牌、暗色自适配）。待实现。 */
+.eva-media {
+  width: 100%;
+  /* TODO: 缩略图网格、空态占位、选择/移除按钮等样式 */
+}
+
+/* 占位提示（实现后删除） */
+.eva-media-placeholder {
+  padding: 12px;
+  border: 1px dashed var(--eva-border);
+  border-radius: var(--eva-radius);
+  background: var(--eva-soft);
+  color: var(--eva-text-mute);
+  font-size: 12.5px;
+}

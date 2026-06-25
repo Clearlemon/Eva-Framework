@@ -1,0 +1,14 @@
+/* Eva UI 库 · eva-modal 样式（骨架 / 占位，遵循 ui-style-guard：5px 圆角、--eva-* 令牌、暗色自适配）。待实现。 */
+.eva-modal {
+  /* TODO: 遮罩 .eva-modal-overlay + 对话框 .eva-modal + 标题/内容/底部 + 进出场过渡 */
+}
+
+/* 占位提示（实现后删除） */
+.eva-modal-placeholder {
+  padding: 12px;
+  border: 1px dashed var(--eva-border);
+  border-radius: var(--eva-radius);
+  background: var(--eva-soft);
+  color: var(--eva-text-mute);
+  font-size: 12.5px;
+}
