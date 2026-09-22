@@ -1,0 +1,144 @@
+/* Eva skin for the WordPress TinyMCE / Quicktags editor. */
+.eva-wp-editor {
+  position: relative;
+  width: 100%;
+  overflow: visible;
+  border: 1px solid var(--eva-border);
+  border-radius: 7px;
+  background: var(--eva-surface);
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--eva-text) 5%, transparent);
+  transition: border-color var(--eva-ease), box-shadow var(--eva-ease);
+}
+.eva-wp-editor:focus-within {
+  border-color: color-mix(in srgb, var(--eva-primary) 58%, var(--eva-border));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--eva-primary) 10%, transparent), 0 8px 24px color-mix(in srgb, var(--eva-text) 7%, transparent);
+}
+.eva-wp-editor-bar {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 9px;
+  border-bottom: 1px solid var(--eva-border);
+  border-radius: 6px 6px 0 0;
+  background: color-mix(in srgb, var(--eva-soft) 72%, var(--eva-surface));
+}
+.eva-wp-editor-level { display: inline-flex; align-items: center; gap: 5px; padding: 4px 7px; border-radius: 4px; color: var(--eva-text-mute); background: var(--eva-surface); font-size: 11px; line-height: 1; }
+.eva-wp-editor-level i { color: var(--eva-primary); font-size: 13px; }
+.eva-wp-editor-media {
+  height: 29px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  border: 1px solid color-mix(in srgb, var(--eva-primary) 30%, var(--eva-border));
+  border-radius: 5px;
+  color: var(--eva-primary);
+  background: var(--eva-primary-050);
+  box-shadow: none;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 550;
+  transition: border-color var(--eva-ease), background var(--eva-ease), transform var(--eva-ease);
+}
+.eva-wp-editor-media:hover:not(:disabled) { border-color: var(--eva-primary); background: color-mix(in srgb, var(--eva-primary) 13%, var(--eva-surface)); transform: translateY(-1px); }
+.eva-wp-editor-media:focus-visible { outline: 2px solid color-mix(in srgb, var(--eva-primary) 24%, transparent); outline-offset: 2px; }
+.eva-wp-editor-textarea { display: block; width: 100%; min-height: 220px; padding: 16px 18px; border: 0; outline: 0; resize: vertical; background: var(--eva-surface); color: var(--eva-text); font: inherit; font-size: 13px; line-height: 1.72; }
+
+/* WordPress editor outer shell. */
+.eva-wp-editor .wp-editor-wrap,
+.eva-wp-editor .wp-editor-container,
+.eva-wp-editor .mce-tinymce,
+.eva-wp-editor .mce-container,
+.eva-wp-editor .mce-panel { border: 0 !important; box-shadow: none !important; }
+.eva-wp-editor .wp-editor-wrap { position: static !important; }
+.eva-wp-editor .wp-editor-tools {
+  position: static !important;
+  display: block !important;
+  min-height: 0;
+  padding: 0 !important;
+  background: var(--eva-surface);
+}
+.eva-wp-editor .wp-editor-tabs {
+  position: absolute !important;
+  top: 4px !important;
+  left: 8px !important;
+  z-index: 20;
+  float: none !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin: 0 !important;
+  padding: 3px;
+  border: 1px solid var(--eva-border);
+  border-radius: 6px;
+  background: var(--eva-soft);
+  transform: none;
+}
+.eva-wp-editor.has-media .wp-editor-tabs { left: 100px !important; }
+.eva-wp-editor .wp-editor-container {
+  clear: both !important;
+  width: 100% !important;
+}
+.eva-wp-editor .wp-switch-editor {
+  position: static !important;
+  top: auto !important;
+  height: 25px !important;
+  display: inline-flex !important;
+  align-items: center;
+  margin: 0 !important;
+  padding: 0 9px !important;
+  border: 0 !important;
+  border-radius: 4px !important;
+  color: var(--eva-text-sub) !important;
+  background: transparent !important;
+  font-size: 11.5px !important;
+  line-height: 1 !important;
+  transition: color var(--eva-ease), background var(--eva-ease) !important;
+}
+.eva-wp-editor .wp-switch-editor:hover { color: var(--eva-primary) !important; background: var(--eva-primary-050) !important; }
+.eva-wp-editor .tmce-active .switch-tmce,
+.eva-wp-editor .html-active .switch-html { color: var(--eva-primary) !important; background: var(--eva-surface) !important; box-shadow: 0 1px 4px color-mix(in srgb, var(--eva-text) 8%, transparent) !important; font-weight: 600 !important; }
+
+/* TinyMCE toolbar. */
+.eva-wp-editor .mce-toolbar-grp { padding: 5px 7px !important; border-top: 1px solid var(--eva-border) !important; border-bottom: 1px solid var(--eva-border) !important; background: color-mix(in srgb, var(--eva-soft) 72%, var(--eva-surface)) !important; }
+.eva-wp-editor .mce-toolbar .mce-btn-group { margin: 1px 4px 1px 0 !important; }
+.eva-wp-editor .mce-toolbar .mce-btn { min-width: 27px !important; height: 27px !important; margin: 0 1px !important; border: 1px solid transparent !important; border-radius: 4px !important; background: transparent !important; box-shadow: none !important; }
+.eva-wp-editor .mce-toolbar .mce-btn:hover,
+.eva-wp-editor .mce-toolbar .mce-btn:focus,
+.eva-wp-editor .mce-toolbar .mce-btn.mce-active,
+.eva-wp-editor .mce-toolbar .mce-btn.mce-active:hover { border-color: color-mix(in srgb, var(--eva-primary) 20%, var(--eva-border)) !important; background: var(--eva-primary-050) !important; }
+.eva-wp-editor .mce-toolbar .mce-btn button { padding: 3px 6px !important; color: var(--eva-text-sub) !important; }
+.eva-wp-editor .mce-toolbar .mce-btn:hover button,
+.eva-wp-editor .mce-toolbar .mce-btn.mce-active button { color: var(--eva-primary) !important; }
+.eva-wp-editor .mce-toolbar .mce-ico { color: inherit !important; text-shadow: none !important; }
+.eva-wp-editor .mce-toolbar .mce-menubtn { min-width: 92px !important; }
+.eva-wp-editor .mce-toolbar .mce-menubtn span { color: var(--eva-text-sub) !important; font-size: 12px !important; }
+.eva-wp-editor .mce-edit-area { border: 0 !important; background: var(--eva-surface) !important; }
+.eva-wp-editor .mce-edit-area iframe { display: block; min-height: 220px; background: #fff; }
+.eva-wp-editor .mce-statusbar { min-height: 24px !important; border-top: 1px solid var(--eva-border) !important; background: var(--eva-soft) !important; }
+.eva-wp-editor .mce-statusbar .mce-path { padding: 4px 8px !important; color: var(--eva-text-mute) !important; }
+
+/* Text/Quicktags mode. */
+.eva-wp-editor .quicktags-toolbar { min-height: 38px; display: flex; flex-wrap: wrap; align-items: center; gap: 3px; padding: 5px 7px !important; border-top: 1px solid var(--eva-border) !important; border-bottom: 1px solid var(--eva-border) !important; background: color-mix(in srgb, var(--eva-soft) 72%, var(--eva-surface)) !important; }
+.eva-wp-editor .quicktags-toolbar input.button { height: 27px !important; min-height: 27px !important; margin: 0 !important; padding: 0 7px !important; border: 1px solid transparent !important; border-radius: 4px !important; color: var(--eva-text-sub) !important; background: transparent !important; box-shadow: none !important; font-size: 11px !important; line-height: 25px !important; }
+.eva-wp-editor .quicktags-toolbar input.button:hover,
+.eva-wp-editor .quicktags-toolbar input.button:focus { border-color: color-mix(in srgb, var(--eva-primary) 20%, var(--eva-border)) !important; color: var(--eva-primary) !important; background: var(--eva-primary-050) !important; }
+.eva-wp-editor textarea.wp-editor-area { min-height: 260px; padding: 15px 17px !important; border: 0 !important; outline: 0 !important; color: var(--eva-text) !important; background: var(--eva-surface) !important; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important; font-size: 12px !important; line-height: 1.65 !important; }
+
+.eva-wp-editor-fallback { display: flex; align-items: center; gap: 6px; margin: 0; padding: 7px 10px; border-top: 1px solid var(--eva-border); color: var(--eva-text-mute); background: var(--eva-soft); font-size: 11px; }
+.eva-wp-editor-fallback i { color: var(--eva-primary); }
+.eva-wp-editor.is-disabled { opacity: .62; }
+.eva-dark .eva-wp-editor .mce-toolbar .mce-btn button,
+.eva-dark .eva-wp-editor .mce-toolbar .mce-menubtn span { color: var(--eva-text-sub) !important; }
+
+@media (max-width: 760px) {
+  .eva-wp-editor-bar { align-items: flex-start; flex-direction: column; }
+  .eva-wp-editor-level { align-self: flex-end; }
+  .eva-wp-editor .wp-editor-tabs { top: 45px !important; left: 8px !important; transform: none; }
+  .eva-wp-editor.has-media .wp-editor-tabs { left: 8px !important; }
+  .eva-wp-editor .wp-editor-tools { padding-top: 38px !important; }
+  .eva-wp-editor .mce-toolbar .mce-menubtn { min-width: 78px !important; }
+}

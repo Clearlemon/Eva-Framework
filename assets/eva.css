@@ -1,3 +1,20 @@
+/* ── 主色令牌 ──────────────────────────────────────────────────────────────
+ * Eva 的组件散落在 wp-admin 各处（#eva-app、嵌入式挂载点、postbox 皮肤、TinyMCE 按钮、
+ * 短代码弹窗、保存条…），彼此没有 DOM 包含关系，所以中性色那几族仍由各组件自带一份
+ * （它们还要跟暗色模式 .eva-dark 配合）。主色不同：明暗下取值一致，集中定义在这里，
+ * 各组件继承即可。
+ *
+ * 主题换品牌色走 \Eva::setThemeColor('#xxx') 或过滤器 eva_theme_color，
+ * PHP 会在 eva.css 之后追加一段同名令牌覆盖它，600 / 050 两档由 color-mix 推导。
+ * ──────────────────────────────────────────────────────────────────────── */
+:root {
+  --eva-primary: #ff758c;
+  --eva-primary-600: #f0607a;
+  --eva-primary-050: #ffe0e8;
+  /* 主色之上的文字色（亮 / 暗两模均为白） */
+  --eva-on-primary: #ffffff;
+}
+
 /* Eva Framework —— 后台管理框架外壳样式（作用域限定 #eva-app；一比一复刻参考稿） */
 
 #eva-app,
@@ -5,12 +22,16 @@
   box-sizing: border-box;
 }
 
+@font-face {
+  font-family: "Eva JingNan MaiYuan";
+  src: url("fonts/jingnan-maiyuan.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
 #eva-app {
   /* ===== 设计令牌（亮色：靛紫主色 + 冷灰中性） ===== */
-  --eva-primary: #ff758c;
-  --eva-primary-600: #f0607a;
-  --eva-primary-050: #ffe0e8;
-  --eva-on-primary: #ffffff; /* 主色之上的文字色（亮/暗两模均为白） */
   --eva-accent: #7280be;
   --eva-success: #1f9d57;
   --eva-info: #12b5a6;
@@ -80,6 +101,11 @@
   overflow: hidden;
   background: var(--eva-bg);
   color: var(--eva-text);
+  font-family: inherit;
+}
+
+#eva-app .eva-admin.eva-font-jingnan {
+  font-family: "Eva JingNan MaiYuan", "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
 /* ===== 左侧边栏 ===== */
@@ -153,6 +179,15 @@
   flex-direction: column;
   gap: 2px;
   overflow-y: auto;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* 左侧菜单保留滚轮、触控板和触摸滚动，但隐藏可见滚动条。 */
+.eva-sb-menu::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .eva-sb-item {
@@ -282,6 +317,916 @@
   margin-bottom: 4px;
   color: var(--eva-text);
   font-size: 14px;
+}
+
+/* ── 嵌入式容器的 wp-admin 隔离层 ──────────────────────────────────────────
+ *
+ * 设置页是 Standalone 输出的整页（/eva/…），根本不加载 wp-admin 的样式；
+ * 嵌入式容器却活在 wp-admin 里，forms.css 会整份盖上来，两边就长得不一样。
+ *
+ * 权重上只有两处会输给 wp-admin，分别对付：
+ * 1) `input, select { margin: 0 1px }`、`input, textarea { font-size: 14px }` 这类元素级声明 (0,0,1)，
+ *    落在 Eva 没有单独声明这些属性的控件上。下面用 :where() 把自己也压成 (0,0,1) 与之打平，
+ *    eva.css 载入更晚所以胜出；同时仍然输给 .eva-f-input 这类 (0,1,0) 的字段规则，不会误伤。
+ * 2) `input[type="text"]` 一族 (0,1,1) 压过 .eva-f-input (0,1,0)——那个在 .eva-f-input 规则上
+ *    额外挂一条 .eva-embed-root 前缀解决，见该处注释。
+ *
+ * 另外：容器的挂载点刻意不带 WP 的 .form-field class，否则
+ * `.form-field input[type=text] { width: 95%; border-width: 1px }` (0,2,1) 会改掉输入框的宽度和边框。 */
+:where(.eva-embed-root, #eva-app) input,
+:where(.eva-embed-root, #eva-app) select,
+:where(.eva-embed-root, #eva-app) textarea {
+  margin: 0;
+  font-size: inherit;
+  box-shadow: none;
+}
+
+:where(.eva-embed-root) p {
+  line-height: inherit;
+}
+
+/* 嵌入式容器（用户资料 / metabox / 分类法 / 菜单）不在 #eva-app 外壳内，
+ * 因此单独提供同一组设计令牌和紧凑表单布局。 */
+.eva-embed-root {
+  --eva-accent: #7280be;
+  --eva-success: #1f9d57;
+  --eva-info: #12b5a6;
+  --eva-warning: #c9820c;
+  --eva-bg: #f4f5f7;
+  --eva-surface: #ffffff;
+  --eva-soft: #f5f6f8;
+  --eva-text: #1f2330;
+  --eva-text-sub: #8a91a0;
+  --eva-text-mute: #aab0bb;
+  --eva-border: #ecedf1;
+  --eva-danger: #b42318;
+  --eva-danger-hover: #9f1f17;
+  --eva-danger-surface: color-mix(in srgb, var(--eva-danger) 8%, var(--eva-surface));
+  --eva-radius: 6px;
+  --eva-radius-sm: 5px;
+  --eva-radius-full: 999px;
+  --eva-shadow-card: 0 1px 2px rgba(31, 35, 48, .08);
+  --eva-shadow-card-hover: 0 6px 16px color-mix(in srgb, var(--eva-text) 12%, transparent);
+  --eva-shadow-menu: 0 10px 24px color-mix(in srgb, var(--eva-text) 12%, transparent);
+  --eva-tooltip-bg: #1f2330;
+  /* 这一条以前漏了：Eva 的过渡统统写成 transition: … var(--eva-ease)，
+   * 令牌缺失会让整条 transition 解析失败，嵌入式容器里的控件就完全没有动效。 */
+  --eva-ease: 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  display: block;
+  max-width: 100%;
+  margin: 16px 0 22px;
+  color: var(--eva-text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Microsoft YaHei", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 13px;
+}
+
+.eva-embed-form {
+  overflow: hidden;
+  border: 1px solid var(--eva-border);
+  border-radius: var(--eva-radius);
+  background: var(--eva-surface);
+  box-shadow: var(--eva-shadow-card);
+}
+
+.eva-embed-section {
+  padding: 20px 22px 22px;
+}
+
+.eva-embed-section + .eva-embed-section {
+  border-top: 1px solid var(--eva-border);
+}
+
+.eva-embed-section-head {
+  margin: 0 0 16px;
+}
+
+.eva-embed-section-head h2 {
+  margin: 0;
+  color: var(--eva-text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.eva-embed-section-head p {
+  margin: 4px 0 0;
+  color: var(--eva-text-sub);
+  font-size: 12px;
+}
+
+.eva-embed-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 24px;
+}
+
+.eva-embed-field {
+  min-width: 0;
+}
+
+.eva-embed-field--full {
+  grid-column: 1 / -1;
+}
+
+.eva-embed-field-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 7px;
+}
+
+.eva-embed-field-title {
+  color: var(--eva-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.eva-embed-field-meta small {
+  color: var(--eva-text-sub);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.eva-embed-field-control {
+  min-width: 0;
+}
+
+.eva-embed-field-control > * {
+  max-width: 100%;
+}
+
+.eva-embed-error {
+  padding: 16px;
+  border: 1px solid #f3b8c3;
+  border-radius: var(--eva-radius);
+  color: #b42318;
+  background: #fff5f7;
+}
+
+/* metabox：page_templates / post_formats 条件不满足时整个 metabox 收起（eva-embed.js 的 initMetaboxConditions 切换）。 */
+.postbox.eva-mb-hidden {
+  display: none;
+}
+
+/* metabox 放在右侧栏（context=side，由 embed_markup 透出到根节点）：可用宽度只剩 ~250px。
+ * 整幅宽度那套「卡片边框 + 22px 内边距 + 两列栅格」在这里会叠成卡中卡，并把控件挤扁；
+ * postbox 自身已经提供标题栏、边框和 .inside 的内边距，这里一律让位，只留字段本身。 */
+.eva-embed-root[data-eva-context="side"] {
+  margin: 0;
+}
+
+.eva-embed-root[data-eva-context="side"] .eva-embed-form {
+  border: none;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.eva-embed-root[data-eva-context="side"] .eva-embed-section {
+  padding: 4px 0 2px;
+}
+
+/* 分区之间保留一条分隔线，但内边距换成外边距，免得左右再吃掉宽度。 */
+.eva-embed-root[data-eva-context="side"] .eva-embed-section + .eva-embed-section {
+  margin-top: 14px;
+  padding-top: 14px;
+}
+
+/* 窄栏放不下两列；字段宽度声明（width: 1/2 等）在这里一律按整行处理。 */
+.eva-embed-root[data-eva-context="side"] .eva-embed-grid {
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+.eva-embed-root[data-eva-context="side"] .eva-embed-field {
+  grid-column: 1 / -1;
+}
+
+/* 分区标题在侧栏里是 postbox 标题之下的次级标题，压一号字重与字号。 */
+.eva-embed-root[data-eva-context="side"] .eva-embed-section-head {
+  margin-bottom: 12px;
+}
+
+.eva-embed-root[data-eva-context="side"] .eva-embed-section-head h2 {
+  font-size: 13px;
+}
+
+.eva-embed-root[data-eva-context="side"] .eva-embed-field-meta {
+  margin-bottom: 6px;
+}
+
+/* ── metabox 面板皮肤 ────────────────────────────────────────────────────────
+ * WordPress 原生 postbox 是直角 + #c3c4c7 深灰边框 + 标题栏硬分割线，套在 Eva 的
+ * 圆角浅色控件外面两套设计语言打架。这里把外壳也接管过来。
+ *
+ * 作用域有两档，由下面这个 :is() 决定：
+ *   默认        —— 只认装着 Eva 字段的 postbox，原生面板保持 WordPress 外观；
+ *   .eva-skin-boxes —— 主题调用 \Eva::skinAdminBoxes(true) 后由 Metabox::body_class 挂到
+ *                  body 上，皮肤扩到整条文章编辑页侧栏。只改外壳（圆角/边框/标题栏），
+ *                  原生面板的内部控件和按钮配色一律不动——「发布」是高风险动作按钮，
+ *                  必须让人一眼认出，不该染成主题色。
+ * ──────────────────────────────────────────────────────────────────────── */
+:is(.postbox:has(> .inside > .eva-embed-root), .eva-skin-boxes #side-sortables .postbox) {
+  /* 令牌定义在 #eva-app 和 .eva-embed-root 上，postbox 是后者的祖先取不到，
+     按本文件里短代码弹窗同样的做法自带一份（只列用到的）。 */
+  --eva-surface: #ffffff;
+  --eva-text: #1f2330;
+  --eva-text-sub: #8a91a0;
+  --eva-border: #ecedf1;
+  --eva-radius-full: 999px;
+  --eva-ease: 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  --eva-shadow-card: 0 1px 2px rgba(31, 35, 48, .08);
+  --eva-shadow-card-hover: 0 6px 16px color-mix(in srgb, var(--eva-text) 12%, transparent);
+
+  border: 1px solid var(--eva-border);
+  border-radius: 8px;
+  background: var(--eva-surface);
+  box-shadow: var(--eva-shadow-card);
+  overflow: hidden;
+  transition: box-shadow var(--eva-ease), border-color var(--eva-ease);
+}
+
+/* 指针进入时轻微浮起，暗示这张卡可以拖拽排序。 */
+:is(.postbox:has(> .inside > .eva-embed-root), .eva-skin-boxes #side-sortables .postbox):hover {
+  border-color: color-mix(in srgb, var(--eva-text) 10%, var(--eva-border));
+  box-shadow: var(--eva-shadow-card-hover);
+}
+
+/* 标题栏：去掉 WP 那条硬分割线，改用留白分隔。 */
+:is(.postbox:has(> .inside > .eva-embed-root), .eva-skin-boxes #side-sortables .postbox) .postbox-header {
+  border-bottom: none;
+  padding: 14px 16px 2px;
+}
+
+:is(.postbox.closed:has(> .inside > .eva-embed-root), .eva-skin-boxes #side-sortables .postbox.closed) .postbox-header {
+  padding-bottom: 14px;
+}
+
+:is(.postbox:has(> .inside > .eva-embed-root), .eva-skin-boxes #side-sortables .postbox) .postbox-header h2 {
+  display: flex;
+  align-items: center;
+  /* WP 给 .postbox-header h2 设了 space-between，h2 一旦变成 flex 容器，
+     下面那根强调条和标题文字就会被推向两端（短标题看着像居中），这里按左对齐钉死。 */
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 0;
+  color: var(--eva-text);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+/* 标题左侧的主色短条，替代原本靠边框划分区块的做法。 */
+:is(.postbox:has(> .inside > .eva-embed-root), .eva-skin-boxes #side-sortables .postbox) .postbox-header h2::before {
+  content: '';
+  flex: none;
+  width: 3px;
+  height: 13px;
+  border-radius: var(--eva-radius-full);
+  background: var(--eva-primary);
+}
+
+/* 上移 / 下移 / 折叠：平时隐去，指针进入或键盘聚焦时才出现，键盘可达性不变。 */
+:is(.postbox:has(> .inside > .eva-embed-root), .eva-skin-boxes #side-sortables .postbox) .handle-actions {
+  opacity: 0;
+  transition: opacity var(--eva-ease);
+}
+
+:is(.postbox:has(> .inside > .eva-embed-root), .eva-skin-boxes #side-sortables .postbox):hover .handle-actions,
+:is(.postbox:has(> .inside > .eva-embed-root), .eva-skin-boxes #side-sortables .postbox):focus-within .handle-actions {
+  opacity: 1;
+}
+
+:is(.postbox:has(> .inside > .eva-embed-root), .eva-skin-boxes #side-sortables .postbox) .handle-actions button {
+  color: var(--eva-text-sub);
+}
+
+:is(.postbox:has(> .inside > .eva-embed-root), .eva-skin-boxes #side-sortables .postbox) .inside {
+  margin: 0;
+  padding: 0 16px 16px;
+}
+
+/* 短代码生成器在经典编辑器里的入口：TinyMCE 格式工具栏上的一个按钮，
+ * 由 assets/eva-mce-shortcoder.js 注册（icon: 'eva-shortcoder' → .mce-i-eva-shortcoder）。
+ *
+ * 这颗按钮是 Eva 自己的，所以按 Eva 的配色做，不跟着 TinyMCE 的灰色图标走：
+ * 浅色主色底 + 主色图标，hover / 菜单展开时转成实心主色；左边一条细线把它和
+ * WordPress 的格式按钮组隔开。作用域只到这颗按钮，同排其它按钮一律不动。 */
+/* 贴工具栏最右端：TinyMCE 的按钮组是 inline-block、宽度收缩到内容，float 推不过去，
+   所以改用绝对定位。只给「装着这颗按钮的那条工具栏」建立定位上下文，
+   并给按钮组留出等宽的右内边距——窄屏工具栏换行时按钮才不会压到原生按钮上。 */
+.mce-toolbar:has(.mce-i-eva-shortcoder) {
+  position: relative;
+}
+
+.mce-toolbar:has(.mce-i-eva-shortcoder) > .mce-flow-layout {
+  padding-right: 42px;
+}
+
+.mce-toolbar .mce-btn:has(> button > .mce-i-eva-shortcoder) {
+  --eva-radius-sm: 5px;
+  --eva-ease: 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  transform: translateY(-50%);
+  margin: 0;
+  border-color: transparent;
+  border-radius: var(--eva-radius-sm);
+  background: var(--eva-primary-050);
+  transition: background var(--eva-ease);
+}
+
+/* TinyMCE 的 .mce-ico 默认是它自带的 tinymce 图标字体，里面没有 dashicons 的字形，
+   字体族和字号要跟着 WP 自己那些 dashicon 按钮（.mce-i-blockquote 等）走：20px/20px。
+   颜色必须从 .mce-btn 那层选下来：WP 的 `.mce-toolbar .mce-ico`（editor.css）和
+   直接写 `.mce-toolbar .mce-i-eva-shortcoder` 特异性相同，而它后加载，会把主色压掉。 */
+.mce-toolbar .mce-btn:has(> button > .mce-i-eva-shortcoder) .mce-i-eva-shortcoder {
+  color: var(--eva-primary);
+  font-family: dashicons;
+  font-size: 20px;
+  line-height: 20px;
+  transition: color var(--eva-ease);
+}
+
+.mce-toolbar .mce-btn:has(> button > .mce-i-eva-shortcoder) .mce-i-eva-shortcoder:before {
+  /* dashicons-shortcode（\f110 是 admin-users，别写混了） */
+  content: '\f150';
+}
+
+/* hover / 聚焦 / 菜单展开：转实心主色。选择器带上 :has() 才压得过 TinyMCE 自己的 hover 样式。 */
+.mce-toolbar .mce-btn:has(> button > .mce-i-eva-shortcoder):hover,
+.mce-toolbar .mce-btn:has(> button > .mce-i-eva-shortcoder).mce-active,
+.mce-toolbar .mce-btn:has(> button > .mce-i-eva-shortcoder):focus-within {
+  border-color: transparent;
+  background: var(--eva-primary);
+}
+
+.mce-toolbar .mce-btn:has(> button > .mce-i-eva-shortcoder):hover .mce-i-eva-shortcoder,
+.mce-toolbar .mce-btn:has(> button > .mce-i-eva-shortcoder).mce-active .mce-i-eva-shortcoder,
+.mce-toolbar .mce-btn:has(> button > .mce-i-eva-shortcoder):focus-within .mce-i-eva-shortcoder {
+  color: var(--eva-on-primary);
+}
+
+/* 以下是备用入口（Shortcoder::editor_button，放 media_buttons 区）的样式。
+ * 那个方法现在没挂钩子，样式留着是为了把它加回来时不用重写。
+ * 选择器全部限定在 .eva-shortcoder-*，不碰「添加媒体」和别的插件往那儿放的按钮。 */
+/* 图标与文字的垂直对齐直接交给 flex，不再调 vertical-align / line-height：
+   WP 的 `.wp-core-ui .button .dashicons` 设了 vertical-align: top + line-height: 1.9，
+   那个行盒比按钮里文字的行盒高，两者在同一行内互相牵扯，靠 vertical-align 很难稳定对齐
+   （试过 middle / text-bottom，量出来居中、渲染却是图标下沉）。align-items: center 没有这个问题。
+   选择器多带 .wp-core-ui + .button 是为压过 WP 那条规则的特异性，不是为了加样式。 */
+.wp-core-ui .button.eva-shortcoder-open,
+.wp-core-ui .eva-shortcoder-menu > summary.button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* 图标自带的 line-height 会把 flex 行撑高，这里压掉；尺寸仍用 WP 的 20x20。 */
+.wp-core-ui .button.eva-shortcoder-open .dashicons,
+.wp-core-ui .eva-shortcoder-menu > summary.button .dashicons {
+  line-height: 1;
+}
+
+/* 位置：挪到编辑器工具条右端，贴着「可视化 / 代码」标签的左边。
+   media_buttons 是 WP 给的唯一输出点（在行首），节点由 eva-embed.js 的
+   relocateShortcoderEntries 搬到 .wp-editor-tools 下，这里负责让它靠右。 */
+.wp-editor-tools > .eva-shortcoder-open,
+.wp-editor-tools > .eva-shortcoder-menu {
+  float: right;
+  margin-left: 8px;
+}
+
+.eva-shortcoder-menu {
+  --eva-surface: #ffffff;
+  --eva-soft: #f5f6f8;
+  --eva-text: #1f2330;
+  --eva-border: #ecedf1;
+  --eva-radius: 6px;
+  --eva-radius-sm: 5px;
+  --eva-shadow-menu: 0 10px 24px color-mix(in srgb, var(--eva-text) 12%, transparent);
+  --eva-ease: 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+
+  position: relative;
+  display: inline-block;
+  vertical-align: top;
+}
+
+/* 去掉 details 自带的三角，summary 沿用 WP 的 .button 外观。 */
+.eva-shortcoder-menu > summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.eva-shortcoder-menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.eva-shortcoder-menu-list {
+  position: absolute;
+  z-index: 100;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 168px;
+  padding: 4px;
+  border: 1px solid var(--eva-border);
+  border-radius: var(--eva-radius);
+  background: var(--eva-surface);
+  box-shadow: var(--eva-shadow-menu);
+}
+
+.eva-shortcoder-menu-list button {
+  display: block;
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: var(--eva-radius-sm);
+  background: none;
+  color: var(--eva-text);
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--eva-ease), color var(--eva-ease);
+}
+
+.eva-shortcoder-menu-list button:hover,
+.eva-shortcoder-menu-list button:focus-visible {
+  background: var(--eva-soft);
+  color: var(--eva-primary);
+}
+
+/* 短代码生成器弹窗：Shortcoder::render_dialogs 输出标记，eva-embed.js 的 initShortcoders 负责开关与插入。
+ * 外层是铺满视口的遮罩，面板居中；它位于 .eva-embed-root 之外，因此自带用到的设计令牌。
+ * z-index 高于 WP 的管理工具条（99999），与媒体库弹窗（160000）同一量级。 */
+.eva-shortcoder-dialog {
+  --eva-surface: #ffffff;
+  --eva-soft: #f5f6f8;
+  --eva-text: #1f2330;
+  --eva-text-sub: #8a91a0;
+  --eva-border: #ecedf1;
+  --eva-radius: 6px;
+  --eva-shadow-menu: 0 10px 24px color-mix(in srgb, var(--eva-text) 12%, transparent);
+  position: fixed;
+  inset: 0;
+  z-index: 159900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: color-mix(in srgb, var(--eva-text) 45%, transparent);
+}
+.eva-shortcoder-dialog[hidden] {
+  display: none;
+}
+.eva-shortcoder-panel {
+  display: flex;
+  flex-direction: column;
+  width: min(760px, 100%);
+  max-height: min(86vh, 900px);
+  overflow: hidden;
+  border-radius: var(--eva-radius);
+  background: var(--eva-surface);
+  box-shadow: var(--eva-shadow-menu);
+}
+.eva-shortcoder-head,
+.eva-shortcoder-foot {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--eva-border);
+}
+.eva-shortcoder-head strong {
+  flex: 1;
+  color: var(--eva-text);
+  font-size: 14px;
+}
+.eva-shortcoder-close {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--eva-radius);
+  color: var(--eva-text-sub);
+  background: transparent;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.eva-shortcoder-close:hover {
+  color: var(--eva-text);
+  background: var(--eva-soft);
+}
+.eva-shortcoder-body {
+  flex: 1;
+  min-height: 0;
+  padding: 0 16px;
+  overflow-y: auto;
+}
+.eva-shortcoder-foot {
+  border-top: 1px solid var(--eva-border);
+  border-bottom: 0;
+  background: var(--eva-soft);
+}
+/* 短代码预览：单行，超长时省略，完整内容以插入结果为准。 */
+.eva-shortcoder-preview {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--eva-text-sub);
+  background: transparent;
+  font-size: 12px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* 区块编辑器里的短代码区块（assets/eva-shortcoder-blocks.js）。 */
+.eva-shortcode-block {
+  --eva-border: #ecedf1;
+  --eva-soft: #f5f6f8;
+  --eva-text: #1f2330;
+  --eva-radius: 6px;
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px dashed var(--eva-border);
+  border-radius: var(--eva-radius);
+  background: var(--eva-soft);
+}
+.eva-shortcode-block-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--eva-text);
+  font-size: 13px;
+}
+.eva-shortcode-block-text {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--eva-border);
+  border-radius: var(--eva-radius);
+  color: var(--eva-text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  resize: vertical;
+}
+
+/* metabox / 评论的「恢复默认值」开关（show_restore）。它位于 .eva-embed-root 之外，因此自带用到的设计令牌。 */
+.eva-mb-restore {
+  --eva-text-sub: #8a91a0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 4px;
+  color: var(--eva-text-sub);
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+/* 页面标题旁的「WP 设置 / Eva 设置」切换器：容器的 PHP 输出标记，eva-embed.js 挪到页面标题（h1）旁。
+ * 用户资料页与分类编辑页共用这一套外观，各自的显隐规则见下面两段。
+ * 它位于 .eva-embed-root 之外，因此自带用到的设计令牌；top: -3px 与 WP 标题行的 .page-title-action 对齐。 */
+.eva-switch-tabs {
+  --eva-surface: #ffffff;
+  --eva-text: #1f2330;
+  --eva-text-sub: #8a91a0;
+  --eva-radius: 6px;
+  --eva-radius-sm: 5px;
+  --eva-shadow-card: 0 1px 2px rgba(31, 35, 48, .08);
+  --eva-ease: 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  top: -3px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 32px;
+  margin-left: 6px;
+  padding: 3px;
+  box-sizing: border-box;
+  vertical-align: middle;
+  border-radius: var(--eva-radius);
+  background: var(--eva-surface);
+  box-shadow: var(--eva-shadow-card);
+}
+
+.eva-switch-tabs[hidden] {
+  display: none;
+}
+
+.eva-switch-tab {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 11px;
+  border: 0;
+  border-radius: var(--eva-radius-sm);
+  background: transparent;
+  color: var(--eva-text-sub);
+  font-family: inherit;
+  font-size: 12.5px;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background var(--eva-ease), color var(--eva-ease), box-shadow var(--eva-ease);
+}
+
+.eva-switch-tab i {
+  font-size: 14px;
+  font-style: normal;
+  line-height: 1;
+}
+
+.eva-switch-tab:hover {
+  color: var(--eva-text);
+}
+
+.eva-switch-tab:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--eva-primary) 22%, transparent);
+}
+
+.eva-switch-tab.is-active {
+  background: var(--eva-primary);
+  color: var(--eva-on-primary);
+}
+
+/* 两侧同属 #your-profile 一个表单：Eva 页签收起原生区块（保留提交按钮），WP 页签收起 Eva 容器。
+ * 只是不显示，隐藏一侧的字段照常随表单提交；<html> 上没有这两个 class（无 JS）时整页保持原样。 */
+.eva-profile-tab-eva #your-profile > :not(.eva-profile-fields):not(.submit) {
+  display: none;
+}
+
+.eva-profile-tab-wp #your-profile > .eva-profile-fields {
+  display: none;
+}
+
+/* 分类编辑页（term.php）同理：两侧同属 #edittag 一个表单，Eva 页签收起原生的字段行与表单里的其它区块
+ * （保留底部的「更新 / 删除」），WP 页签收起 Eva 占的整行。隐藏一侧的字段照常随「更新」提交。
+ * 原生字段排在 .form-table 的 <tr> 里，Eva 的挂载点由 Taxonomy::render_edit 也占一整行。 */
+.eva-term-tab-eva #edittag > :not(.form-table):not(.edit-tag-actions),
+.eva-term-tab-eva #edittag .form-table tr:not(.eva-tax-field) {
+  display: none;
+}
+
+.eva-term-tab-wp #edittag .form-table tr.eva-tax-field {
+  display: none;
+}
+
+/* 新增分类页（edit-tags.php 左栏）同理：新增表单是一摞平铺的 .form-field，
+ * Eva 的字段块由 *_add_form_fields 输出，只能排在原生字段之后，所以同样用页签切换。
+ * Eva 页签里不留任何原生字段，只保留底部那段 <p class="submit">（「添加分类」按钮两个页签共用）。
+ * 「名称」是必填项：停在 Eva 页签却没填名称时，由 eva-embed.js 把页签切回 WP，
+ * 否则原生的必填提示藏在看不见的地方。 */
+.eva-addtag-tab-eva #addtag > :not(.eva-tax-field):not(.submit) {
+  display: none;
+}
+
+.eva-addtag-tab-wp #addtag > .eva-tax-field {
+  display: none;
+}
+
+/* 菜单页（nav-menus.php）：页签装在每个菜单项设置区的顶部，各项独立切换。
+ * 这里不用 <html> 上的 class——那套是页面级的，菜单一页有几十项，
+ * 得让每个 .menu-item-settings 自己记住停在哪一侧（分组标记由 eva-embed.js 打）。
+ * 同样只是不显示，隐藏那一侧的字段照常随「保存菜单」提交。 */
+.menu-item-settings.eva-mi-wp > .eva-mi-custom {
+  display: none;
+}
+
+.menu-item-settings.eva-mi-eva > .eva-mi-native {
+  display: none;
+}
+
+/* 页签在设置区顶部单占一行；--block 自带 margin-bottom: 14px，这里收一点。 */
+.menu-item-settings > .eva-mi-tabs {
+  margin: 0 0 12px;
+}
+
+/* 承载切换器的标题默认是块级、独占一行（term.php 的 h1、新增表单的 h2），
+ * 由 eva-embed.js 挂上这个 class 改成行内，切换器才能并排在它右边。
+ * 用 .wrap 提一档权重，压过 WP 自己对 .form-wrap h2 之类的规则。 */
+.wrap .eva-switch-heading {
+  display: inline-block;
+  margin-right: 6px;
+}
+
+/* 整行分段控件形态：给新增分类页左栏用——那一栏只有三成多页面宽，
+ * 行内跟在 h2 后面会折行，改成标题下方独占一行、两个页签均分宽度。 */
+.eva-switch-tabs--block {
+  top: 0;
+  /* 上方标题行右侧浮着吸顶保存按钮，这里是 flex 不会绕开它，得自己清一下。 */
+  clear: both;
+  display: flex;
+  width: 100%;
+  margin: 0 0 14px;
+}
+
+.eva-switch-tabs--block .eva-switch-tab {
+  flex: 1;
+  justify-content: center;
+}
+
+/* 分类编辑页：原生 .form-table 的 <th> 有固定列宽，Eva 占整行的那格要取消它，字段才能铺满。 */
+#edittag .form-table tr.eva-tax-field > th {
+  width: auto;
+  padding: 15px 10px 15px 0;
+}
+
+/* 保存入口：用户资料页、分类编辑页、新增分类/标签页的原生提交按钮都排在长表单最底部，
+ * 由 eva-embed.js 的 initFormActions 收起（只是不显示、不移除，按回车的隐式提交仍走它），
+ * 换成一上一下两个入口——标题行右侧的吸顶按钮，和表单一有改动才升起的底部保存条。
+ * 两者都位于 .eva-embed-root 之外，因此自带用到的设计令牌。 */
+/* 选择器要压过 WP 自己的 `.wp-core-ui .button`（同为两级 class），故多带一个元素名。 */
+.eva-submit-native,
+.wp-core-ui input.eva-submit-native {
+  display: none;
+}
+
+/* 按钮一收起，原生那段 <p class="submit"> 就只剩间距（新增分类页里还留着 tags.js 用的 spinner），
+ * 压平它，表单底部不至于空出一大块。分类编辑页那格不动：里面还有「删除」链接。 */
+#your-profile > p.submit,
+#addtag > p.submit {
+  padding: 0;
+  margin: 0;
+}
+
+/* 浮动按钮后面的清除块：资料页靠 hr.wp-header-end 清浮动，分类编辑页没有这条 hr，统一补一个。 */
+.eva-submit-clear {
+  clear: both;
+}
+
+.eva-sticky-submit {
+  --eva-radius: 6px;
+  --eva-ease: 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  float: right;
+  /* 上边距对齐标题行里的切换器；右边留一点空隙，避免贴死右上角「帮助」按钮
+   * （它是 #screen-meta-links 的浮动，会把这里的浮动往左挤）。 */
+  margin: 9px 6px 0 10px;
+  /* 表单很长，按钮随页面滚走就没法保存了：吸在管理栏下方跟着滚。
+   * 吸附范围是父元素（.wrap / 新增表单的 .form-wrap），正好覆盖整页；
+   * z-index 压在正文之上、又低于字段自己的浮层。 */
+  position: sticky;
+  top: 42px;
+  z-index: 10;
+}
+
+.eva-submit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: var(--eva-radius);
+  background: var(--eva-primary);
+  color: var(--eva-on-primary);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--eva-primary) 38%, transparent);
+  transition: background var(--eva-ease), box-shadow var(--eva-ease);
+}
+
+.eva-submit-btn i {
+  font-size: 15px;
+  font-style: normal;
+  line-height: 1;
+}
+
+.eva-submit-btn:hover,
+.eva-submit-btn:active {
+  background: var(--eva-primary-600);
+}
+
+.eva-submit-btn:focus-visible {
+  outline: none;
+  /* 焦点环之外保留那层悬浮阴影，否则聚焦时按钮会忽然贴回页面。 */
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--eva-primary) 22%, transparent),
+    0 2px 10px color-mix(in srgb, var(--eva-primary) 38%, transparent);
+}
+
+/* 新增分类/标签那一栏挂的是表单自己的 h2，没有管理区标题行那圈上边距，按钮跟着往上收。 */
+#col-left .form-wrap > .eva-sticky-submit {
+  margin: 0 0 0 10px;
+}
+
+/* 底部保存条：表单一有改动就升起来（.is-on），改回原样或保存完又落回去。
+ * 左边缘避开 WP 左侧菜单：菜单收起时 36px，窄屏时整条通栏。
+ * z-index 取 9989——压在 WP 侧边菜单（9990）之下，也远低于字段自己的浮层（选择器、取色板…），
+ * 底部字段的下拉照常盖在它上面。 */
+.eva-savebar {
+  --eva-surface: #ffffff;
+  --eva-text-sub: #8a91a0;
+  --eva-border: #ecedf1;
+  --eva-radius: 6px;
+  --eva-ease: 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  position: fixed;
+  left: 160px;
+  right: 0;
+  bottom: 0;
+  z-index: 9989;
+  padding: 11px 22px;
+  box-sizing: border-box;
+  background: color-mix(in srgb, var(--eva-surface) 92%, transparent);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid var(--eva-border);
+  box-shadow: 0 -6px 22px rgba(31, 35, 48, .1);
+  /* 没改动时整条落到视口外，且不吃点击。 */
+  transform: translateY(120%);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform var(--eva-ease), opacity var(--eva-ease);
+}
+
+.eva-savebar.is-on {
+  transform: none;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.eva-savebar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+}
+
+.eva-savebar-tip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--eva-text-sub);
+  font-size: 12.5px;
+  line-height: 1;
+}
+
+.eva-savebar-tip i {
+  font-size: 15px;
+  font-style: normal;
+  line-height: 1;
+  color: var(--eva-primary);
+}
+
+/* 保存条是固定定位，会盖住正文最底部一条；升起时给正文补出等高的下边距。 */
+.eva-savebar-on #wpbody-content {
+  padding-bottom: 72px;
+}
+
+/* 左侧菜单收起（手动折叠 / 窄屏自动折叠）时只剩 36px。 */
+body.folded .eva-savebar {
+  left: 36px;
+}
+
+@media (max-width: 960px) {
+  body.auto-fold .eva-savebar {
+    left: 36px;
+  }
+}
+
+/* 窄屏放不下标题行，浮动会让按钮跟表单第一个小标题并排；改成独占一行、靠右。
+ * 同一档宽度下 WP 的菜单改为抽屉式，保存条通栏。 */
+@media (max-width: 782px) {
+  .eva-sticky-submit {
+    display: block;
+    float: none;
+    margin: 12px 0 0;
+    text-align: right;
+    top: 56px;
+  }
+
+  .eva-savebar {
+    left: 0;
+    padding: 10px 14px;
+  }
+}
+
+/* WP 在这个宽度以下不再固定管理栏，它会随页面滚走，按钮就贴视口顶部。 */
+@media (max-width: 600px) {
+  .eva-sticky-submit {
+    top: 10px;
+  }
+}
+
+@media (max-width: 782px) {
+  .eva-embed-section {
+    padding: 16px;
+  }
+  .eva-embed-grid {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+  .eva-embed-field--full {
+    grid-column: auto;
+  }
 }
 
 /* backup 字段：沿用主题原版布局，配色统一到 Eva 令牌（珊瑚粉主色 + 雾蓝辅色 + 中性色 + 5px 圆角，自动适配暗色） */
@@ -983,6 +1928,15 @@
   gap: 8px;
   min-width: 0;
   overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.eva-tabs::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .eva-tab {
@@ -1013,12 +1967,37 @@
 }
 
 .eva-tab-close {
-  font-size: 11px;
-  opacity: 0.85;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 -5px 0 0;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  appearance: none;
+  -webkit-appearance: none;
+  transition: none;
+  color: inherit;
+  font-size: 13px;
+  line-height: 1;
+  opacity: 0.8;
+  cursor: pointer;
 }
 
-.eva-tab-close:hover {
+.eva-tab-close:hover,
+.eva-tab-close:focus-visible {
+  background: rgba(255, 255, 255, 0.18);
   opacity: 1;
+  outline: none;
+}
+
+.eva-tab:not(.is-active) .eva-tab-close:hover,
+.eva-tab:not(.is-active) .eva-tab-close:focus-visible {
+  background: var(--eva-soft);
 }
 
 .eva-tabs-right {
@@ -1071,6 +2050,29 @@
   position: relative;
   overflow: auto;
   background: var(--eva-bg);
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--eva-primary) 42%, var(--eva-border)) transparent;
+}
+
+.eva-content::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.eva-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.eva-content::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--eva-primary) 42%, var(--eva-border));
+  background-clip: padding-box;
+}
+
+.eva-content::-webkit-scrollbar-thumb:hover {
+  background: var(--eva-primary);
+  background-clip: padding-box;
 }
 
 /* ===== 独立页（脱离 /wp-admin/）与全屏沉浸：让框架铺满视口 ===== */
@@ -1078,8 +2080,8 @@ body.eva-standalone {
   margin: 0;
 }
 
-/* 全屏沉浸：进入后台全屏页时隐藏 WP 后台外壳（本文件仅该页加载；
-   !important 用于压过 WordPress 核心后台样式，属第三方覆盖例外）。 */
+/* 全屏沉浸：进入后台全屏页时隐藏 WP 后台外壳（!important 用于压过 WordPress 核心后台样式，属第三方覆盖例外）。
+   本文件也会随嵌入式容器加载到资料页、文章编辑页等普通后台页，所以每条规则都必须限定在 eva-fullscreen 内。 */
 body.eva-fullscreen #adminmenumain,
 body.eva-fullscreen #wpadminbar,
 body.eva-fullscreen #wpfooter,
@@ -1097,7 +2099,9 @@ body.eva-fullscreen #wpbody-content {
   padding: 0 !important;
 }
 
-.wp-toolbar {
+/* 管理栏占位加在 <html> 上，而 eva-fullscreen 在 <body> 上，故用 :has 反查；
+   不限定的话，普通后台页的顶部 32px 内容会被固定的管理栏盖住。 */
+.wp-toolbar:has(body.eva-fullscreen) {
   padding-top: 0 !important;
 }
 
@@ -1149,6 +2153,13 @@ body.eva-fullscreen #wpbody-content {
     border-top: 1px solid var(--eva-border);
     overflow-x: auto;
     overflow-y: visible;
+    scrollbar-width: none;
+  }
+
+  .eva-sb-menu::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
   }
 
   /* 顶置《使用指南》在横排里不再单独分隔 */
@@ -1334,6 +2345,25 @@ body.eva-fullscreen #wpbody-content {
   .eva-admin .eva-savefab {
     height: 28px;
     padding: 0 11px;
+  }
+
+  .eva-sidebar-save {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 70;
+    padding: 6px 10px calc(6px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--eva-border);
+  }
+
+  .eva-sidebar-save .eva-savedock {
+    justify-content: flex-end;
+  }
+
+  .eva-sidebar-save .eva-savefab {
+    flex: none;
+    width: auto;
   }
 
   .eva-admin .eva-reset-btn {
@@ -1527,6 +2557,65 @@ body.eva-fullscreen #wpbody-content {
 
 .eva-accent.is-active {
   box-shadow: 0 0 0 2px var(--eva-surface), 0 0 0 4px var(--eva-primary);
+}
+
+/* 界面字体 */
+.eva-font-setting {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--eva-border);
+}
+
+.eva-set-subtitle {
+  margin: 0 0 8px;
+  color: var(--eva-text-sub);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.eva-font-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.eva-font-option {
+  min-width: 0;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 8px;
+  border: 1px solid var(--eva-border);
+  border-radius: var(--eva-radius);
+  background: var(--eva-soft);
+  color: var(--eva-text-sub);
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color var(--eva-ease), background var(--eva-ease), color var(--eva-ease), box-shadow var(--eva-ease);
+}
+
+.eva-font-option i {
+  flex: none;
+  font-size: 15px;
+}
+
+.eva-font-option.is-jingnan {
+  font-family: "Eva JingNan MaiYuan", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+.eva-font-option:hover {
+  border-color: color-mix(in srgb, var(--eva-primary) 42%, var(--eva-border));
+  color: var(--eva-text);
+}
+
+.eva-font-option.is-active {
+  border-color: var(--eva-primary);
+  background: var(--eva-primary-050);
+  color: var(--eva-primary-600);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--eva-primary) 18%, transparent);
 }
 
 /* ===== 搜索命令面板（右上角按钮 / Ctrl+K 弹出） ===== */
@@ -1811,61 +2900,213 @@ body.eva-fullscreen #wpbody-content {
   font-weight: 700;
 }
 
-.eva-guide-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-.eva-guide-tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border: 1px solid var(--eva-border);
-  border-radius: var(--eva-radius);
-  background: var(--eva-surface);
-  color: var(--eva-text-sub);
-  font-family: inherit;
-  font-size: 12.5px;
-  font-weight: 700;
-  text-align: left;
-  cursor: pointer;
-  transition: background var(--eva-ease), color var(--eva-ease), border-color var(--eva-ease);
-}
-
-.eva-guide-tab:hover,
-.eva-guide-tab.is-active {
-  background: color-mix(in srgb, var(--eva-primary) 10%, transparent);
-  color: var(--eva-primary);
-  border-color: var(--eva-primary);
-}
-
-.eva-guide-tab i {
-  color: var(--eva-primary);
-  font-size: 15px;
-}
-
-.eva-guide-tab span {
-  display: block;
-  color: inherit;
-}
-
 .eva-guide-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 250px;
+  grid-template-columns: 208px minmax(0, 1fr) 250px;
   gap: 8px;
   align-items: start;
 }
+
+/* 左栏目录：一次列出全部分组与小节，点击滚动定位正文 */
+.eva-guide-outline {
+  position: sticky;
+  top: 16px;
+  display: grid;
+  gap: 8px;
+  max-height: calc(100vh - 150px);
+  padding: 10px 8px;
+  border: 1px solid var(--eva-border);
+  border-radius: var(--eva-radius);
+  background: var(--eva-surface);
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.eva-guide-outline-group {
+  display: grid;
+  gap: 2px;
+  align-content: start;
+}
+
+/* 分组之间拉一条细线，收起时也能一眼看出分段 */
+.eva-guide-outline-group + .eva-guide-outline-group {
+  padding-top: 8px;
+  border-top: 1px solid var(--eva-border);
+}
+
+/* 分组标题兼作折叠开关 */
+.eva-guide-outline-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  margin: 0 0 2px;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: var(--eva-radius);
+  background: transparent;
+  color: var(--eva-text-mute);
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--eva-ease), color var(--eva-ease);
+}
+
+.eva-guide-outline-head:hover {
+  background: var(--eva-soft);
+  color: var(--eva-text-sub);
+}
+
+.eva-guide-outline-head i {
+  color: var(--eva-primary);
+  font-size: 14px;
+}
+
+.eva-guide-outline-head span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.eva-guide-outline-head em {
+  flex: none;
+  font-size: 15px;
+  font-style: normal;
+  line-height: 1;
+  transition: transform var(--eva-ease);
+}
+
+/* 收起时箭头转向；正看的小节落在这组里就把标题标成选中色 */
+.eva-guide-outline-group:not(.is-open) .eva-guide-outline-head em {
+  transform: rotate(-90deg);
+}
+
+.eva-guide-outline-head.is-current {
+  color: var(--eva-primary);
+}
+
+.eva-guide-outline-body {
+  display: grid;
+  gap: 2px;
+  margin-left: 15px;
+  padding-left: 6px;
+  border-left: 1px solid var(--eva-border);
+}
+
+/* 字段展示页的跳转项数量多，单独限高滚动，不把后面的分组挤出视野 */
+.eva-guide-outline-menus {
+  display: grid;
+  gap: 2px;
+  max-height: 232px;
+  margin-top: 3px;
+  padding-top: 5px;
+  border-top: 1px dashed var(--eva-border);
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.eva-guide-outline-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: var(--eva-radius);
+  background: transparent;
+  color: var(--eva-text-sub);
+  font: inherit;
+  font-size: 12.5px;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background var(--eva-ease), color var(--eva-ease);
+}
+
+.eva-guide-outline-link i {
+  flex: 0 0 16px;
+  color: var(--eva-primary);
+  font-size: 14px;
+  text-align: center;
+}
+
+.eva-guide-outline-link span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.eva-guide-outline-link em {
+  flex: none;
+  color: var(--eva-text-mute);
+  font-size: 12px;
+  font-style: normal;
+  opacity: 0;
+  transition: opacity var(--eva-ease);
+}
+
+.eva-guide-outline-link.is-menu:hover em {
+  opacity: 1;
+}
+
+.eva-guide-outline-link:hover {
+  background: var(--eva-soft);
+  color: var(--eva-primary);
+}
+
+.eva-guide-outline-link.is-active {
+  background: color-mix(in srgb, var(--eva-primary) 10%, transparent);
+  color: var(--eva-primary);
+  font-weight: 700;
+}
+
+/* 正文顶部的分组标题条 */
+.eva-guide-part {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+}
+
+.eva-guide-part i {
+  color: var(--eva-primary);
+  font-size: 16px;
+}
+
+.eva-guide-part strong {
+  color: var(--eva-text);
+  font-size: 13.5px;
+}
+
+.eva-guide-part span {
+  color: var(--eva-text-mute);
+  font-size: 12px;
+}
+
 
 .eva-guide-docs {
   display: grid;
   gap: 8px;
   min-width: 0;
+  align-content: start;
+  animation: eva-guide-switch var(--eva-ease);
+}
+
+/* 切换小节时的淡入：模板里换 key 重建整块正文时触发 */
+@keyframes eva-guide-switch {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
 }
 
 .eva-guide-card,
+.eva-guide-part,
 .eva-guide-side-card,
 .eva-guide-foot {
   border: 1px solid var(--eva-border);
@@ -1874,6 +3115,7 @@ body.eva-fullscreen #wpbody-content {
 }
 
 .eva-guide-card {
+  min-width: 0;
   padding: 18px;
   scroll-margin-top: 18px;
 }
@@ -1919,24 +3161,29 @@ body.eva-fullscreen #wpbody-content {
   line-height: 1.75;
 }
 
+/* 卡片是「名字 + API 名 + 一句说明」的清单，不是一组等大的功能砖。
+ * 摊成四列会把 createTaxonomyOptions 这类长名字和说明都挤成三行，
+ * 十个条目还会在最后一行空掉一半；两列横排既读得顺，十个也正好五行排满。 */
 .eva-guide-fw-cards {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   margin: 14px 0;
 }
 
 .eva-guide-fw-card {
-  display: grid;
-  gap: 7px;
-  min-height: 132px;
-  padding: 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+  padding: 13px 15px;
   border: 1px solid var(--eva-border);
   border-radius: var(--eva-radius);
   background: var(--eva-soft);
 }
 
 .eva-guide-fw-card i {
+  flex: 0 0 34px;
   width: 34px;
   height: 34px;
   display: grid;
@@ -1947,10 +3194,39 @@ body.eva-fullscreen #wpbody-content {
   font-size: 18px;
 }
 
+.eva-guide-fw-card-body {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+/* 名字和 API 名同一行，基线对齐；窄到放不下时 API 名自己换到第二行。 */
+.eva-guide-fw-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 3px 8px;
+  min-width: 0;
+}
+
 .eva-guide-fw-card strong {
+  min-width: 0;
   color: var(--eva-text);
   font-size: 13.5px;
   font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+/* API 名：标题说「这是什么」，这个小药丸说「怎么调」。 */
+.eva-guide-fw-card code {
+  min-width: 0;
+  padding: 1px 7px;
+  border-radius: var(--eva-radius-sm);
+  background: var(--eva-surface);
+  color: var(--eva-primary-600);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 11.5px;
+  overflow-wrap: anywhere;
 }
 
 .eva-guide-fw-card span {
@@ -2111,6 +3387,7 @@ body.eva-fullscreen #wpbody-content {
 .eva-guide-codeblocks {
   display: grid;
   gap: 14px;
+  min-width: 0;
 }
 
 .eva-guide-codeblock {
@@ -2129,6 +3406,113 @@ body.eva-fullscreen #wpbody-content {
   color: var(--eva-text);
   font-size: 13px;
   font-weight: 800;
+}
+
+/* 小节里的示意图：内联 SVG，颜色走 --eva-* 变量，暗色自动跟随 */
+.eva-guide-diagram {
+  margin: 14px 0;
+  padding: 16px 14px 12px;
+  border: 1px solid var(--eva-border);
+  border-radius: var(--eva-radius);
+  background: var(--eva-soft);
+}
+
+.eva-guide-diagram-art {
+  display: block;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.eva-guide-diagram svg {
+  display: block;
+  width: 100%;
+  min-width: 460px;
+  height: auto;
+  font-family: inherit;
+}
+
+/* 示意图的通用笔触：全部用 token，避免在 SVG 里写死色值 */
+.eva-guide-diagram .d-box { fill: var(--eva-surface); stroke: var(--eva-border); stroke-width: 1; }
+.eva-guide-diagram .d-box-hi { fill: var(--eva-surface); stroke: var(--eva-primary); stroke-width: 1.4; }
+.eva-guide-diagram .d-fill { fill: var(--eva-soft); stroke: var(--eva-border); stroke-width: 1; }
+.eva-guide-diagram .d-line { fill: none; stroke: var(--eva-border); stroke-width: 1.2; }
+.eva-guide-diagram .d-dash { fill: none; stroke: var(--eva-border); stroke-width: 1; stroke-dasharray: 3 3; }
+.eva-guide-diagram .d-arrow { fill: var(--eva-text-mute); }
+.eva-guide-diagram .d-t { fill: var(--eva-text); font-size: 12px; font-weight: 700; }
+.eva-guide-diagram .d-s { fill: var(--eva-text-mute); font-size: 10.5px; }
+.eva-guide-diagram .d-cap { fill: var(--eva-text-mute); font-size: 11px; font-weight: 700; letter-spacing: 0.04em; }
+.eva-guide-diagram .d-code { fill: var(--eva-primary); font-size: 11.5px; font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; }
+.eva-guide-diagram .d-mark { fill: var(--eva-primary); }
+
+.eva-guide-diagram figcaption {
+  margin-top: 10px;
+  color: var(--eva-text-mute);
+  font-size: 12px;
+  text-align: center;
+}
+
+/* 参数表 */
+.eva-guide-tables {
+  display: grid;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.eva-guide-table-title {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--eva-text);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.eva-guide-table-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--eva-border);
+  border-radius: var(--eva-radius);
+  scrollbar-width: thin;
+}
+
+.eva-guide-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.eva-guide-table th,
+.eva-guide-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--eva-border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.eva-guide-table thead th {
+  background: var(--eva-soft);
+  color: var(--eva-text-mute);
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.eva-guide-table tbody tr:last-child th,
+.eva-guide-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.eva-guide-table td {
+  color: var(--eva-text-sub);
+  line-height: 1.6;
+}
+
+.eva-guide-table code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--eva-soft);
+  color: var(--eva-primary);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 11.5px;
+  white-space: nowrap;
 }
 
 .eva-guide-notes {
@@ -2172,7 +3556,6 @@ body.eva-fullscreen #wpbody-content {
   padding: 14px;
 }
 
-.eva-guide-side-link,
 .eva-guide-req,
 .eva-guide-resource {
   display: flex;
@@ -2181,26 +3564,6 @@ body.eva-fullscreen #wpbody-content {
   min-width: 0;
   color: var(--eva-text-sub);
   text-decoration: none;
-}
-
-.eva-guide-side-link {
-  justify-content: space-between;
-  padding: 7px 8px;
-  border-radius: var(--eva-radius);
-  font-size: 12.5px;
-  transition: background var(--eva-ease), color var(--eva-ease);
-}
-
-.eva-guide-side-link:hover {
-  background: var(--eva-soft);
-  color: var(--eva-primary);
-}
-
-.eva-guide-side-link em {
-  color: var(--eva-text-mute);
-  font-size: 11px;
-  font-style: normal;
-  font-weight: 700;
 }
 
 .eva-guide-req {
@@ -2235,6 +3598,70 @@ body.eva-fullscreen #wpbody-content {
   margin-top: 2px;
   color: var(--eva-text-mute);
   font-size: 11.5px;
+}
+
+/* 切换式正文的前后翻页 */
+.eva-guide-pager {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.eva-guide-pager-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 48%;
+  min-width: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--eva-border);
+  border-radius: var(--eva-radius);
+  background: var(--eva-surface);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--eva-ease), background var(--eva-ease);
+}
+
+.eva-guide-pager-btn.is-next {
+  margin-left: auto;
+  text-align: right;
+}
+
+.eva-guide-pager-btn:hover {
+  border-color: var(--eva-primary);
+  background: var(--eva-soft);
+}
+
+.eva-guide-pager-btn i {
+  flex: none;
+  color: var(--eva-primary);
+  font-size: 18px;
+}
+
+.eva-guide-pager-btn span {
+  min-width: 0;
+}
+
+.eva-guide-pager-btn em {
+  display: block;
+  color: var(--eva-text-mute);
+  font-size: 11.5px;
+  font-style: normal;
+}
+
+.eva-guide-pager-btn strong {
+  display: block;
+  overflow: hidden;
+  color: var(--eva-text);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.eva-guide-pager-btn:hover strong {
+  color: var(--eva-primary);
 }
 
 .eva-guide-foot {
@@ -2302,10 +3729,107 @@ body.eva-fullscreen #wpbody-content {
 .eva-col-3 { grid-column: span 3; }
 
 .eva-field-row {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 6px;
   min-width: 0;
+}
+
+/* 字段展示页代码预览：仅 field-image-select 页面挂载，默认悬停显示，点击后固定。 */
+.eva-field-code {
+  position: absolute;
+  top: -2px;
+  right: 0;
+  z-index: 20;
+}
+.eva-field-code:hover,
+.eva-field-code:focus-within,
+.eva-field-code.is-open { z-index: 100; }
+.eva-field-code-trigger {
+  width: 26px;
+  height: 26px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--eva-radius);
+  color: var(--eva-text-mute);
+  background: transparent;
+  cursor: pointer;
+  transition: color var(--eva-ease), background var(--eva-ease), border-color var(--eva-ease);
+}
+.eva-field-code-trigger:hover,
+.eva-field-code:focus-within .eva-field-code-trigger,
+.eva-field-code.is-open .eva-field-code-trigger {
+  border-color: color-mix(in srgb, var(--eva-primary) 28%, var(--eva-border));
+  color: var(--eva-primary);
+  background: var(--eva-primary-050);
+}
+.eva-field-code-popover {
+  position: absolute;
+  top: 28px;
+  right: 0;
+  z-index: 1;
+  display: block;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: auto;
+  width: min(420px, calc(100vw - 36px));
+  max-height: 320px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--eva-primary) 24%, var(--eva-border));
+  border-radius: var(--eva-radius);
+  background: var(--eva-surface);
+  box-shadow: 0 14px 34px color-mix(in srgb, var(--eva-text) 18%, transparent);
+  transform: translateY(-4px);
+  transition: opacity .14s ease, transform .14s ease, visibility 0s linear .8s;
+}
+.eva-field-code-popover::before { content: ''; position: absolute; top: -8px; right: 0; width: 100%; height: 8px; }
+.eva-field-code:hover .eva-field-code-popover,
+.eva-field-code:focus-within .eva-field-code-popover,
+.eva-field-code.is-open .eva-field-code-popover {
+  visibility: visible;
+  opacity: 1;
+  transform: translateY(0);
+  transition-delay: 0s;
+}
+.eva-field-code-head {
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 8px;
+  border-bottom: 1px solid var(--eva-border);
+  background: var(--eva-soft);
+}
+.eva-field-code-head strong { color: var(--eva-text); font-size: 10px; }
+.eva-field-code-head button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px;
+  border: 0;
+  border-radius: 4px;
+  color: var(--eva-primary);
+  background: transparent;
+  cursor: pointer;
+  font-size: 10px;
+}
+.eva-field-code-head button:hover { background: var(--eva-primary-050); }
+.eva-field-code-popover pre {
+  max-height: 284px;
+  overflow: auto;
+  margin: 0;
+  padding: 8px 9px;
+  color: var(--eva-text);
+  background: var(--eva-surface);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 10px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .eva-field-meta {
@@ -2330,6 +3854,18 @@ body.eva-fullscreen #wpbody-content {
   min-width: 0;
 }
 
+/* 表单上方 / 下方的自定义区：PHP 端 eva_options_before / eva_options_after 回调输出的 HTML（对应 CSF 的 csf_options_before / _after）。 */
+.eva-form-before { margin-bottom: 16px; }
+.eva-form-after { margin-top: 16px; }
+/* footer_text（同 CSF）：表单下方的一行页脚文字。 */
+.eva-form-footer-text {
+  color: var(--eva-text-mute);
+  font-size: 12.5px;
+  text-align: center;
+}
+.eva-admin .eva-form--flush .eva-form-before,
+.eva-admin .eva-form--flush .eva-form-after { margin: 16px 20px; }
+
 /* 整页型字段页（backup / html）：去掉表单内边距与外层卡片包裹，让内容铺满（.eva-admin 前缀以压过移动端规则） */
 .eva-admin .eva-form--flush { padding: 0; }
 .eva-admin .eva-form--flush .eva-form-card {
@@ -2341,7 +3877,995 @@ body.eva-fullscreen #wpbody-content {
 }
 .eva-admin .eva-form--flush .eva-field-meta { display: none; }
 
-.eva-f-input {
+/* 页面构建器在保留 Eva Framework 侧栏菜单的同时，铺满主内容区高度，进入沉浸式工作区。 */
+.eva-admin:has(.eva-form--flush .eva-pb) .eva-header,
+.eva-admin:has(.eva-form--flush .eva-pb) .eva-tabsbar { display: none; }
+.eva-admin:has(.eva-form--flush .eva-pb) .eva-content { overflow: hidden; }
+.eva-admin .eva-form--flush:has(.eva-pb),
+.eva-admin .eva-form--flush:has(.eva-pb) .eva-form-card,
+.eva-admin .eva-form--flush:has(.eva-pb) .eva-field-row:has(.eva-pb),
+.eva-admin .eva-form--flush:has(.eva-pb) .eva-field-control:has(.eva-pb),
+.eva-admin .eva-form--flush:has(.eva-pb) .eva-pb {
+  min-height: 0;
+  height: 100%;
+}
+.eva-admin .eva-form--flush:has(.eva-pb) .eva-form-card { display: block; }
+.eva-admin .eva-form--flush:has(.eva-pb) .eva-pb { border-radius: 0; box-shadow: none; }
+
+
+/* color_group 字段：按文档预览图的内容区样式实现 */
+.eva-admin .eva-field-row:has(.eva-color-group) > .eva-field-meta {
+  display: none;
+}
+
+.eva-color-group {
+  min-height: 72px;
+  padding: 12px 14px;
+  overflow: visible;
+  border: 1px solid var(--eva-border);
+  border-radius: var(--eva-radius);
+  background: var(--eva-surface);
+}
+
+.eva-cg-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-height: 20px;
+  margin-bottom: 8px;
+}
+
+.eva-cg-head strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--eva-text);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.eva-cg-head i {
+  color: var(--eva-primary);
+  font-style: normal;
+}
+
+.eva-cg-palette {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+}
+
+.eva-cg-chip {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+  transition: opacity var(--eva-ease);
+}
+
+.eva-cg-chip.is-dragging {
+  opacity: 0.55;
+}
+
+.eva-cg-swatch {
+  position: relative;
+  display: block;
+  width: 30px;
+  height: 30px;
+  border: 1px solid color-mix(in srgb, var(--eva-text) 8%, transparent);
+  border-radius: var(--eva-radius);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.42);
+  cursor: pointer;
+  transition: transform var(--eva-ease), box-shadow var(--eva-ease);
+}
+
+.eva-cg-swatch:hover {
+  transform: translateY(-1px);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.42), 0 6px 16px color-mix(in srgb, var(--eva-text) 14%, transparent);
+}
+
+.eva-cg-swatch input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.eva-cg-chip-actions {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  z-index: 2;
+  display: flex;
+  gap: 3px;
+}
+
+.eva-cg-remove,
+.eva-cg-copy {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--eva-primary) 28%, var(--eva-border));
+  border-radius: 50%;
+  background: var(--eva-surface);
+  color: var(--eva-primary);
+  font-size: 10px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.eva-cg-copy.is-done {
+  border-color: #16a34a;
+  color: #16a34a;
+}
+
+/* 富模式：每个颜色是一张小卡（含 HEX 输入 / 命名 / 透明度） */
+.eva-color-group.is-rich .eva-cg-palette {
+  align-items: stretch;
+}
+
+.eva-color-group.is-rich .eva-cg-chip {
+  flex-direction: column;
+  gap: 6px;
+  width: 138px;
+  padding: 8px;
+  border: 1px solid var(--eva-border);
+  border-radius: var(--eva-radius);
+  background: var(--eva-soft);
+}
+
+.eva-color-group.is-rich .eva-cg-swatch {
+  width: 100%;
+  height: 32px;
+}
+
+.eva-color-group.is-rich .eva-cg-chip-actions {
+  position: static;
+  justify-content: flex-end;
+}
+
+.eva-color-group.is-rich .eva-cg-remove,
+.eva-color-group.is-rich .eva-cg-copy {
+  width: 20px;
+  height: 20px;
+  font-size: 12px;
+}
+
+.eva-cg-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.eva-cg-hex,
+.eva-cg-label {
+  width: 100%;
+  height: 26px;
+  padding: 0 7px;
+  border: 1px solid var(--eva-border);
+  border-radius: calc(var(--eva-radius) - 2px);
+  background: var(--eva-surface);
+  color: var(--eva-text);
+  font: inherit;
+  font-size: 11.5px;
+}
+
+.eva-cg-hex {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  text-transform: uppercase;
+}
+
+.eva-cg-hex:focus,
+.eva-cg-label:focus {
+  outline: none;
+  border-color: var(--eva-primary);
+}
+
+.eva-cg-alpha {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--eva-text-sub);
+  font-size: 10px;
+}
+
+.eva-cg-alpha input[type="range"] {
+  flex: 1;
+  min-width: 0;
+  accent-color: var(--eva-primary);
+}
+
+.eva-cg-alpha span {
+  width: 34px;
+  text-align: right;
+}
+
+/* 头部工具：计数 / 清空 / 重置 */
+.eva-cg-tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.eva-cg-count {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--eva-soft);
+  color: var(--eva-text-sub);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.eva-cg-tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 24px;
+  padding: 0 9px;
+  border: 1px solid var(--eva-border);
+  border-radius: var(--eva-radius);
+  background: var(--eva-surface);
+  color: var(--eva-text-sub);
+  font: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+  transition: border-color var(--eva-ease), color var(--eva-ease);
+}
+
+.eva-cg-tool:hover {
+  border-color: color-mix(in srgb, var(--eva-primary) 50%, var(--eva-border));
+  color: var(--eva-primary);
+}
+
+/* 预设色板：点一下即加入色组 */
+.eva-cg-presets {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.eva-cg-presets-label {
+  color: var(--eva-text-sub);
+  font-size: 11.5px;
+}
+
+.eva-cg-presets-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.eva-cg-preset {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--eva-text) 10%, transparent);
+  border-radius: 5px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  transition: transform var(--eva-ease);
+}
+
+.eva-cg-preset:hover:not(:disabled) {
+  transform: translateY(-1px) scale(1.06);
+}
+
+.eva-cg-preset:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* 整组配色方案 */
+.eva-cg-schemes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.eva-cg-scheme {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 11px 4px 7px;
+  border: 1px solid var(--eva-border);
+  border-radius: 999px;
+  background: var(--eva-surface);
+  color: var(--eva-text);
+  font: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+  transition: border-color var(--eva-ease), background var(--eva-ease);
+}
+
+.eva-cg-scheme:hover {
+  border-color: color-mix(in srgb, var(--eva-primary) 50%, var(--eva-border));
+  background: color-mix(in srgb, var(--eva-primary) 4%, var(--eva-surface));
+}
+
+.eva-cg-scheme-dots {
+  display: inline-flex;
+}
+
+.eva-cg-scheme-dots span {
+  width: 14px;
+  height: 14px;
+  margin-left: -5px;
+  border: 1.5px solid var(--eva-surface);
+  border-radius: 50%;
+}
+
+.eva-cg-scheme-dots span:first-child {
+  margin-left: 0;
+}
+
+.eva-color-group.is-disabled {
+  opacity: 0.7;
+}
+
+.eva-color-group.is-disabled .eva-cg-swatch {
+  cursor: not-allowed;
+}
+
+.eva-cg-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px dashed color-mix(in srgb, var(--eva-primary) 52%, var(--eva-border));
+  border-radius: var(--eva-radius);
+  background: color-mix(in srgb, var(--eva-primary) 3%, transparent);
+  color: var(--eva-primary);
+  font-size: 0;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--eva-ease), border-color var(--eva-ease);
+}
+.eva-cg-add i { font-size: 14px; }
+
+.eva-color-group.is-rich .eva-cg-add {
+  align-self: stretch;
+  width: 138px;
+  min-width: 138px;
+  min-height: 112px;
+  height: auto;
+  padding: 10px;
+  font-size: 12px;
+  border-radius: var(--eva-radius);
+}
+.eva-color-group.is-rich .eva-cg-add i { font-size: 14px; }
+
+.eva-cg-add:hover {
+  border-color: var(--eva-primary);
+  background: color-mix(in srgb, var(--eva-primary) 8%, transparent);
+}
+
+.eva-color-group p {
+  margin: 4px 0 0;
+  color: var(--eva-text-sub);
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+
+.eva-color-group.is-empty .eva-cg-palette {
+  min-height: 26px;
+}
+
+/* image_select 字段：图像卡片单选 */
+.eva-image-select {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+}
+
+.eva-is-card {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  padding: 6px;
+  border: 1px solid var(--eva-border);
+  border-radius: var(--eva-radius);
+  background: var(--eva-surface);
+  color: var(--eva-text);
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+  flex-direction: column;
+  gap: 6px;
+  transition: border-color var(--eva-ease), box-shadow var(--eva-ease), transform var(--eva-ease), background var(--eva-ease);
+}
+
+.eva-is-card:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--eva-primary) 58%, var(--eva-border));
+  box-shadow: var(--eva-shadow-card-hover);
+}
+
+.eva-is-card:focus-visible {
+  outline: none;
+  border-color: var(--eva-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--eva-primary) 18%, transparent);
+}
+
+.eva-is-card.is-selected {
+  border-color: var(--eva-primary);
+  background: color-mix(in srgb, var(--eva-primary) 4%, var(--eva-surface));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--eva-primary) 18%, transparent);
+}
+
+.eva-is-card.is-disabled,
+.eva-image-select.is-disabled .eva-is-card {
+  cursor: not-allowed;
+  opacity: 0.55;
+  transform: none;
+  box-shadow: none;
+}
+
+.eva-is-preview {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  width: 100%;
+  height: var(--eva-is-height, auto);
+  aspect-ratio: var(--eva-is-ratio, 16 / 9);
+  border: 1px solid color-mix(in srgb, var(--eva-border) 80%, transparent);
+  border-radius: var(--eva-radius);
+  background: linear-gradient(135deg, var(--eva-soft), color-mix(in srgb, var(--eva-primary) 8%, var(--eva-soft)));
+}
+
+.eva-is-preview img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: var(--eva-is-fit, cover);
+}
+
+.eva-is-placeholder {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  color: var(--eva-text-mute);
+  font-size: 22px;
+}
+
+.eva-is-check {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: grid;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--eva-primary);
+  color: #fff;
+  font-size: 13px;
+  box-shadow: 0 4px 10px color-mix(in srgb, var(--eva-primary) 35%, transparent);
+  place-items: center;
+}
+
+.eva-is-zoom {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  display: grid;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, #fff 55%, transparent);
+  border-radius: 50%;
+  background: color-mix(in srgb, #1f2330 72%, transparent);
+  color: #fff;
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(3px);
+  transition: opacity var(--eva-ease), transform var(--eva-ease), background var(--eva-ease);
+  place-items: center;
+}
+
+.eva-is-card:hover .eva-is-zoom,
+.eva-is-card:focus-within .eva-is-zoom {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.eva-is-zoom:hover,
+.eva-is-zoom:focus-visible {
+  outline: none;
+  background: var(--eva-primary);
+}
+
+.eva-is-card strong {
+  overflow: hidden;
+  color: var(--eva-text);
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.eva-is-card em {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--eva-text-sub);
+  font-size: 11.5px;
+  font-style: normal;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.eva-is-empty {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 14px;
+  border: 1px dashed var(--eva-border);
+  border-radius: var(--eva-radius);
+  color: var(--eva-text-mute);
+  text-align: center;
+}
+
+.eva-is-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  display: flex;
+  padding: 28px;
+  background: color-mix(in srgb, #0f1115 78%, transparent);
+  align-items: center;
+  justify-content: center;
+}
+
+.eva-is-lightbox-card {
+  position: relative;
+  display: flex;
+  width: min(920px, 92vw);
+  max-height: 88vh;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, #fff 14%, transparent);
+  border-radius: calc(var(--eva-radius) + 6px);
+  background: var(--eva-surface);
+  box-shadow: 0 24px 80px color-mix(in srgb, #000 42%, transparent);
+  flex-direction: column;
+  gap: 10px;
+}
+
+.eva-is-lightbox-card img {
+  display: block;
+  width: 100%;
+  max-height: calc(88vh - 78px);
+  border-radius: var(--eva-radius);
+  object-fit: contain;
+  background: var(--eva-soft);
+}
+
+.eva-is-lightbox-card strong {
+  color: var(--eva-text);
+  font-size: 13px;
+  text-align: center;
+}
+
+.eva-is-lightbox-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  display: grid;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: color-mix(in srgb, #1f2330 74%, transparent);
+  color: #fff;
+  cursor: pointer;
+  place-items: center;
+}
+
+.eva-is-lightbox-close:hover,
+.eva-is-lightbox-close:focus-visible {
+  outline: none;
+  background: var(--eva-primary);
+}
+
+/* image_select 进阶：工具条 / 搜索 / 多选 / 分组 / 徽章 / 骨架 */
+.eva-image-select-field {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.eva-is-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.eva-is-search {
+  position: relative;
+  display: flex;
+  flex: 1 1 200px;
+  min-width: 0;
+  align-items: center;
+}
+
+.eva-is-search > i {
+  position: absolute;
+  left: 10px;
+  color: var(--eva-text-mute);
+  font-size: 15px;
+  pointer-events: none;
+}
+
+.eva-is-search input {
+  width: 100%;
+  height: 34px;
+  padding: 0 30px;
+  border: 1px solid var(--eva-border);
+  border-radius: var(--eva-radius);
+  background: var(--eva-surface);
+  color: var(--eva-text);
+  font: inherit;
+  font-size: 13px;
+}
+
+.eva-is-search input:focus {
+  outline: none;
+  border-color: var(--eva-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--eva-primary) 16%, transparent);
+}
+
+.eva-is-search-clear {
+  position: absolute;
+  right: 6px;
+  display: grid;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--eva-soft);
+  color: var(--eva-text-sub);
+  cursor: pointer;
+  place-items: center;
+}
+
+.eva-is-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.eva-is-count {
+  color: var(--eva-text-sub);
+  font-size: 12px;
+}
+
+.eva-is-tool-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--eva-border);
+  border-radius: var(--eva-radius);
+  background: var(--eva-surface);
+  color: var(--eva-text);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: border-color var(--eva-ease), background var(--eva-ease), color var(--eva-ease);
+}
+
+.eva-is-tool-btn:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--eva-primary) 55%, var(--eva-border));
+  color: var(--eva-primary);
+}
+
+.eva-is-tool-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.eva-is-group + .eva-is-group {
+  margin-top: 6px;
+}
+
+.eva-is-group-title {
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid color-mix(in srgb, var(--eva-border) 70%, transparent);
+  color: var(--eva-text-sub);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.eva-is-card.is-multiple.is-selected .eva-is-check {
+  border-radius: 5px;
+}
+
+.eva-is-card.is-dimmed {
+  opacity: 0.5;
+}
+
+.eva-is-card.is-dimmed:hover {
+  transform: none;
+  border-color: var(--eva-border);
+  box-shadow: none;
+}
+
+.eva-is-badge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  max-width: calc(100% - 12px);
+  padding: 1px 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, #1f2330 72%, transparent);
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1.6;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.eva-is-badge.is-primary { background: var(--eva-primary); }
+.eva-is-badge.is-success { background: #16a34a; }
+.eva-is-badge.is-warn { background: #d97706; }
+.eva-is-badge.is-danger { background: #dc2626; }
+
+.eva-is-preview img {
+  transition: opacity var(--eva-ease);
+}
+
+.eva-is-preview img.is-loading {
+  opacity: 0;
+}
+
+.eva-is-skeleton {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(100deg, var(--eva-soft) 30%, color-mix(in srgb, var(--eva-border) 50%, var(--eva-soft)) 50%, var(--eva-soft) 70%);
+  background-size: 200% 100%;
+  animation: eva-is-shimmer 1.1s ease-in-out infinite;
+}
+
+@keyframes eva-is-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ajax_select 字段：CSF 风格的远程文章 / 页面查找 */
+.eva-ajax-select {
+  position: relative;
+  width: 100%;
+  max-width: 620px;
+}
+
+.eva-ajax-trigger-wrap {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.eva-ajax-trigger,
+.eva-ajax-clear {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  border: 1px solid var(--eva-border);
+  border-radius: var(--eva-radius);
+  background: var(--eva-soft);
+  color: var(--eva-text);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: border-color var(--eva-ease), background var(--eva-ease), box-shadow var(--eva-ease);
+}
+
+.eva-ajax-trigger {
+  justify-content: space-between;
+  width: 100%;
+  min-width: 0;
+  padding: 0 9px;
+  gap: 8px;
+}
+
+.eva-ajax-select.is-multiple .eva-ajax-trigger {
+  min-height: 34px;
+  align-items: flex-start;
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+.eva-ajax-trigger span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.eva-ajax-trigger span.is-placeholder {
+  color: var(--eva-text-mute);
+}
+
+.eva-ajax-clear {
+  flex: 0 0 30px;
+  justify-content: center;
+  padding: 0;
+  color: var(--eva-text-sub);
+}
+
+.eva-ajax-tags {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: 5px;
+  min-width: 0;
+}
+
+.eva-ajax-tag {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  gap: 4px;
+  padding: 2px 6px;
+  border: 1px solid color-mix(in srgb, var(--eva-primary) 26%, var(--eva-border));
+  border-radius: var(--eva-radius);
+  background: color-mix(in srgb, var(--eva-primary) 8%, var(--eva-surface));
+  color: var(--eva-primary);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.eva-ajax-tag[draggable="true"] {
+  cursor: move;
+}
+
+.eva-ajax-tag.is-dragging {
+  opacity: 0.55;
+}
+
+.eva-ajax-tag span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.eva-ajax-tag i {
+  flex: none;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.eva-ajax-trigger:hover,
+.eva-ajax-clear:hover,
+.eva-ajax-select.is-open .eva-ajax-trigger {
+  border-color: var(--eva-primary);
+  background: var(--eva-surface);
+}
+
+.eva-ajax-trigger:focus-visible,
+.eva-ajax-clear:focus-visible {
+  outline: none;
+  border-color: var(--eva-primary);
+  background: var(--eva-surface);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--eva-primary) 18%, transparent);
+}
+
+.eva-ajax-trigger:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+.eva-ajax-panel {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 6px);
+  z-index: 90;
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--eva-border);
+  border-radius: var(--eva-radius);
+  background: var(--eva-surface);
+  box-shadow: 0 18px 42px color-mix(in srgb, var(--eva-text) 18%, transparent);
+}
+
+.eva-ajax-search {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 30px;
+  padding: 0 9px;
+  border: 1px solid var(--eva-border);
+  border-radius: var(--eva-radius);
+  background: var(--eva-soft);
+  color: var(--eva-text-mute);
+}
+
+.eva-ajax-search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--eva-text);
+  font: inherit;
+  font-size: 12.5px;
+}
+
+.eva-ajax-list {
+  max-height: 260px;
+  margin: 8px 0 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.eva-ajax-list li {
+  display: flex;
+  padding: 8px 9px;
+  border-radius: var(--eva-radius);
+  cursor: pointer;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.eva-ajax-list li:hover {
+  background: var(--eva-soft);
+}
+
+.eva-ajax-list li.is-selected {
+  background: color-mix(in srgb, var(--eva-primary) 8%, var(--eva-surface));
+}
+
+.eva-ajax-list li.is-selected strong {
+  color: var(--eva-primary);
+}
+
+.eva-ajax-list strong {
+  color: var(--eva-text);
+  font-size: 12.8px;
+  font-weight: 600;
+}
+
+.eva-ajax-list span {
+  color: var(--eva-text-mute);
+  font-size: 11.5px;
+}
+
+.eva-ajax-empty {
+  padding: 13px 9px 6px;
+  color: var(--eva-text-mute);
+  font-size: 12.5px;
+  text-align: center;
+}
+
+/* 基础控件。第二条选择器是给嵌入式容器提权用的：见文件末尾「嵌入式容器的 wp-admin 隔离层」——
+ * wp-admin 的 input[type="text"] 一族是 (0,1,1)，会压过这里的 (0,1,0)，
+ * 多写一条 .eva-embed-root 前缀把它抬到 (0,2,0)，声明本身不重复。
+ * Fields/<Name>/<Name>.css 里的 (0,2,0) 规则载入更晚，同权重仍然赢，字段自己的定制不受影响。 */
+.eva-f-input,
+.eva-embed-root .eva-f-input {
   width: 100%;
   padding: 5px 11px;
   border: 1px solid var(--eva-border);
@@ -2358,7 +4882,7 @@ body.eva-fullscreen #wpbody-content {
   color: var(--eva-text-mute);
 }
 
-.eva-f-input:hover {
+.eva-f-input:hover:not(:disabled):not([readonly]) {
   border-color: var(--eva-text-sub);
   background: var(--eva-surface);
 }
@@ -2370,14 +4894,35 @@ body.eva-fullscreen #wpbody-content {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--eva-primary) 18%, transparent);
 }
 
-.eva-f-textarea {
+.eva-f-input[readonly] {
+  background: var(--eva-surface);
+  color: var(--eva-text-sub);
+}
+
+.eva-f-input:disabled {
+  background: var(--eva-soft);
+  color: var(--eva-text-mute);
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
+.eva-f-textarea,
+.eva-embed-root .eva-f-textarea {
   resize: vertical;
-  min-height: 84px;
+  min-height: 0;
   line-height: 1.6;
 }
 
-.eva-f-select {
+.eva-f-select,
+.eva-embed-root .eva-f-select {
   cursor: pointer;
+}
+
+.eva-f-switch-wrap {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 23px;
 }
 
 .eva-f-switch {
@@ -2389,12 +4934,15 @@ body.eva-fullscreen #wpbody-content {
   border: none;
   border-radius: var(--eva-radius-full);
   background: var(--eva-border);
+  color: #fff;
   cursor: pointer;
-  transition: background var(--eva-ease);
+  overflow: hidden;
+  transition: background var(--eva-ease), opacity var(--eva-ease);
 }
 
 .eva-f-switch-dot {
   position: absolute;
+  z-index: 2;
   top: 2px;
   left: 2px;
   width: 19px;
@@ -2413,7 +4961,45 @@ body.eva-fullscreen #wpbody-content {
   transform: translateX(19px);
 }
 
-/* 脏状态保存坞（有未保存更改才出现）：表单底部静态条，右对齐，保存 + 恢复默认 */
+.eva-f-switch.has-text {
+  width: var(--eva-switch-width, 60px);
+  min-width: 56px;
+}
+
+.eva-f-switch.has-text.is-on .eva-f-switch-dot {
+  transform: translateX(calc(var(--eva-switch-width, 60px) - 23px));
+}
+
+.eva-f-switch-state {
+  position: absolute;
+  inset: 0 4px 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--eva-text-sub);
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.eva-f-switch.is-on .eva-f-switch-state {
+  inset: 0 24px 0 4px;
+  color: #fff;
+}
+
+.eva-f-switch:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.eva-f-switch-label {
+  color: var(--eva-text-sub);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+/* 脏状态保存坞（有未保存更改才出现）：左侧边栏底部，保存 + 恢复默认 */
 .eva-savedock {
   display: flex;
   justify-content: flex-end;
@@ -2423,6 +5009,15 @@ body.eva-fullscreen #wpbody-content {
   padding-top: 16px;
   border-top: 1px solid var(--eva-border);
 }
+
+/* 保存坞位于侧栏底部，始终与菜单区分开；窄侧栏时只保留图标。 */
+.eva-sidebar-save { flex: none; padding: 10px; border-top: 1px solid var(--eva-border); background: var(--eva-surface); }
+.eva-sidebar-save .eva-savedock { justify-content: stretch; margin: 0; padding: 0; border-top: 0; }
+.eva-sidebar-save .eva-savefab { flex: 1; justify-content: center; min-width: 0; padding: 0 10px; }
+.eva-sidebar-save .eva-reset-menu { top: auto; bottom: calc(100% + 6px); }
+.eva-admin.is-collapsed .eva-sidebar-save .eva-savedock { flex-direction: column; align-items: center; gap: 6px; }
+.eva-admin.is-collapsed .eva-sidebar-save .eva-savefab { flex: none; width: 32px; padding: 0; }
+.eva-admin.is-collapsed .eva-sidebar-save .eva-savefab span { display: none; }
 
 .eva-savefab {
   display: inline-flex;
@@ -2530,6 +5125,18 @@ body.eva-fullscreen #wpbody-content {
 .eva-up-banner { height: 25vh; border-radius: var(--eva-radius); overflow: hidden; }
 .eva-up-banner img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
+/* 首屏占位：版本数据挂载完成前保持页面结构稳定。 */
+.eva-up-loading { display: flex; min-height: 220px; padding: 24px; border: 1px solid var(--eva-border); border-radius: var(--eva-radius); background: linear-gradient(135deg, color-mix(in srgb, var(--eva-primary) 6%, var(--eva-surface)), var(--eva-surface)); color: var(--eva-text-sub); flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; }
+.eva-up-loading-spinner { width: 34px; height: 34px; border: 3px solid var(--eva-primary-050); border-top-color: var(--eva-primary); border-radius: 50%; animation: eva-up-loading-spin .9s linear infinite; }
+.eva-up-loading strong { color: var(--eva-text); font-size: 16px; line-height: 1.4; }
+.eva-up-loading > span:not(.eva-up-loading-spinner) { font-size: 13px; line-height: 1.6; }
+.eva-up-loading-grid { display: grid; width: min(360px, 100%); margin-top: 10px; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 11px; }
+.eva-up-loading-grid i { height: 58px; border: 1px solid var(--eva-border); border-radius: var(--eva-radius); background: linear-gradient(90deg, var(--eva-soft), color-mix(in srgb, var(--eva-primary) 8%, var(--eva-soft)), var(--eva-soft)); background-size: 220% 100%; animation: eva-up-loading-shimmer 1.4s ease-in-out infinite; }
+.eva-up-loading-grid i:nth-child(2) { animation-delay: .12s; }
+.eva-up-loading-grid i:nth-child(3) { animation-delay: .24s; }
+@keyframes eva-up-loading-spin { to { transform: rotate(360deg); } }
+@keyframes eva-up-loading-shimmer { 0% { background-position: 100% 0; } 100% { background-position: -120% 0; } }
+
 /* 按钮（扁平，遵循 skill） */
 .eva-up-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: 100%; padding: 4px 11px; min-height: 34px; border-radius: var(--eva-radius); border: 1px solid transparent; font-size: 13.5px; font-family: inherit; cursor: pointer; text-decoration: none; transition: background var(--eva-ease), border-color var(--eva-ease), color var(--eva-ease); }
 .eva-up-btn.is-primary { background: var(--eva-primary); color: #fff; }
@@ -2568,8 +5175,8 @@ body.eva-fullscreen #wpbody-content {
 .eva-up-stat-btn { margin-top: 14px; }
 
 /* 主区三栏 */
-.eva-up-main { display: grid; grid-template-columns: 1.3fr 1fr 0.8fr; gap: 16px; align-items: start; }
-.eva-up-main > .eva-up-panel { padding: 14px 16px; }
+.eva-up-main { display: grid; grid-template-columns: 1.3fr 1fr 0.8fr; gap: 16px; align-items: stretch; }
+.eva-up-main > .eva-up-panel { height: 100%; box-sizing: border-box; padding: 14px 16px; }
 .eva-up-bottom { display: grid; grid-template-columns: 1.4fr 0.8fr 0.8fr; gap: 16px; align-items: stretch; }
 .eva-up-panel { padding: 18px; border: 1px solid var(--eva-border); border-radius: var(--eva-radius); background: var(--eva-surface); box-shadow: var(--eva-shadow-card); }
 .eva-up-bottom > .eva-up-panel { height: 100%; display: flex; flex-direction: column; }
@@ -2642,7 +5249,8 @@ body.eva-fullscreen #wpbody-content {
 .eva-up-switch:checked::before { transform: translateX(17px); }
 
 /* 侧栏 mini-card */
-.eva-up-side { display: flex; flex-direction: column; gap: 16px; }
+.eva-up-side { display: flex; flex-direction: column; gap: 16px; height: 100%; min-height: 0; }
+.eva-up-side > .eva-up-mini { flex: 1 1 0; }
 .eva-up-mini { min-height: 0; padding: 13px 14px; border: 1px solid var(--eva-border); border-radius: var(--eva-radius); background: var(--eva-surface); box-shadow: var(--eva-shadow-card); }
 .eva-up-mini h4 { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 10px; font-size: 14px; font-weight: 600; color: var(--eva-text); }
 .eva-up-mini p { margin: 0; color: var(--eva-text-sub); font-size: 12.5px; line-height: 1.7; }
@@ -2730,9 +5338,15 @@ body.eva-fullscreen #wpbody-content {
   .eva-guide-features,
   .eva-guide-fw-cards,
   .eva-guide-fw-flow { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .eva-guide-outline { position: static; max-height: none; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .eva-guide-outline-group + .eva-guide-outline-group { padding-top: 0; border-top: 0; }
+  .eva-guide-outline-menus { max-height: 148px; }
   .eva-guide-side { position: static; grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .eva-up-stats { grid-template-columns: repeat(2, 1fr); }
   .eva-up-main, .eva-up-bottom { grid-template-columns: 1fr; }
+  .eva-up-main { align-items: start; }
+  .eva-up-main > .eva-up-panel, .eva-up-side { height: auto; }
+  .eva-up-side > .eva-up-mini { flex: none; }
 }
 @media (max-width: 782px) {
   .eva-guide { padding: 14px; }
@@ -2743,7 +5357,11 @@ body.eva-fullscreen #wpbody-content {
   .eva-guide-features,
   .eva-guide-fw-cards,
   .eva-guide-fw-flow,
+  .eva-guide-outline,
   .eva-guide-side { grid-template-columns: 1fr; }
+  .eva-guide-outline-menus { max-height: 132px; }
+  .eva-guide-outline-group + .eva-guide-outline-group { padding-top: 8px; border-top: 1px solid var(--eva-border); }
+  .eva-guide-part span { display: none; }
   .eva-guide-steps { grid-template-columns: 1fr; }
   .eva-guide-card-head,
   .eva-guide-foot { align-items: flex-start; flex-direction: column; }
@@ -2885,3 +5503,578 @@ body.eva-fullscreen #wpbody-content {
 .eva-lang-seg-btn.is-active { border-color: var(--eva-primary); background: color-mix(in srgb, var(--eva-primary) 12%, var(--eva-surface)); color: var(--eva-primary); font-weight: 600; }
 .eva-lang-flag { margin-right: 6px; font-size: 14px; line-height: 1; border-radius: 2px; }
 
+
+/* ===== 2026-08 字段依赖、辅助内容与校验状态（保留本地扁平布局） ===== */
+.eva-dependency-move {
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.eva-dependency-leave-active { pointer-events: none; }
+.eva-dependency-css-enter,
+.eva-dependency-css-leave {
+  transition: opacity 0.22s ease, transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.eva-dependency-css-enter {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+.eva-dependency-css-enter.is-active {
+  opacity: 1;
+  transform: translateY(0);
+}
+.eva-field-row.is-dependency-muted,
+.eva-field-row.is-dependency-disabled,
+.eva-field-row.is-dependency-readonly {
+  transition: opacity var(--eva-ease);
+}
+.eva-field-row.is-dependency-muted { opacity: 0.78; }
+.eva-field-row.is-dependency-disabled { opacity: 0.64; cursor: not-allowed; }
+.eva-field-row.is-dependency-readonly { opacity: 0.88; }
+.eva-field-row.is-dependency-muted .eva-field-control,
+.eva-field-row.is-dependency-disabled .eva-field-control,
+.eva-field-row.is-dependency-readonly .eva-field-control {
+  position: relative;
+}
+.eva-field-row.is-dependency-muted .eva-field-control::after,
+.eva-field-row.is-dependency-disabled .eva-field-control::after,
+.eva-field-row.is-dependency-readonly .eva-field-control::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  z-index: 2;
+  background: transparent;
+}
+.eva-field-row.is-dependency-disabled .eva-field-control::after { cursor: not-allowed; }
+.eva-field-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.eva-field-help {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--eva-primary) 9%, transparent);
+  color: var(--eva-primary);
+  font-size: 13px;
+  cursor: help;
+}
+.eva-field-help em {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  z-index: 20;
+  display: none;
+  width: max-content;
+  max-width: 260px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: rgba(17, 24, 39, 0.95);
+  color: #fff;
+  font-style: normal;
+  font-size: 13px;
+  line-height: 1.5;
+  transform: translateX(-50%);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.18);
+}
+.eva-field-help:hover em,
+.eva-field-help:focus em { display: block; }
+.eva-field-subtitle,
+.eva-field-before,
+.eva-field-after,
+.eva-field-content {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--eva-text-sub);
+}
+.eva-field-before p,
+.eva-field-after p,
+.eva-field-content p { margin: 0; }
+.eva-field-content {
+  padding: 8px 10px;
+  border-left: 3px solid var(--eva-primary);
+  background: color-mix(in srgb, var(--eva-primary) 5%, transparent);
+}
+.eva-field-row.has-error .eva-f-input,
+.eva-field-row.has-error .eva-select-trigger,
+.eva-field-row.has-error .eva-ajax-trigger {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.10);
+}
+.eva-field-error {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  max-width: 100%;
+  padding: 4px 0;
+  color: #dc2626;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.eva-field-error i { flex: none; font-size: 15px; }
+@media (prefers-reduced-motion: reduce) {
+  .eva-guide-docs { animation: none; }
+  .eva-dependency-move,
+  .eva-dependency-css-enter,
+  .eva-dependency-css-leave { transition: none !important; }
+}
+
+/* ===== 2026-08 Iconfont 项目设置：沿用主题色的扁平紧凑样式 ===== */
+.eva-set-row--stack { align-items: stretch; flex-direction: column; gap: 8px; }
+.eva-set-input-row { display: flex; align-items: center; gap: 6px; width: 100%; }
+.eva-set-input {
+  min-width: 0; height: 32px; flex: 1 1 auto; padding: 0 9px;
+  border: 1px solid var(--eva-border); border-radius: var(--eva-radius);
+  background: var(--eva-soft); color: var(--eva-text); font: inherit; font-size: 13px;
+}
+.eva-set-input:focus {
+  outline: none; border-color: var(--eva-primary); background: var(--eva-surface);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--eva-primary) 15%, transparent);
+}
+.eva-iconfont-tabs {
+  display: flex; align-items: center; gap: 5px; width: 100%; overflow-x: auto; padding-bottom: 2px;
+}
+.eva-iconfont-tab, .eva-iconfont-add, .eva-set-mini-btn {
+  height: 30px; border: 1px solid var(--eva-border); border-radius: var(--eva-radius);
+  background: var(--eva-soft); color: var(--eva-text-sub); font: inherit; font-size: 13px; cursor: pointer;
+}
+.eva-iconfont-tab { display: inline-flex; align-items: center; gap: 5px; flex: 0 0 auto; padding: 0 8px; }
+.eva-iconfont-tab.is-active {
+  border-color: var(--eva-primary); background: var(--eva-primary-050); color: var(--eva-primary-600);
+}
+.eva-iconfont-add { width: 30px; flex: 0 0 30px; padding: 0; }
+.eva-iconfont-remove { font-size: 15px; line-height: 1; }
+.eva-iconfont-add:hover, .eva-iconfont-tab:hover { border-color: var(--eva-primary); color: var(--eva-primary-600); }
+.eva-set-mini-btn {
+  height: 32px; flex: 0 0 auto; padding: 0 12px;
+  border-color: var(--eva-primary); background: var(--eva-primary); color: #fff;
+}
+.eva-set-mini-btn:hover { border-color: var(--eva-primary-600); background: var(--eva-primary-600); }
+.eva-set-hint { margin: 0; color: var(--eva-text-mute); font-size: 13px; line-height: 1.55; }
+
+/* ── 区块编辑器：Eva 字段面板 ───────────────────────────────────────────────
+ * Eva::createBlock 的字段由 eva-blocks.js 现造一个 .eva-embed-root 交给 Vue 渲染，
+ * 外面套的是区块编辑器的 PanelBody（placement=inspector）或区块本体（placement=content）。
+ * 侧栏那档直接复用 metabox 的 data-eva-context="side" 窄栏规则，这里只收拾外壳间距。 */
+.eva-block-fields {
+  display: block;
+}
+
+/* PanelBody 与区块本体都已经有自己的内边距，字段区不再另加外边距。 */
+.eva-block-fields > .eva-block-root {
+  margin: 0;
+}
+
+/* 字段画在区块本体里（placement=content）时，与其下的嵌套子区块留出间距。 */
+.eva-block-inner {
+  margin-top: 16px;
+}
+
+/* ── 「可用小工具」来源筛选标签 ──────────────────────────────────────────────
+ * 只出现在经典小工具页（wp-admin/widgets.php），且站点确实注册了 Eva 小工具容器时；
+ * 标记与交互见 assets/eva-widget-filter.js。
+ *
+ * 它和 #eva-app、.eva-embed-root 都没有 DOM 包含关系，所以照本文件的惯例自带一份
+ * 用得到的中性色令牌；主色族从 :root 继承，跟着 \Eva::setThemeColor() 走。
+ *
+ * 分寸：这里只画标签自己。原生小工具列表项的样式一条都不碰（筛选靠 JS 切 display），
+ * 页面上其余 WordPress 原生界面保持原样。
+ * ──────────────────────────────────────────────────────────────────────── */
+.eva-widget-filter {
+  --eva-surface: #ffffff;
+  --eva-soft: #f5f6f8;
+  --eva-text: #1f2330;
+  --eva-text-sub: #8a91a0;
+  --eva-border: #ecedf1;
+  --eva-radius: 6px;
+  --eva-radius-full: 999px;
+  --eva-ease: .18s ease;
+
+  display: flex;
+  gap: 4px;
+  margin: 0 0 12px;
+  padding: 4px;
+  /* 白底而不是灰底：WP 后台本身就是浅灰，灰底几乎看不出边界，白底还能和下面的小工具卡片对齐。 */
+  background: var(--eva-surface);
+  border: 1px solid var(--eva-border);
+  border-radius: var(--eva-radius);
+}
+
+.eva-widget-filter-tab {
+  display: inline-flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: calc(var(--eva-radius) - 2px);
+  background: transparent;
+  /* 用正文色而不是次要色：次要色 #8a91a0 在白底上对比度只有约 3:1，达不到 4.5:1。
+   * 三个标签的主次交给底色（选中态实心主色）表达，不靠把文字调淡。 */
+  color: var(--eva-text);
+  /* button 默认不继承字体，这里跟上后台的正文字体。 */
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+  cursor: pointer;
+  transition: background var(--eva-ease), color var(--eva-ease);
+}
+
+.eva-widget-filter-tab:hover {
+  background: var(--eva-soft);
+}
+
+/* 正在选「加到哪个侧栏」时整组锁住（类由 eva-widget-filter.js 跟着 #widgets-left
+ * 的 .chooser 切换）。pointer-events 挡鼠标，按钮自身的 disabled 挡键盘。 */
+.eva-widget-filter.is-disabled {
+  opacity: .5;
+  pointer-events: none;
+}
+
+.eva-widget-filter-tab.is-active {
+  background: var(--eva-primary);
+  color: var(--eva-on-primary);
+}
+
+.eva-widget-filter-tab:focus-visible {
+  outline: 2px solid var(--eva-primary);
+  outline-offset: 1px;
+}
+
+/* 计数用 currentColor 兑出底色，选中态（白字）和普通态（灰字）各自成立。 */
+.eva-widget-filter-count {
+  padding: 0 5px;
+  border-radius: var(--eva-radius-full);
+  background: color-mix(in srgb, currentColor 14%, transparent);
+  font-size: 11px;
+}
+
+
+/* ── Eva 小工具在「可用小工具」列表里的外观 ────────────────────────────────
+ * 只作用于带 [data-eva-source="eva"] 标记的那几张卡（标记由 eva-widget-filter.js 打，
+ * 且只有站点注册了 Eva 小工具容器时才会出现）。
+ *
+ * 分寸：原生小工具的样式和布局一律不碰——包括 WordPress 自己的两列 float。
+ * 筛选留下的空格子由 JS 重排 DOM 顺序解决（把隐藏项移到末尾，可见项的 :nth-child
+ * 自然连续），而不是把整个列表的布局接管过来。
+ *
+ * 选择器凑三个 id，是为了压过 WP 的 #widgets-left #available-widgets .widget（两个 id），
+ * 用特异性赢而不是用 !important。
+ * ──────────────────────────────────────────────────────────────────────── */
+#widgets-left #available-widgets #widget-list > .widget[data-eva-source="eva"] {
+  --eva-surface: #ffffff;
+  --eva-text: #1f2330;
+  --eva-text-sub: #646970;
+  --eva-soft: #f5f6f8;
+  --eva-border: #ecedf1;
+  --eva-radius: 6px;
+  --eva-radius-full: 999px;
+  --eva-ease: .18s ease;
+
+  /* WP 给 .widget 设的是 margin: 0，条目之间的空隙全靠描述的 padding-bottom（10px）撑开；
+   * Eva 把描述收进了卡片，那段空隙就没了，必须自己补一个下外边距，否则卡片底边会和
+   * 下一个条目的边框贴成一条。只影响同一列里排在它后面的条目，别的列不动。 */
+  margin: 0 0 10px;
+  background: var(--eva-surface);
+  border: 1px solid var(--eva-border);
+  border-radius: var(--eva-radius);
+  overflow: hidden;
+  /* 不用 transform 做 hover：可用小工具是 jQuery UI draggable，
+   * 元素自身的 transform 会干扰拖拽起点的坐标计算。 */
+  transition: border-color var(--eva-ease), box-shadow var(--eva-ease);
+}
+
+#widgets-left #available-widgets #widget-list > .widget[data-eva-source="eva"]:hover {
+  border-color: var(--eva-primary);
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--eva-text) 10%, transparent);
+}
+
+/* 标题行：去掉 WP 的灰底和方框，换成卡片里的一行。
+ * :hover 也一并写上，否则会被 WP 的 .widget-top:hover 把边框加回来。 */
+#widgets-left #available-widgets #widget-list > .widget[data-eva-source="eva"] > .widget-top,
+#widgets-left #available-widgets #widget-list > .widget[data-eva-source="eva"] > .widget-top:hover {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  /* 横向跟着原生条目的 15px 走（差 1px 是卡片自己的边框）。
+   * 下边距单独收到 5px：标题和描述是同一段内容，挨近一点，空白留在卡片外沿。 */
+  padding: 9px 14px 5px;
+  background: transparent;
+  border: 0;
+}
+
+#widgets-left #available-widgets #widget-list > .widget[data-eva-source="eva"] > .widget-top .widget-title {
+  order: 1;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+}
+
+/* 标题前一个主色圆点：一眼和原生条目分得开，不占文案也不用翻译。
+ * 圆点挂在这一层而不是 h3 上，是为了让 h3 能保持块级——text-overflow 在
+ * flex 容器上不生效，h3 一旦变成 flex，标题挤不下时就是硬截断、没有省略号。 */
+#widgets-left #available-widgets #widget-list > .widget[data-eva-source="eva"] > .widget-top .widget-title::before {
+  content: "";
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--eva-primary);
+}
+
+#widgets-left #available-widgets #widget-list > .widget[data-eva-source="eva"] > .widget-top .widget-title h3 {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--eva-text);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+/* 展开箭头：DOM 里这个容器排在标题前面（WP 原本靠 float: right 推到右边），
+ * 换成 flex 之后要显式排到标题之后。按钮本体保留，它是真正的交互入口。
+ * order 3 是给代理按钮组（order 2）让位，让它落在折叠箭头左边。 */
+#widgets-left #available-widgets #widget-list > .widget[data-eva-source="eva"] > .widget-top .widget-title-action {
+  order: 3;
+  flex: none;
+  float: none;
+  position: static;
+}
+
+#widgets-left #available-widgets #widget-list > .widget[data-eva-source="eva"] > .widget-top .widget-action {
+  /* WP 这颗按钮是 42x42（padding:10px + 22px 的指示器）——原生布局里它 float、高度撑满整条，
+   * 放进 flex 标题行就成了最高的子项，把整行顶到 56px。收成 28x28 的图标按钮，
+   * 行高就由标题自己决定；28 还留得住可点区域。 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  color: var(--eva-text-sub);
+  background: transparent;
+  border: 0;
+  border-radius: var(--eva-radius);
+  transition: color var(--eva-ease), background var(--eva-ease);
+}
+
+/* 指示器本身是 22x22 的 span，里面是 20px 的 dashicon；交给上面的 flex 居中，
+ * 不靠 vertical-align——行内元素的垂直对齐在 wp-admin 里调不稳。 */
+#widgets-left #available-widgets #widget-list > .widget[data-eva-source="eva"] > .widget-top .widget-action .toggle-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#widgets-left #available-widgets #widget-list > .widget[data-eva-source="eva"] > .widget-top .widget-action:hover {
+  color: var(--eva-primary);
+  background: var(--eva-primary-050);
+}
+
+#widgets-left #available-widgets #widget-list > .widget[data-eva-source="eva"] > .widget-description {
+  padding: 0 14px 10px;
+  color: var(--eva-text-sub);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* ── chooser 的「取消 / 添加小工具」改成标题行里的两个图标按钮 ────────────────
+ * 原来的按钮区收起来，功能由 .eva-chooser-proxy 里的图标按钮代理（见 eva-widget-filter.js）。
+ *
+ * 为什么是「隐藏 + 代理点击」而不是把按钮搬过来：WordPress 把 click 委托在
+ * .widgets-chooser 上，按 event.target 的 class 分派（button-primary → 添加，
+ * widgets-chooser-cancel → 取消）。按钮一旦移出 chooser 就再也收不到事件，
+ * 所以代理按钮的做法是去 .click() 这两颗原按钮，让事件从它们身上冒泡回 chooser。
+ * ──────────────────────────────────────────────────────────────────────── */
+#widgets-left #available-widgets #widget-list > .widget[data-eva-source="eva"].eva-chooser-proxied .widgets-chooser-actions {
+  display: none;
+}
+
+/* 只在 chooser 打开时出现——WP 会给当时那张卡片加 .widget-in-question。 */
+#widgets-left #available-widgets #widget-list > .widget[data-eva-source="eva"] > .widget-top .eva-chooser-proxy {
+  display: none;
+  order: 2;
+  flex: none;
+}
+
+#widgets-left #available-widgets #widget-list > .widget[data-eva-source="eva"].widget-in-question > .widget-top .eva-chooser-proxy {
+  display: flex;
+}
+
+#widgets-left #available-widgets #widget-list > .widget[data-eva-source="eva"] > .widget-top .eva-chooser-proxy-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* chooser 打开时这一行要塞下三颗按钮，卡片本身只有 220px 上下，
+   * 所以比折叠箭头（28）再小一号，给标题多留点位置。 */
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--eva-radius);
+  background: transparent;
+  color: var(--eva-text-sub);
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  transition: color var(--eva-ease), background var(--eva-ease);
+}
+
+/* 添加是主操作，平时就带主色；取消保持中性，hover 才浮出底色。 */
+#widgets-left #available-widgets #widget-list > .widget[data-eva-source="eva"] > .widget-top .eva-chooser-proxy-btn.is-add {
+  color: var(--eva-primary);
+}
+
+#widgets-left #available-widgets #widget-list > .widget[data-eva-source="eva"] > .widget-top .eva-chooser-proxy-btn.is-add:hover {
+  color: var(--eva-on-primary);
+  background: var(--eva-primary);
+}
+
+#widgets-left #available-widgets #widget-list > .widget[data-eva-source="eva"] > .widget-top .eva-chooser-proxy-btn.is-cancel:hover {
+  color: var(--eva-text);
+  background: var(--eva-soft);
+}
+
+#widgets-left #available-widgets #widget-list > .widget[data-eva-source="eva"] > .widget-top .eva-chooser-proxy-btn:focus-visible {
+  outline: 2px solid var(--eva-primary);
+  outline-offset: 1px;
+}
+
+/* WP 添加小工具时是把「可用小工具」里那张卡整块克隆进右边的侧栏的，
+ * 连我们插进标题行的代理按钮一起带过去了。克隆体不带事件监听（jQuery .clone()
+ * 默认不复制），是两颗死按钮，而且侧栏里也没有 chooser 可代理——直接藏掉，
+ * display: none 同时会把它们移出无障碍树。 */
+#widgets-right .eva-chooser-proxy {
+  display: none;
+}
+
+
+
+/* ── chooser 的侧边栏选择器：小卡片（仅 Eva 卡片内） ────────────────────────
+ * WordPress 原生是每个侧边栏占一整行的竖排列表（整条 #3858e9 蓝底白字 + 一圈
+ * #c3c4c7 方框）。这里换成两列网格的小卡片：图标 + 名称，选中的主色描边加底色，
+ * 右上角落一个勾。
+ *
+ * 只作用于 Eva 卡片。注意 .widgets-chooser 是全页唯一的一个、会被 WP 搬进当前
+ * 那张卡里，所以这里**只能用 CSS 改**——往它的 DOM 里插图标元素的话，等它被搬进
+ * 原生条目时那些元素会跟着露出来。图标因此走 ::before + 码点。
+ *
+ * 要压过 colors.min.css 的 .widgets-chooser li.widgets-chooser-selected（0,3,1），
+ * 前缀照旧凑三个 id，不用 !important。
+ * ──────────────────────────────────────────────────────────────────────── */
+/* chooser 整块的内边距：左右 14px 和标题行、描述对齐，底部留出收尾的空。
+ * WP 原本没给它任何 padding，卡片会直接贴上 Eva 卡片的边框。 */
+#widgets-left #available-widgets #widget-list > .widget[data-eva-source="eva"] .widgets-chooser {
+  padding: 2px 14px 12px;
+}
+
+#widgets-left #available-widgets #widget-list > .widget[data-eva-source="eva"] .widgets-chooser ul.widgets-chooser-sidebars {
+  display: grid;
+  /* 卡片按可用宽度自动分列，Eva 卡片里大约是两列。
+   * 最小列宽要配合上面那圈 14px 内边距——给大了会掉成单列。 */
+  grid-template-columns: repeat(auto-fill, minmax(86px, 1fr));
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  /* 压掉 WP 的 1px #c3c4c7 外框。 */
+  border: 0;
+  /* WP 给竖排列表设了 max-height: 300px + overflow: auto，网格用不上，
+   * 留着会在卡片多时冒出一条内滚动条。 */
+  max-height: none;
+  overflow: visible;
+}
+
+#widgets-left #available-widgets #widget-list > .widget[data-eva-source="eva"] .widgets-chooser li {
+  margin: 0;
+  /* 压掉项之间的分隔线，间隙交给 grid 的 gap。 */
+  border: 0;
+  background: transparent;
+  /* WP 已经设过 relative（给那颗勾定位用），这里写明是因为下面要把勾挪到右上角。 */
+  position: relative;
+}
+
+#widgets-left #available-widgets #widget-list > .widget[data-eva-source="eva"] .widgets-chooser .widgets-chooser-button,
+#widgets-left #available-widgets #widget-list > .widget[data-eva-source="eva"] .widgets-chooser .widgets-chooser-button:hover,
+#widgets-left #available-widgets #widget-list > .widget[data-eva-source="eva"] .widgets-chooser .widgets-chooser-button:focus {
+  display: flex;
+  flex-direction: column;
+  /* 图标和名称都居中——卡片窄，居中比靠左稳当。 */
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  /* 撑满格子，同行卡片等高。 */
+  height: 100%;
+  /* WP 那边是 padding: 10px 15px 10px 35px（左边给勾留位），卡片用不上。 */
+  padding: 9px;
+  border: 1px solid var(--eva-border);
+  border-radius: var(--eva-radius);
+  background: var(--eva-surface);
+  color: var(--eva-text);
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: center;
+  /* 长名称换行而不是撑破卡片。 */
+  white-space: normal;
+  overflow-wrap: break-word;
+  /* WP 的 hover / focus 是加下划线，卡片改用描边和底色表达。 */
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color var(--eva-ease), background var(--eva-ease), color var(--eva-ease);
+}
+
+/* 卡片左上角的小图标：remixicon 的 ri-layout-left-line（\ee94）。
+ * 码点是在页面上建探针读 ::before 的 content 量出来的，别凭记忆写。 */
+#widgets-left #available-widgets #widget-list > .widget[data-eva-source="eva"] .widgets-chooser .widgets-chooser-button::before {
+  content: "\ee94";
+  font-family: remixicon;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--eva-text-sub);
+  -webkit-font-smoothing: antialiased;
+  transition: color var(--eva-ease);
+}
+
+#widgets-left #available-widgets #widget-list > .widget[data-eva-source="eva"] .widgets-chooser .widgets-chooser-button:hover {
+  border-color: var(--eva-primary);
+}
+
+#widgets-left #available-widgets #widget-list > .widget[data-eva-source="eva"] .widgets-chooser .widgets-chooser-button:focus-visible {
+  outline: 2px solid var(--eva-primary);
+  outline-offset: 1px;
+}
+
+#widgets-left #available-widgets #widget-list > .widget[data-eva-source="eva"] .widgets-chooser li.widgets-chooser-selected .widgets-chooser-button {
+  border-color: var(--eva-primary);
+  background: var(--eva-primary-050);
+  color: var(--eva-primary);
+  font-weight: 600;
+}
+
+#widgets-left #available-widgets #widget-list > .widget[data-eva-source="eva"] .widgets-chooser li.widgets-chooser-selected .widgets-chooser-button::before {
+  color: var(--eva-primary);
+}
+
+/* 选中勾：复用 WP 那颗 dashicon（li::before），从左上 26px 挪到右上角缩成 16px。 */
+#widgets-left #available-widgets #widget-list > .widget[data-eva-source="eva"] .widgets-chooser li.widgets-chooser-selected::before {
+  top: 7px;
+  left: auto;
+  right: 6px;
+  width: 16px;
+  height: 16px;
+  font-size: 16px;
+  line-height: 16px;
+  color: var(--eva-primary);
+}

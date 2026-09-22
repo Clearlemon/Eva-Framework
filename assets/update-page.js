@@ -81,94 +81,112 @@
   function rangeMap(max) { var m = {}; for (var i = 0; i < max; i++) { m[pad2(i)] = pad2(i); } return m; }
   function splitTime(t) { var p = String(t || '03:00').split(':'); return { h: pad2((parseInt(p[0], 10) || 0)), m: pad2((parseInt(p[1], 10) || 0)) }; }
 
-  // REST 与后端 option 使用英文枚举；UI 展示统一映射为中文。
-  var FREQ = [['everyday', '每天'], ['monday', '周一'], ['tuesday', '周二'], ['wednesday', '周三'], ['thursday', '周四'], ['friday', '周五'], ['saturday', '周六'], ['sunday', '周日']];
+  // REST 与后端 option 使用英文枚举；UI 展示通过翻译键动态映射。
+  var FREQ = [
+    ['everyday', 'up_freq_everyday'],
+    ['monday', 'up_freq_monday'],
+    ['tuesday', 'up_freq_tuesday'],
+    ['wednesday', 'up_freq_wednesday'],
+    ['thursday', 'up_freq_thursday'],
+    ['friday', 'up_freq_friday'],
+    ['saturday', 'up_freq_saturday'],
+    ['sunday', 'up_freq_sunday']
+  ];
 
   /*
    * Vue 模板使用字符串拼接而不是 SFC：
    * - WordPress 插件无需构建流程即可运行。
-   * - 所有 class 都带 `eva-up-` 前缀，便于和通用 Eva 外壳样式隔离。
+   * - 所有 class 都带 eva-up- 前缀，便于和通用 Eva 外壳样式隔离。
    */
   var TEMPLATE =
-    '<div class="eva-update">' +
+    '<div class="eva-update" :class="{\'is-loading\':loading}" :aria-busy="loading ? \'true\' : \'false\'">' +
     '  <transition name="eva-up-fade"><div v-if="notice.msg" class="eva-up-notice" :class="\'is-\'+notice.type">{{ notice.msg }}</div></transition>' +
-    '  <div class="eva-up-banner"><img :src="banner" alt=""></div>' +
+    '  <div class="eva-up-banner"><img :src="banner" :alt="t(\'up_banner_alt\')"></div>' +
+    '  <div v-if="loading" class="eva-up-loading" role="status" aria-live="polite">' +
+    '    <span class="eva-up-loading-spinner" aria-hidden="true"></span>' +
+    '    <strong>{{ t(\'up_loading_title\') }}</strong>' +
+    '    <span>{{ t(\'up_loading_sub\') }}</span>' +
+    '    <div class="eva-up-loading-grid" aria-hidden="true"><i></i><i></i><i></i></div>' +
+    '  </div>' +
+    '  <template v-else>' +
 
     '  <div class="eva-up-stats">' +
     '    <div class="eva-up-stat">' +
-    '      <div class="eva-up-stat-head"><div class="eva-up-stat-ico is-primary"><i class="ri-flashlight-line"></i></div><div class="eva-up-stat-main"><p class="eva-up-stat-title">当前版本</p><div class="eva-up-stat-value">v{{ d.version }}</div></div></div>' +
-    '      <div class="eva-up-stat-meta"><div><span>最后更新</span><strong>{{ d.lastUpdate }}</strong></div><div><span>更新通道</span><strong>{{ channel }}</strong></div></div>' +
+    '      <div class="eva-up-stat-head"><div class="eva-up-stat-ico is-primary"><i class="ri-flashlight-line"></i></div><div class="eva-up-stat-main"><p class="eva-up-stat-title">{{ t(\'up_current_version\') }}</p><div class="eva-up-stat-value">v{{ d.version }}</div></div></div>' +
+    '      <div class="eva-up-stat-meta"><div><span>{{ t(\'up_last_update\') }}</span><strong>{{ d.lastUpdate }}</strong></div><div><span>{{ t(\'up_update_channel\') }}</span><strong>{{ t(\'up_stable_release\') }}</strong></div></div>' +
     '      <i class="ri-shield-check-line eva-up-stat-wm"></i>' +
     '    </div>' +
     '    <div class="eva-up-stat">' +
-    '      <div class="eva-up-stat-head"><div class="eva-up-stat-ico" :class="hasUpdate?\'is-warn\':\'is-success\'"><i :class="hasUpdate?\'ri-download-cloud-line\':\'ri-checkbox-circle-line\'"></i></div><div class="eva-up-stat-main"><p class="eva-up-stat-title">可用更新</p><div class="eva-up-stat-value">{{ hasUpdate ? d.latestVersion : \'已最新\' }}</div></div><span class="eva-up-tag" :class="hasUpdate?\'is-warn\':\'is-ok\'">{{ hasUpdate?\'可更新\':\'最新\' }}</span></div>' +
-    '      <button class="eva-up-btn is-primary eva-up-stat-btn" :class="{\'is-disabled\':!hasUpdate}" @click="startUpdate">{{ hasUpdate?\'立即更新\':\'无需更新\' }}</button>' +
+    '      <div class="eva-up-stat-head"><div class="eva-up-stat-ico" :class="hasUpdate?\'is-warn\':\'is-success\'"><i :class="hasUpdate?\'ri-download-cloud-line\':\'ri-checkbox-circle-line\'"></i></div><div class="eva-up-stat-main"><p class="eva-up-stat-title">{{ t(\'up_available_update\') }}</p><div class="eva-up-stat-value">{{ hasUpdate ? d.latestVersion : t(\'up_up_to_date\') }}</div></div><span class="eva-up-tag" :class="hasUpdate?\'is-warn\':\'is-ok\'">{{ hasUpdate ? t(\'up_update_available\') : t(\'up_latest\') }}</span></div>' +
+    '      <button class="eva-up-btn is-primary eva-up-stat-btn" :class="{\'is-disabled\':!hasUpdate}" @click="startUpdate">{{ hasUpdate ? t(\'up_update_now\') : t(\'up_no_update_needed\') }}</button>' +
     '      <i class="ri-rocket-2-line eva-up-stat-wm"></i>' +
     '    </div>' +
     '    <div class="eva-up-stat">' +
-    '      <div class="eva-up-stat-head"><div class="eva-up-stat-ico is-success"><i class="ri-heart-pulse-line"></i></div><div class="eva-up-stat-main"><p class="eva-up-stat-title">系统状态</p><div class="eva-up-stat-value">运行正常</div></div><span class="eva-up-tag is-ok">健康</span></div>' +
-    '      <div class="eva-up-stat-meta"><div><span>运行时长</span><strong>{{ sys.uptime }}</strong></div><div><span>负载</span><strong>{{ sys.load }}</strong></div></div>' +
+    '      <div class="eva-up-stat-head"><div class="eva-up-stat-ico is-success"><i class="ri-heart-pulse-line"></i></div><div class="eva-up-stat-main"><p class="eva-up-stat-title">{{ t(\'up_system_status\') }}</p><div class="eva-up-stat-value">{{ t(\'up_running_normally\') }}</div></div><span class="eva-up-tag is-ok">{{ t(\'up_healthy\') }}</span></div>' +
+    '      <div class="eva-up-stat-meta"><div><span>{{ t(\'up_uptime\') }}</span><strong>{{ sys.uptime }}</strong></div><div><span>{{ t(\'up_load\') }}</span><strong>{{ t(\'up_normal\') }}</strong></div></div>' +
     '      <i class="ri-pulse-line eva-up-stat-wm"></i>' +
     '    </div>' +
     '    <div class="eva-up-stat">' +
-    '      <div class="eva-up-stat-head"><div class="eva-up-stat-ico is-accent"><i class="ri-git-branch-line"></i></div><div class="eva-up-stat-main"><p class="eva-up-stat-title">更新通道</p><div class="eva-up-stat-value">{{ channel }}</div></div></div>' +
-    '      <div class="eva-up-stat-meta"><div><span>自动更新</span><strong>{{ d.schedule.enabled?\'已开启\':\'已关闭\' }}</strong></div><div><span>检查频率</span><strong>{{ freqLabel(d.schedule.frequency) }}</strong></div></div>' +
+    '      <div class="eva-up-stat-head"><div class="eva-up-stat-ico is-accent"><i class="ri-git-branch-line"></i></div><div class="eva-up-stat-main"><p class="eva-up-stat-title">{{ t(\'up_update_channel\') }}</p><div class="eva-up-stat-value">{{ t(\'up_stable_release\') }}</div></div></div>' +
+    '      <div class="eva-up-stat-meta"><div><span>{{ t(\'up_auto_update\') }}</span><strong>{{ d.schedule.enabled ? t(\'up_enabled\') : t(\'up_disabled\') }}</strong></div><div><span>{{ t(\'up_check_frequency\') }}</span><strong>{{ freqLabel(d.schedule.frequency) }}</strong></div></div>' +
     '      <i class="ri-flow-chart eva-up-stat-wm"></i>' +
     '    </div>' +
     '  </div>' +
 
     '  <div class="eva-up-main">' +
     '    <div class="eva-up-panel">' +
-    '      <div class="eva-up-panel-head"><h3 class="eva-up-panel-title"><span class="eva-up-panel-ico"><i class="ri-file-list-3-line"></i></span>版本详情</h3><div class="eva-up-ver-nav" v-if="d.logs.length > 1"><button type="button" :disabled="selectedLogIndex <= 0" @click="prevLog" title="上一个版本"><i class="ri-arrow-left-s-line"></i></button><button type="button" :disabled="selectedLogIndex >= d.logs.length - 1" @click="nextLog" title="下一个版本"><i class="ri-arrow-right-s-line"></i></button></div></div>' +
+    '      <div class="eva-up-panel-head"><h3 class="eva-up-panel-title"><span class="eva-up-panel-ico"><i class="ri-file-list-3-line"></i></span>{{ t(\'up_version_details\') }}</h3><div class="eva-up-ver-nav" v-if="d.logs.length > 1"><button type="button" :disabled="selectedLogIndex <= 0" @click="prevLog" :title="t(\'up_previous_version\')"><i class="ri-arrow-left-s-line"></i></button><button type="button" :disabled="selectedLogIndex >= d.logs.length - 1" @click="nextLog" :title="t(\'up_next_version\')"><i class="ri-arrow-right-s-line"></i></button></div></div>' +
     '      <div class="eva-up-ver-tabs" v-if="d.logs.length > 1" :class="{\'has-left-mask\': selectedLogIndex > 1, \'has-right-mask\': selectedLogIndex < d.logs.length - 3}"><div class="eva-up-ver-track" :style="{transform:\'translateX(-\'+tabOffset+\'px)\'}"><button type="button" v-for="(log,i) in d.logs" :key="log.version || i" :class="{\'is-active\': selectedLogIndex === i}" @click="selectedLogIndex = i"><strong>v{{ log.version }}</strong></button></div></div>' +
-    '      <template v-if="selectedLog.sections"><div class="eva-up-verbody"><div class="eva-up-versec" v-for="(sec, title) in selectedLog.sections" :key="title"><div class="eva-up-versec-head">{{ title }}<span class="eva-up-count">{{ sec.items.length }}</span></div><ul class="eva-up-verlist"><li v-for="(it,k) in sec.items" :key="k">{{ it }}</li></ul></div><div class="eva-up-verfoot"><button type="button" class="eva-up-verlink" @click="showVersionModal = true">查看完整版本说明 <i class="ri-arrow-right-line"></i></button></div></div></template>' +
-    '      <div v-else class="eva-up-empty">暂无版本详情</div>' +
+    '      <template v-if="selectedLog.sections"><div class="eva-up-verbody"><div class="eva-up-versec" v-for="(sec, title) in selectedLog.sections" :key="title"><div class="eva-up-versec-head">{{ tv(title) }}<span class="eva-up-count">{{ sec.items.length }}</span></div><ul class="eva-up-verlist"><li v-for="(it,k) in sec.items" :key="k">{{ tv(it) }}</li></ul></div><div class="eva-up-verfoot"><button type="button" class="eva-up-verlink" @click="showVersionModal = true">{{ t(\'up_view_full_release_notes\') }} <i class="ri-arrow-right-line"></i></button></div></div></template>' +
+    '      <div v-else class="eva-up-empty">{{ t(\'up_no_version_details\') }}</div>' +
     '    </div>' +
     '    <div class="eva-up-panel">' +
-    '      <div class="eva-up-panel-head"><h3 class="eva-up-panel-title"><span class="eva-up-panel-ico"><i class="ri-time-line"></i></span>计划更新</h3></div>' +
-    '      <label class="eva-up-switch-row"><span class="eva-up-switch-text"><strong>启用计划更新</strong><em>到点自动下载并安装</em></span><input type="checkbox" class="eva-up-switch" v-model="form.enabled"></label>' +
-    '      <div class="eva-up-field"><label class="eva-up-label">更新时间</label><div class="eva-up-time-grid"><eva-select :options="hourMap" v-model="form.hour"></eva-select><eva-select :options="minuteMap" v-model="form.minute"></eva-select></div></div>' +
-    '      <div class="eva-up-field"><label class="eva-up-label">更新频率</label><eva-select :options="freqMap" :searchable="false" v-model="form.frequency"></eva-select></div>' +
+    '      <div class="eva-up-panel-head"><h3 class="eva-up-panel-title"><span class="eva-up-panel-ico"><i class="ri-time-line"></i></span>{{ t(\'up_scheduled_update\') }}</h3></div>' +
+    '      <label class="eva-up-switch-row"><span class="eva-up-switch-text"><strong>{{ t(\'up_enable_scheduled_update\') }}</strong><em>{{ t(\'up_auto_download_install\') }}</em></span><input type="checkbox" class="eva-up-switch" v-model="form.enabled"></label>' +
+    '      <div class="eva-up-field"><label class="eva-up-label">{{ t(\'up_update_time\') }}</label><div class="eva-up-time-grid"><eva-select :options="hourMap" v-model="form.hour"></eva-select><eva-select :options="minuteMap" v-model="form.minute"></eva-select></div></div>' +
+    '      <div class="eva-up-field"><label class="eva-up-label">{{ t(\'up_update_frequency\') }}</label><eva-select :options="freqMap" :searchable="false" v-model="form.frequency"></eva-select></div>' +
     '    </div>' +
     '    <div class="eva-up-side">' +
-    '      <div class="eva-up-mini"><h4>环境检测 <span class="eva-up-tag is-ok">通过</span></h4><div class="eva-up-env"><span v-for="(e,i) in env" :key="i"><i class="ri-checkbox-circle-line"></i>{{ e }}</span></div></div>' +
-    '      <div class="eva-up-mini"><h4>风险提示</h4><ul class="eva-up-mini-list"><li v-for="(r,i) in risks" :key="i"><i class="ri-error-warning-line"></i><span>{{ r }}</span></li></ul></div>' +
+    '      <div class="eva-up-mini"><h4>{{ t(\'up_environment_check\') }} <span class="eva-up-tag is-ok">{{ t(\'up_passed\') }}</span></h4><div class="eva-up-env"><span v-for="(e,i) in env" :key="i"><i class="ri-checkbox-circle-line"></i>{{ t(e) }}</span></div></div>' +
+    '      <div class="eva-up-mini"><h4>{{ t(\'up_risk_notice\') }}</h4><ul class="eva-up-mini-list"><li v-for="(r,i) in risks" :key="i"><i class="ri-error-warning-line"></i><span>{{ t(r) }}</span></li></ul></div>' +
     '    </div>' +
     '  </div>' +
 
     '  <div class="eva-up-bottom">' +
     '    <div class="eva-up-panel">' +
-    '      <div class="eva-up-panel-head"><h3 class="eva-up-panel-title"><span class="eva-up-panel-ico"><i class="ri-history-line"></i></span>更新日志</h3><span class="eva-up-tag is-mute">共 {{ d.logs.length }} 个版本</span></div>' +
-    '      <div class="eva-up-table-wrap"><table class="eva-up-table"><thead><tr><th>版本</th><th>日期</th><th>摘要</th><th>状态</th></tr></thead><tbody>' +
-    '        <tr v-for="(log,i) in shownLogs" :key="i"><td>v{{ log.version }}</td><td>{{ log.date }}</td><td class="eva-up-td-sum">{{ summary(log) }}</td><td><span class="eva-up-table-tag" :class="i===0?\'is-warn\':\'is-ok\'">{{ i===0?\'最新\':\'已发布\' }}</span></td></tr>' +
-    '        <tr v-if="!d.logs.length"><td colspan="4"><div class="eva-up-empty">暂无更新日志</div></td></tr>' +
+    '      <div class="eva-up-panel-head"><h3 class="eva-up-panel-title"><span class="eva-up-panel-ico"><i class="ri-history-line"></i></span>{{ t(\'up_update_log\') }}</h3><span class="eva-up-tag is-mute">{{ t(\'up_total\') }} {{ d.logs.length }} {{ t(\'up_versions_unit\') }}</span></div>' +
+    '      <div class="eva-up-table-wrap"><table class="eva-up-table"><thead><tr><th>{{ t(\'up_version\') }}</th><th>{{ t(\'up_date\') }}</th><th>{{ t(\'up_summary\') }}</th><th>{{ t(\'up_status\') }}</th></tr></thead><tbody>' +
+    '        <tr v-for="(log,i) in shownLogs" :key="i"><td>v{{ log.version }}</td><td>{{ log.date }}</td><td class="eva-up-td-sum">{{ tv(summary(log)) }}</td><td><span class="eva-up-table-tag" :class="i===0?\'is-warn\':\'is-ok\'">{{ i===0 ? t(\'up_latest\') : t(\'up_released\') }}</span></td></tr>' +
+    '        <tr v-if="!d.logs.length"><td colspan="4"><div class="eva-up-empty">{{ t(\'up_no_update_logs\') }}</div></td></tr>' +
     '      </tbody></table></div>' +
-    '      <div class="eva-up-table-foot" v-if="d.logs.length>logLimit"><button class="eva-up-btn is-ghost eva-up-more" @click="logLimit+=10">加载更多</button></div>' +
+    '      <div class="eva-up-table-foot" v-if="d.logs.length>logLimit"><button class="eva-up-btn is-ghost eva-up-more" @click="logLimit+=10">{{ t(\'up_load_more\') }}</button></div>' +
     '    </div>' +
     '    <div class="eva-up-panel">' +
-    '      <div class="eva-up-panel-head"><h3 class="eva-up-panel-title"><span class="eva-up-panel-ico"><i class="ri-calendar-schedule-line"></i></span>计划任务</h3></div>' +
-    '      <div class="eva-up-plan"><div class="eva-up-plan-label">下次计划检查</div><div class="eva-up-plan-time">{{ d.schedule.enabled ? d.schedule.time : \'未启用\' }}</div><div class="eva-up-plan-grid"><div><span>频率</span><strong>{{ freqLabel(d.schedule.frequency) }}</strong></div><div><span>状态</span><strong>{{ d.schedule.enabled?\'运行中\':\'已停用\' }}</strong></div></div><ul class="eva-up-plan-list"><li v-for="(p,i) in planNotes" :key="i"><i class="ri-checkbox-circle-line"></i><em>{{ p }}</em></li></ul></div>' +
+    '      <div class="eva-up-panel-head"><h3 class="eva-up-panel-title"><span class="eva-up-panel-ico"><i class="ri-calendar-schedule-line"></i></span>{{ t(\'up_scheduled_tasks\') }}</h3></div>' +
+    '      <div class="eva-up-plan"><div class="eva-up-plan-label">{{ t(\'up_next_scheduled_check\') }}</div><div class="eva-up-plan-time">{{ d.schedule.enabled ? d.schedule.time : t(\'up_not_enabled\') }}</div><div class="eva-up-plan-grid"><div><span>{{ t(\'up_frequency\') }}</span><strong>{{ freqLabel(d.schedule.frequency) }}</strong></div><div><span>{{ t(\'up_status\') }}</span><strong>{{ d.schedule.enabled ? t(\'up_running\') : t(\'up_stopped\') }}</strong></div></div><ul class="eva-up-plan-list"><li v-for="(p,i) in planNotes" :key="i"><i class="ri-checkbox-circle-line"></i><em>{{ t(p) }}</em></li></ul></div>' +
     '    </div>' +
     '    <div class="eva-up-panel">' +
-    '      <div class="eva-up-panel-head"><h3 class="eva-up-panel-title"><span class="eva-up-panel-ico"><i class="ri-pulse-line"></i></span>最近操作</h3></div>' +
-    '      <div class="eva-up-timeline" v-if="timeline.length"><div class="eva-up-tl-item" v-for="(t,i) in timeline" :key="i"><div class="eva-up-tl-dot"></div><div><div class="eva-up-tl-title">{{ t.title }}</div><div class="eva-up-tl-desc">{{ t.desc }}</div><div class="eva-up-tl-time">{{ t.time }}</div></div></div></div><div v-else class="eva-up-empty">暂无最近操作</div>' +
+    '      <div class="eva-up-panel-head"><h3 class="eva-up-panel-title"><span class="eva-up-panel-ico"><i class="ri-pulse-line"></i></span>{{ t(\'up_recent_activity\') }}</h3></div>' +
+    '      <div class="eva-up-timeline" v-if="timeline.length"><div class="eva-up-tl-item" v-for="(item,i) in timeline" :key="i"><div class="eva-up-tl-dot"></div><div><div class="eva-up-tl-title">{{ tv(item.title) }}</div><div class="eva-up-tl-desc">{{ tv(item.desc) }}</div><div class="eva-up-tl-time">{{ item.time }}</div></div></div></div><div v-else class="eva-up-empty">{{ t(\'up_no_recent_activity\') }}</div>' +
     '    </div>' +
     '  </div>' +
 
+    '  </template>' +
     '  <div class="eva-up-modal" v-if="showVersionModal" @click.self="showVersionModal = false">' +
     '    <div class="eva-up-modal-box is-version">' +
-    '      <div class="eva-up-modal-bar"><h3>{{ selectedLog.version ? (\'v\'+selectedLog.version) : \'版本说明\' }}</h3><button type="button" class="eva-up-x" @click="showVersionModal = false">×</button></div>' +
-    '      <div class="eva-up-version-full"><div class="eva-up-versec" v-for="(sec, title) in selectedLog.sections" :key="title"><div class="eva-up-versec-head">{{ title }}<span class="eva-up-count">{{ sec.items.length }}</span></div><ul class="eva-up-verlist"><li v-for="(it,k) in sec.items" :key="k">{{ it }}</li></ul></div></div>' +
+    '      <div class="eva-up-modal-bar"><h3>{{ selectedLog.version ? (\'v\'+selectedLog.version) : t(\'up_release_notes\') }}</h3><button type="button" class="eva-up-x" :aria-label="t(\'up_close\')" @click="showVersionModal = false">×</button></div>' +
+    '      <div class="eva-up-version-full"><div class="eva-up-versec" v-for="(sec, title) in selectedLog.sections" :key="title"><div class="eva-up-versec-head">{{ tv(title) }}<span class="eva-up-count">{{ sec.items.length }}</span></div><ul class="eva-up-verlist"><li v-for="(it,k) in sec.items" :key="k">{{ tv(it) }}</li></ul></div></div>' +
     '    </div>' +
     '  </div>' +
     '  <div class="eva-up-modal" v-if="showModal">' +
     '    <div class="eva-up-modal-box">' +
-    '      <div class="eva-up-modal-head"><div class="eva-up-modal-icon"><i class="ri-download-cloud-2-line"></i></div><h3>正在更新系统</h3><p>请勿关闭窗口，完成后将自动重启</p></div>' +
-    '      <div class="eva-up-progress"><div class="eva-up-progress-label"><span>下载进度</span><span>{{ download }}%</span></div><div class="eva-up-progress-bg"><div class="eva-up-progress-bar" :style="{width:download+\'%\'}"></div></div></div>' +
-    '      <div class="eva-up-progress"><div class="eva-up-progress-label"><span>安装进度</span><span>{{ install }}%</span></div><div class="eva-up-progress-bg"><div class="eva-up-progress-bar" :style="{width:install+\'%\'}"></div></div></div>' +
+    '      <div class="eva-up-modal-head"><div class="eva-up-modal-icon"><i class="ri-download-cloud-2-line"></i></div><h3>{{ t(\'up_updating_system\') }}</h3><p>{{ t(\'up_do_not_close\') }}</p></div>' +
+    '      <div class="eva-up-progress"><div class="eva-up-progress-label"><span>{{ t(\'up_download_progress\') }}</span><span>{{ download }}%</span></div><div class="eva-up-progress-bg"><div class="eva-up-progress-bar" :style="{width:download+\'%\'}"></div></div></div>' +
+    '      <div class="eva-up-progress"><div class="eva-up-progress-label"><span>{{ t(\'up_install_progress\') }}</span><span>{{ install }}%</span></div><div class="eva-up-progress-bg"><div class="eva-up-progress-bar" :style="{width:install+\'%\'}"></div></div></div>' +
     '    </div>' +
     '  </div>' +
     '</div>';
+
 
   function createUpdateApp(el) {
     var init = parseData(el);
@@ -177,6 +195,7 @@
         var t = splitTime(init.schedule.time);
         return {
           d: init,
+          loading: true,
           banner: 'https://www.dmoe.cc/random.php',
           logLimit: 10,
           showModal: false,
@@ -185,20 +204,18 @@
           download: 0,
           install: 0,
           form: { enabled: init.schedule.enabled, hour: t.h, minute: t.m, frequency: init.schedule.frequency },
-          freqOptions: FREQ,
-          freqMap: { everyday: '每天', monday: '周一', tuesday: '周二', wednesday: '周三', thursday: '周四', friday: '周五', saturday: '周六', sunday: '周日' },
           hourMap: rangeMap(24),
           minuteMap: rangeMap(60),
           selectedLogIndex: 0,
           notice: { msg: '', type: 'info' },
-          channel: '稳定版',
-          sys: { uptime: '—', load: '正常' },
-          env: ['PHP 8.0+', 'WordPress 6.0+', 'cURL 已启用', 'ZipArchive 可用', 'HTTPS 已开启', '磁盘空间充足'],
-          risks: ['更新前建议先完成整站备份，避免异常时无法回退', '更新过程中请保持页面开启，并确保服务器网络稳定'],
-          planNotes: ['到点自动下载更新包', '校验通过后自动安装', '失败自动回滚并通知', '执行结果写入最近操作'],
+          sys: { uptime: '—' },
+          env: ['up_env_php', 'up_env_wordpress', 'up_env_curl', 'up_env_zip', 'up_env_https', 'up_env_disk'],
+          risks: ['up_risk_backup', 'up_risk_keep_open'],
+          planNotes: ['up_plan_download', 'up_plan_install', 'up_plan_rollback', 'up_plan_activity'],
           timeline: init.activities,
           tabMaxOffset: 0,
           _timer: null,
+          _loadingTimer: null,
           _noticeTimer: null,
           _resizeHandler: null
         };
@@ -209,6 +226,11 @@
           return this.cmp((this.d.latestVersion || '').replace(/^Version\s+/i, '').trim(), this.d.version) > 0;
         },
         shownLogs: function () { return this.d.logs.slice(0, this.logLimit); },
+        freqMap: function () {
+          var out = {};
+          for (var i = 0; i < FREQ.length; i++) { out[FREQ[i][0]] = this.t(FREQ[i][1]); }
+          return out;
+        },
         latestLog: function () { return this.d.logs[0] || {}; },
         selectedLog: function () { return this.d.logs[this.selectedLogIndex] || this.latestLog; },
         // tabs 轨道由左右按钮驱动，偏移量必须被实测的最大滚动距离限制，避免最右侧留空。
@@ -219,6 +241,13 @@
         }
       },
       methods: {
+        // 复用 Eva 主应用的全局翻译方法；读取共享 reactive 语言状态后会自动重渲染。
+        t: function (key) {
+          return window.EvaI18n && window.EvaI18n.t ? window.EvaI18n.t(key) : key;
+        },
+        tv: function (value) {
+          return window.EvaI18n && window.EvaI18n.tv ? window.EvaI18n.tv(value) : (value != null ? value : '');
+        },
         // 比较两个语义版本号。返回值：>0 表示 a 更新，<0 表示 b 更新，0 表示相等。
         cmp: function (a, b) {
           var pa = (a || '').split('.').map(Number), pb = (b || '').split('.').map(Number);
@@ -226,8 +255,8 @@
           return 0;
         },
         freqLabel: function (f) {
-          for (var i = 0; i < FREQ.length; i++) { if (FREQ[i][0] === f) { return FREQ[i][1]; } }
-          return f || '每天';
+          for (var i = 0; i < FREQ.length; i++) { if (FREQ[i][0] === f) { return this.t(FREQ[i][1]); } }
+          return f || this.t('up_freq_everyday');
         },
         prevLog: function () {
           if (this.selectedLogIndex > 0) { this.selectedLogIndex--; }
@@ -265,8 +294,8 @@
           var self = this;
           var time = self.form.hour + ':' + self.form.minute;
           api('SaveUpdateSchedule', { method: 'POST', body: { enabled: self.form.enabled, time: time, frequency: self.form.frequency } })
-            .then(function (res) { self.setNotice((res && res.message) || '保存成功', 'success'); self.d.schedule = { enabled: self.form.enabled, time: time, frequency: self.form.frequency }; self.syncActivities(res); })
-            .catch(function () { self.setNotice('保存失败', 'error'); });
+            .then(function (res) { self.setNotice((res && res.message) || self.t('up_save_success'), 'success'); self.d.schedule = { enabled: self.form.enabled, time: time, frequency: self.form.frequency }; self.syncActivities(res); })
+            .catch(function () { self.setNotice(self.t('up_save_failed'), 'error'); });
         },
         // 启动更新：先请求后端下载更新包，然后进入轮询进度。
         startUpdate: function () {
@@ -274,15 +303,15 @@
           this.isUpdating = true; this.showModal = true; this.download = 0; this.install = 0;
           var self = this;
           api('StartSystemUpdate', { method: 'POST' })
-            .then(function (res) { self.setNotice('正在检查更新...', 'info'); self.syncActivities(res); self.poll(); })
-            .catch(function () { self.setNotice('更新失败', 'error'); self.isUpdating = false; self.showModal = false; });
+            .then(function (res) { self.setNotice(self.t('up_checking_updates'), 'info'); self.syncActivities(res); self.poll(); })
+            .catch(function () { self.setNotice(self.t('up_update_failed'), 'error'); self.isUpdating = false; self.showModal = false; });
         },
         // 下载阶段完成后调用安装接口，后端负责解压与替换主题文件。
         installPkg: function () {
           var self = this;
           api('InstallThemePackage', { method: 'POST' })
-            .then(function (res) { self.setNotice((res && res.message) || '解压中...', 'info'); self.syncActivities(res); })
-            .catch(function () { self.setNotice('安装失败', 'error'); self.isUpdating = false; });
+            .then(function (res) { self.setNotice((res && res.message) || self.t('up_extracting'), 'info'); self.syncActivities(res); })
+            .catch(function () { self.setNotice(self.t('up_install_failed'), 'error'); self.isUpdating = false; });
         },
         // 轮询更新进度。后端通过 transient 暴露 phase/percent，前端只负责反映进度与结束态。
         poll: function () {
@@ -293,19 +322,23 @@
               var phase = data.phase;
               if (phase === 'download') { self.download = (data.download && data.download.percent) || 0; if (self.download >= 100) { self.installPkg(); } }
               if (phase === 'install') { self.install = (data.install && data.install.percent) || 0; }
-              if (phase === 'complete') { self.install = 100; clearInterval(self._timer); self._timer = null; self.isUpdating = false; self.setNotice('更新完成', 'success'); setTimeout(function () { self.showModal = false; }, 1500); }
-            }).catch(function () { clearInterval(self._timer); self._timer = null; self.isUpdating = false; self.setNotice('获取进度失败', 'error'); });
+              if (phase === 'complete') { self.install = 100; clearInterval(self._timer); self._timer = null; self.isUpdating = false; self.setNotice(self.t('up_update_completed'), 'success'); setTimeout(function () { self.showModal = false; }, 1500); }
+            }).catch(function () { clearInterval(self._timer); self._timer = null; self.isUpdating = false; self.setNotice(self.t('up_progress_failed'), 'error'); });
           }, 1500);
         }
       },
       mounted: function () {
         var self = this;
-        // tabs 轨道宽度依赖真实渲染后的 DOM，必须在 mount 后测量。
-        this.$nextTick(function () { self.updateTabMetrics(); });
+        // 保留一个很短的占位阶段，避免独立页挂载时出现内容跳动；正文显示后再测量 tabs。
+        this._loadingTimer = setTimeout(function () {
+          self.loading = false;
+          self.$nextTick(function () { self.updateTabMetrics(); });
+        }, 420);
         this._resizeHandler = function () { self.updateTabMetrics(); };
         window.addEventListener('resize', this._resizeHandler);
       },
       beforeUnmount: function () {
+        if (this._loadingTimer) { clearTimeout(this._loadingTimer); }
         if (this._resizeHandler) {
           window.removeEventListener('resize', this._resizeHandler);
         }
@@ -319,27 +352,93 @@
     return app;
   }
 
-  function mountWhenReady() {
-    var tries = 0;
-    var timer = setInterval(function () {
-      tries++;
-      var el = document.querySelector('[data-eva-update-page]:not([data-eva-mounted])');
-      if (!el) {
-        var u = document.getElementById('update');
-        if (u && !u.getAttribute('data-eva-mounted')) { el = u; }
+  function mountUpdateElement(el) {
+    if (!el || el.getAttribute('data-eva-mounted')) { return; }
+
+    el.setAttribute('data-eva-mounted', '1');
+    try {
+      var app = createUpdateApp(el);
+      el.__evaUpdateApp = app;
+      app.mount(el);
+    } catch (e) {
+      // 挂载失败时允许后续 DOM 变更再次尝试，并把真实错误留在控制台便于排查。
+      el.removeAttribute('data-eva-mounted');
+      el.__evaUpdateApp = null;
+      if (window.console && window.console.error) {
+        window.console.error('[Eva update page] mount failed:', e);
       }
-      if (el) {
-        el.setAttribute('data-eva-mounted', '1');
-        try { createUpdateApp(el).mount(el); } catch (e) { /* noop */ }
+    }
+  }
+
+  function mountPending(root) {
+    var selector = '[data-eva-update-page]:not([data-eva-mounted])';
+    var nodes = [];
+
+    if (root && root.nodeType === 1 && root.matches && root.matches(selector)) {
+      nodes.push(root);
+    }
+
+    var scope = root && root.querySelectorAll ? root : document;
+    var found = scope.querySelectorAll(selector);
+    for (var i = 0; i < found.length; i++) {
+      nodes.push(found[i]);
+    }
+
+    for (var j = 0; j < nodes.length; j++) {
+      mountUpdateElement(nodes[j]);
+    }
+  }
+
+  function unmountRemoved(root) {
+    if (!root || root.nodeType !== 1) { return; }
+    var nodes = [];
+
+    if (root.matches && root.matches('[data-eva-update-page][data-eva-mounted]')) {
+      nodes.push(root);
+    }
+
+    if (root.querySelectorAll) {
+      var found = root.querySelectorAll('[data-eva-update-page][data-eva-mounted]');
+      for (var i = 0; i < found.length; i++) {
+        nodes.push(found[i]);
       }
-      // Eva 主应用和 callback 字段可能异步渲染，最多等待约 120 秒，避免无限轮询。
-      if (tries > 240) { clearInterval(timer); }
-    }, 500);
+    }
+
+    for (var j = 0; j < nodes.length; j++) {
+      var app = nodes[j].__evaUpdateApp;
+      if (app && app.unmount) {
+        try { app.unmount(); } catch (e) { /* detached nodes can already be disposed */ }
+      }
+      nodes[j].__evaUpdateApp = null;
+    }
+  }
+
+  function startMountObserver() {
+    mountPending(document);
+
+    if (!document.body || !window.MutationObserver || window.__evaUpdatePageObserver) {
+      return;
+    }
+
+    var observer = new window.MutationObserver(function (records) {
+      for (var i = 0; i < records.length; i++) {
+        var record = records[i];
+        for (var a = 0; a < record.addedNodes.length; a++) {
+          mountPending(record.addedNodes[a]);
+        }
+        for (var r = 0; r < record.removedNodes.length; r++) {
+          unmountRemoved(record.removedNodes[r]);
+        }
+      }
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
+    window.__evaUpdatePageObserver = observer;
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', mountWhenReady);
+    document.addEventListener('DOMContentLoaded', startMountObserver);
   } else {
-    mountWhenReady();
+    startMountObserver();
   }
 })();

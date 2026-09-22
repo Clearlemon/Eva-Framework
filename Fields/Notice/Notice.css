@@ -1,0 +1,76 @@
+/* Eva heading / subheading / notice / submessage —— 纯展示字段 */
+
+/* 大标题条：左侧主色竖线 + 浅底，把一页字段分成几段。 */
+.eva-heading {
+  position: relative;
+  padding: 10px 14px 10px 16px;
+  border-radius: var(--eva-radius);
+  color: var(--eva-text);
+  background: var(--eva-soft);
+  font-size: 14.5px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.eva-heading::before {
+  content: '';
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  left: 0;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--eva-primary);
+}
+
+/* 小标题条：只有下边线，层级低于 heading。 */
+.eva-subheading {
+  padding: 2px 0 8px;
+  border-bottom: 1px solid var(--eva-border);
+  color: var(--eva-text);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+/* 提示条：--eva-notice-color 决定图标、左边线与底色，各状态只改这一个变量。 */
+.eva-notice {
+  --eva-notice-color: var(--eva-text-sub);
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 10px 14px;
+  border: 1px solid color-mix(in srgb, var(--eva-notice-color) 26%, var(--eva-border));
+  border-left: 3px solid var(--eva-notice-color);
+  border-radius: var(--eva-radius);
+  color: var(--eva-text);
+  background: color-mix(in srgb, var(--eva-notice-color) 7%, var(--eva-surface));
+  font-size: 13px;
+  line-height: 1.65;
+}
+.eva-notice--success { --eva-notice-color: var(--eva-success); }
+.eva-notice--info { --eva-notice-color: var(--eva-info); }
+.eva-notice--warning { --eva-notice-color: var(--eva-warning); }
+.eva-notice--danger { --eva-notice-color: var(--eva-danger); }
+
+.eva-notice-icon {
+  flex: none;
+  color: var(--eva-notice-color);
+  font-size: 16px;
+  font-style: normal;
+  /* 与正文首行对齐：正文行高 13px × 1.65 ≈ 21px。 */
+  line-height: 21px;
+}
+.eva-notice-body {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.eva-notice-body > :first-child { margin-top: 0; }
+.eva-notice-body > :last-child { margin-bottom: 0; }
+.eva-notice-body a { color: var(--eva-primary); }
+.eva-notice-body code {
+  padding: 1px 5px;
+  border-radius: var(--eva-radius);
+  background: color-mix(in srgb, var(--eva-notice-color) 12%, var(--eva-surface));
+  font-size: 12px;
+}

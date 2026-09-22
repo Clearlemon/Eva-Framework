@@ -1,15 +1,77 @@
-/* Eva UI 库 · eva-tabs 样式（骨架 / 占位，遵循 ui-style-guard：5px 圆角、--eva-* 令牌、暗色自适配）。待实现。 */
-.eva-tabs {
+/* Eva UI 库 · eva-tabs 样式（遵循 ui-style-guard：--eva-* 令牌、--eva-radius 圆角、暗色自适配）。
+ * 类名前缀用 .eva-tabset 而不是 .eva-tabs：后者已经是外壳顶部「工作区页签栏」的类名（eva.css），同名会把这里的布局带歪。 */
+.eva-tabset {
   width: 100%;
-  /* TODO: 标签条、激活下划线/底色、内容区等样式 */
+  min-width: 0;
 }
 
-/* 占位提示（实现后删除） */
-.eva-tabs-placeholder {
-  padding: 12px;
-  border: 1px dashed var(--eva-border);
+/* 标签条：浅底胶囊槽，激活项浮起成白底卡片；标签多时横向滚动而不是换行。 */
+.eva-tabset-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  max-width: 100%;
+  padding: 3px;
+  overflow-x: auto;
   border-radius: var(--eva-radius);
   background: var(--eva-soft);
-  color: var(--eva-text-mute);
+  scrollbar-width: none;
+}
+.eva-tabset-nav::-webkit-scrollbar { display: none; }
+
+.eva-tabset-tab {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--eva-radius-sm, var(--eva-radius));
+  color: var(--eva-text-sub);
+  background: transparent;
+  font-family: inherit;
   font-size: 12.5px;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color var(--eva-ease, .22s ease), background var(--eva-ease, .22s ease), box-shadow var(--eva-ease, .22s ease);
+}
+.eva-tabset-tab:hover { color: var(--eva-text); }
+.eva-tabset-tab:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--eva-primary) 22%, transparent);
+}
+.eva-tabset-tab.is-active {
+  color: var(--eva-primary);
+  background: var(--eva-surface);
+  box-shadow: var(--eva-shadow-card, 0 1px 2px color-mix(in srgb, var(--eva-text) 8%, transparent));
+  font-weight: 600;
+}
+.eva-tabset-tab:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+.eva-tabset-icon {
+  font-size: 14px;
+  font-style: normal;
+  line-height: 1;
+}
+.eva-tabset-badge {
+  min-width: 16px;
+  padding: 0 5px;
+  border-radius: 999px;
+  color: var(--eva-on-primary);
+  background: var(--eva-primary);
+  font-size: 10.5px;
+  font-style: normal;
+  font-weight: 600;
+  line-height: 16px;
+  text-align: center;
+}
+
+.eva-tabset-panel {
+  min-width: 0;
+  padding-top: 14px;
 }

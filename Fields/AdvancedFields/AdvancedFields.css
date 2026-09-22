@@ -1,0 +1,71 @@
+/* 高级复合字段：与 Eva 后台统一使用紧凑、扁平的视觉规范。 */
+.eva-advanced-card{box-sizing:border-box;width:100%;padding:12px;border:1px solid var(--eva-border);border-radius:8px;background:var(--eva-surface)}
+.eva-group-head-button{display:flex;width:100%;align-items:center;justify-content:space-between;gap:10px;padding:0;border:0;background:transparent;color:inherit;text-align:left;cursor:pointer}.eva-group-head-button>.eva-advanced-card-head{flex:1;margin-bottom:0}.eva-group-head-button>i{color:var(--eva-text-mute);font-size:16px}.eva-group-body{width:100%}.eva-group-field.is-compact{padding:8px}.eva-group-field.is-compact .eva-advanced-grid{gap:8px}.eva-group-field.is-collapsed .eva-group-body{display:none}
+.eva-advanced-card.is-disabled,.eva-repeater.is-disabled{opacity:.55;pointer-events:none}.eva-advanced-card-head{display:flex;flex-direction:column;gap:3px;margin-bottom:11px}.eva-advanced-card-head strong{font-size:13px}.eva-advanced-card-head small,.eva-advanced-meta small{color:var(--eva-text-mute);font-size:11.5px;line-height:1.4}
+.eva-advanced-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:12px}.eva-advanced-col-12{grid-column:span 12}.eva-advanced-col-9{grid-column:span 9}.eva-advanced-col-8{grid-column:span 8}.eva-advanced-col-6{grid-column:span 6}.eva-advanced-col-4{grid-column:span 4}.eva-advanced-col-3{grid-column:span 3}
+.eva-advanced-child,.eva-advanced-control{display:flex;min-width:0;flex-direction:column;gap:6px}.eva-advanced-meta{display:flex;min-height:18px;flex-direction:column;gap:2px}.eva-advanced-meta>span,.eva-advanced-control>span{font-size:12px;font-weight:550;color:var(--eva-text)}
+.eva-advanced-control input,.eva-advanced-control select,.eva-box-inputs input,.eva-box-inputs select{box-sizing:border-box;width:100%;height:30px;padding:0 8px;border:1px solid var(--eva-border);border-radius:5px;background:var(--eva-surface);color:var(--eva-text);font-size:12px;outline:0}.eva-advanced-control input:focus,.eva-advanced-control select:focus,.eva-box-inputs input:focus,.eva-box-inputs select:focus{border-color:var(--eva-primary);box-shadow:0 0 0 2px color-mix(in srgb,var(--eva-primary) 12%,transparent)}
+.eva-advanced-number{display:flex}.eva-advanced-number input{min-width:0;border-radius:5px 0 0 5px}.eva-advanced-number select{width:70px;border-left:0;border-radius:0 5px 5px 0}.eva-advanced-number>.eva-select{width:70px;flex:0 0 70px}.eva-advanced-number>.eva-select .eva-select-trigger{border-left:0;border-radius:0 5px 5px 0}.eva-typography-preview{margin-top:12px;padding:14px;border:1px dashed var(--eva-border);border-radius:6px;background:var(--eva-soft);overflow-wrap:anywhere}
+.eva-repeater{display:flex;width:100%;flex-direction:column;gap:9px}.eva-repeater-empty{display:flex;min-height:76px;align-items:center;justify-content:center;gap:7px;border:1px dashed var(--eva-border);border-radius:8px;color:var(--eva-text-mute)}.eva-repeater-empty i{font-size:18px}.eva-repeater-item{border:1px solid var(--eva-border);border-radius:8px;background:var(--eva-surface);overflow:hidden}.eva-repeater-head{display:flex;min-height:36px;align-items:center;justify-content:space-between;padding:0 7px 0 3px;background:var(--eva-soft);border-bottom:1px solid var(--eva-border)}.eva-repeater-title{display:flex;flex:1;align-items:center;gap:5px;height:34px;border:0;background:transparent;color:var(--eva-text);cursor:pointer;text-align:left}.eva-repeater-title strong{font-size:12.5px}.eva-repeater-actions{display:flex;gap:3px}.eva-repeater-actions button,.eva-inline-switch button{display:grid;width:26px;height:26px;place-items:center;padding:0;border:1px solid transparent;border-radius:5px;background:transparent;color:var(--eva-text-sub);cursor:pointer}.eva-repeater-actions button:hover,.eva-inline-switch button:hover,.eva-inline-switch button.is-active{border-color:var(--eva-border);background:var(--eva-surface);color:var(--eva-primary)}.eva-repeater-actions button.is-danger:hover{color:#ef4444}.eva-repeater-actions button:disabled{opacity:.35;cursor:not-allowed}.eva-repeater-body{padding:12px}.eva-advanced-add{display:flex;align-items:center;justify-content:center;gap:6px;height:31px;padding:0 12px;border:1px dashed var(--eva-border);border-radius:6px;background:transparent;color:var(--eva-primary);font-size:12px;cursor:pointer}.eva-advanced-add:hover{border-color:var(--eva-primary);background:var(--eva-soft)}.eva-advanced-add:disabled{opacity:.45;cursor:not-allowed}.eva-advanced-add small{margin-left:auto;color:var(--eva-text-mute)}
+.eva-box-inputs{display:flex;align-items:flex-end;gap:7px}.eva-box-inputs label{display:flex;min-width:70px;flex:1;flex-direction:column;gap:5px}.eva-box-inputs label span{font-size:11.5px;color:var(--eva-text-sub)}.eva-box-inputs .eva-box-unit{flex:0 0 76px}.eva-box-link{display:grid;width:30px;height:30px;place-items:center;padding:0;border:1px solid var(--eva-border);border-radius:5px;background:var(--eva-surface);color:var(--eva-text-sub);cursor:pointer}.eva-box-link.is-active{border-color:var(--eva-primary);background:var(--eva-soft);color:var(--eva-primary)}.eva-inline-switch{justify-content:flex-end}.eva-inline-switch button{border-color:var(--eva-border)}
+@media(max-width:900px){.eva-advanced-col-9,.eva-advanced-col-8,.eva-advanced-col-6,.eva-advanced-col-4,.eva-advanced-col-3{grid-column:span 12}.eva-box-inputs{flex-wrap:wrap}.eva-box-inputs label{min-width:calc(50% - 8px)}}
+
+/* Spacing / Dimensions：固定网格避免输入项被压扁；Dimensions 不预留联动按钮。 */
+.eva-box-field {
+  max-width: 100%;
+}
+
+.eva-box-inputs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(76px, 1fr)) 78px 30px;
+  align-items: end;
+  gap: 7px;
+}
+
+.eva-box-field.is-dimensions .eva-box-inputs {
+  grid-template-columns: repeat(4, minmax(92px, 1fr)) 78px;
+}
+
+.eva-box-inputs label,
+.eva-box-inputs .eva-box-unit {
+  min-width: 0;
+  width: auto;
+}
+
+.eva-box-inputs input,
+.eva-box-inputs select {
+  min-width: 0;
+}
+
+.eva-box-link {
+  flex: none;
+  align-self: end;
+}
+
+.eva-box-link:focus-visible {
+  outline: none;
+  border-color: var(--eva-primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--eva-primary) 12%, transparent);
+}
+
+@media (max-width: 1100px) {
+  .eva-box-inputs,
+  .eva-box-field.is-dimensions .eva-box-inputs {
+    grid-template-columns: repeat(2, minmax(120px, 1fr));
+  }
+
+  .eva-box-inputs .eva-box-unit {
+    width: auto;
+  }
+
+  .eva-box-link {
+    justify-self: start;
+  }
+}
+
+@media (max-width: 520px) {
+  .eva-box-inputs,
+  .eva-box-field.is-dimensions .eva-box-inputs {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

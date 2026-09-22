@@ -1,0 +1,11 @@
+(function(){
+  window.EvaFields=window.EvaFields||{};
+  var labels={normal:'默认 Normal',hover:'悬停 Hover',active:'激活 Active',visited:'已访问 Visited',focus:'聚焦 Focus'};
+  window.EvaFields.link_color={
+    props:['field','modelValue'],emits:['update:modelValue'],
+    data:function(){return{copiedState:''};},
+    computed:{value:function(){return Object.assign({normal:'',hover:'',active:'',visited:''},(this.modelValue&&typeof this.modelValue==='object')?this.modelValue:{});},stateList:function(){var states=Array.isArray(this.field.states)&&this.field.states.length?this.field.states:['normal','hover','active','visited'];return states.map(function(state){return typeof state==='object'?String(state.value||state.key||'normal'):String(state);});},copyable:function(){return this.field.copyable===true||this.field.copyable==='true';},preview:function(){return this.field.preview!==false;}},
+    methods:{set:function(k,v){var n=Object.assign({},this.value);n[k]=v;this.$emit('update:modelValue',n);},label:function(k){var custom=this.field.labels||this.field.state_labels||{};return custom[k]||labels[k]||k;},copyColor:function(state){var self=this,text=this.value[state]||'';if(!text){return;}var done=function(){self.copiedState=state;setTimeout(function(){if(self.copiedState===state){self.copiedState='';}},1200);};if(window.navigator&&navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(done).catch(done);}else{done();}}},
+    template:'<div class="eva-link-color"><div v-for="state in stateList" :key="state" class="eva-link-color-row"><span class="eva-link-color-label"><i :style="{background:value[state]||\'transparent\'}"></i>{{label(state)}}</span><eva-color :model-value="value[state]" :alpha="field.alpha!==false" :presets="field.presets||[]" :disabled="field.disabled" @update:model-value="set(state,$event)"></eva-color><div class="eva-link-color-actions"><a v-if="preview" href="#" :style="{color:value[state]||\'var(--eva-primary)\'}" @click.prevent>示例链接</a><button v-if="copyable" type="button" :class="{\'is-done\':copiedState===state}" @click="copyColor(state)"><i :class="copiedState===state?\'ri-check-line\':\'ri-file-copy-line\'"></i>{{copiedState===state?\'已复制\':\'复制\'}}</button></div></div></div>'
+  };
+})();

@@ -79,6 +79,7 @@ class Floating
         html.eva-fa-embed #adminmenumain { display: none !important; }
         html.eva-fa-embed #wpcontent,
         html.eva-fa-embed #wpfooter { margin-left: 0 !important; }
+        html.eva-fa-embed #wpbody { padding-top: 0 !important; }
         html.eva-fa-embed #wpbody-content { padding-top: 8px; }
         </style>
         <?php
@@ -162,12 +163,20 @@ class Floating
             </div>
         </div>
         <?php
-        echo "<style>\n" . self::css() . "\n</style>\n";
+        // css() 里的主色一律写成 var(--eva-primary, 兜底)，这行负责在「用户挑过主题色 / 主题指定过
+        // 品牌色」时把令牌覆盖到浮窗根节点上——前台没有 eva.css，:root 上一个 Eva 令牌都没有。
+        echo "<style>\n" . self::css() . "\n" . \Eva::theme_color_css('#xn-fa-root') . "\n</style>\n";
         echo "<script>\n" . self::js() . "\n</script>\n";
     }
 
     /**
      * 浮窗的内联 CSS（悬浮按钮、面板、标签条、iframe、缩放手柄，含响应式与暗色模式）。
+     *
+     * 配色全部走令牌，就近定义在 #xn-fa-root 上：浮窗主要挂在前台 wp_footer，那里不加载 eva.css，
+     * :root 上一个 Eva 令牌都没有，所以中性色这套由浮窗自带（它还要配合 prefers-color-scheme 暗色）。
+     * 主色三档则写成 var(--eva-primary, 兜底) —— 有 eva.css（Eva 独立页）时跟着它走，
+     * 主题品牌色或用户挑的主题色由 markup() 追加的一段 #xn-fa-root 令牌覆盖，
+     * 都没有时落到这里的兜底值，与 eva.css 的默认粉一致。
      *
      * 用 nowdoc（'CSS'）原样返回，不做变量插值；样式全部加 xn-fa 前缀避免污染站点。
      *
@@ -176,67 +185,101 @@ class Floating
     private static function css()
     {
         return <<<'CSS'
+#xn-fa-root {
+  --xn-fa-accent: var(--eva-primary, #ff758c);
+  --xn-fa-accent-strong: var(--eva-primary-600, #f0607a);
+  --xn-fa-accent-soft: var(--eva-primary-050, #ffe0e8);
+  --xn-fa-accent-text: var(--xn-fa-accent-strong);
+  --xn-fa-on-accent: var(--eva-on-primary, #fff);
+  --xn-fa-surface: #fff;
+  --xn-fa-soft: #f5f6f8;
+  --xn-fa-border: #e3e5ea;
+  --xn-fa-border-soft: #ececf1;
+  --xn-fa-text: #41454d;
+  --xn-fa-bar: #1f2330;
+  --xn-fa-on-bar: #fff;
+  --xn-fa-on-bar-sub: #c7ccd6;
+  --xn-fa-on-bar-hover: rgba(255, 255, 255, .14);
+  --xn-fa-scroll: #cfd3da;
+  --xn-fa-panel-border: rgba(0, 0, 0, .08);
+  --xn-fa-panel-shadow: 0 20px 64px rgba(0, 0, 0, .32);
+  --xn-fa-grip: rgba(120, 120, 120, .55);
+}
 #xn-fa-root, #xn-fa-root * { box-sizing: border-box; }
 .xn-fa-fab {
   position: fixed; right: 24px; bottom: 24px; z-index: 2147483600;
   width: 52px; height: 52px; border: 0; border-radius: 50%; cursor: pointer;
-  display: grid; place-items: center; color: #fff; touch-action: none;
-  background: linear-gradient(135deg, #6366f1, #4f46e5);
-  box-shadow: 0 8px 24px rgba(79, 70, 229, .45);
+  display: grid; place-items: center; color: var(--xn-fa-on-accent); touch-action: none;
+  background: linear-gradient(135deg, var(--xn-fa-accent), var(--xn-fa-accent-strong));
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--xn-fa-accent-strong) 45%, transparent);
   transition: transform .18s ease, box-shadow .18s ease;
 }
-.xn-fa-fab:hover { transform: translateY(-2px) scale(1.06); box-shadow: 0 12px 30px rgba(79, 70, 229, .55); }
+.xn-fa-fab:hover {
+  transform: translateY(-2px) scale(1.06);
+  box-shadow: 0 12px 30px color-mix(in srgb, var(--xn-fa-accent-strong) 55%, transparent);
+}
 .xn-fa-fab .dashicons { font-size: 28px; width: 28px; height: 28px; line-height: 1; }
 .xn-fa-panel {
   position: fixed; z-index: 2147483600; display: none; flex-direction: column;
   width: 440px; height: 620px; max-width: 96vw; max-height: 92vh;
-  background: #fff; border: 1px solid rgba(0, 0, 0, .08); border-radius: 14px;
-  overflow: hidden; box-shadow: 0 20px 64px rgba(0, 0, 0, .32);
+  background: var(--xn-fa-surface); border: 1px solid var(--xn-fa-panel-border); border-radius: 14px;
+  overflow: hidden; box-shadow: var(--xn-fa-panel-shadow);
 }
 .xn-fa-panel.is-max { left: 2vw !important; top: 2vh !important; width: 96vw !important; height: 96vh !important; }
 .xn-fa-bar {
   flex: none; display: flex; align-items: center; justify-content: space-between;
-  padding: 8px 8px 8px 14px; background: #1f2330; color: #fff; cursor: move; user-select: none;
+  padding: 8px 8px 8px 14px; background: var(--xn-fa-bar); color: var(--xn-fa-on-bar);
+  cursor: move; user-select: none;
 }
 .xn-fa-title { display: flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; }
-.xn-fa-title .dashicons { font-size: 18px; width: 18px; height: 18px; color: #8b93ff; }
+.xn-fa-title .dashicons { font-size: 18px; width: 18px; height: 18px; color: var(--xn-fa-accent); }
 .xn-fa-actions { display: flex; gap: 2px; }
 .xn-fa-actions button {
   width: 28px; height: 28px; border: 0; border-radius: 6px; cursor: pointer;
-  background: transparent; color: #c7ccd6; display: grid; place-items: center; transition: all .15s ease;
+  background: transparent; color: var(--xn-fa-on-bar-sub); display: grid; place-items: center;
+  transition: all .15s ease;
 }
-.xn-fa-actions button:hover { background: rgba(255, 255, 255, .14); color: #fff; }
+.xn-fa-actions button:hover { background: var(--xn-fa-on-bar-hover); color: var(--xn-fa-on-bar); }
 .xn-fa-actions .dashicons { font-size: 17px; width: 17px; height: 17px; }
 .xn-fa-tabs {
   flex: none; display: flex; gap: 6px; padding: 8px 10px; overflow-x: auto; white-space: nowrap;
-  background: #f5f6f8; border-bottom: 1px solid #ececf1;
+  background: var(--xn-fa-soft); border-bottom: 1px solid var(--xn-fa-border-soft);
 }
 .xn-fa-tabs::-webkit-scrollbar { height: 6px; }
-.xn-fa-tabs::-webkit-scrollbar-thumb { background: #cfd3da; border-radius: 3px; }
+.xn-fa-tabs::-webkit-scrollbar-thumb { background: var(--xn-fa-scroll); border-radius: 3px; }
 .xn-fa-tab {
   flex: none; display: inline-flex; align-items: center; gap: 5px; padding: 5px 11px; line-height: 1;
-  border: 1px solid #e3e5ea; border-radius: 999px; background: #fff; color: #41454d; font-size: 12px; cursor: pointer;
+  border: 1px solid var(--xn-fa-border); border-radius: 999px;
+  background: var(--xn-fa-surface); color: var(--xn-fa-text); font-size: 12px; cursor: pointer;
   transition: all .15s ease;
 }
-.xn-fa-tab:hover { border-color: #6366f1; color: #4f46e5; }
-.xn-fa-tab.is-active { border-color: #6366f1; background: #eef0fe; color: #4f46e5; }
+.xn-fa-tab:hover { border-color: var(--xn-fa-accent); color: var(--xn-fa-accent-text); }
+.xn-fa-tab.is-active {
+  border-color: var(--xn-fa-accent); background: var(--xn-fa-accent-soft); color: var(--xn-fa-accent-text);
+}
 .xn-fa-tab .dashicons { font-size: 15px; width: 15px; height: 15px; }
-.xn-fa-frame-wrap { position: relative; flex: 1; min-height: 0; background: #fff; }
+.xn-fa-frame-wrap { position: relative; flex: 1; min-height: 0; background: var(--xn-fa-surface); }
 .xn-fa-frame { display: block; width: 100%; height: 100%; border: 0; }
 .xn-fa-resize { position: absolute; right: 0; bottom: 0; width: 18px; height: 18px; cursor: nwse-resize; z-index: 6; }
 .xn-fa-resize::after {
   content: ""; position: absolute; right: 3px; bottom: 3px; width: 8px; height: 8px;
-  border-right: 2px solid rgba(120, 120, 120, .55); border-bottom: 2px solid rgba(120, 120, 120, .55);
+  border-right: 2px solid var(--xn-fa-grip); border-bottom: 2px solid var(--xn-fa-grip);
 }
 @media (max-width: 782px) {
   .xn-fa-fab { right: 16px; bottom: 84px; }
 }
 @media (prefers-color-scheme: dark) {
-  .xn-fa-panel { background: #1a1e25; border-color: #2c323b; }
-  .xn-fa-tabs { background: #242a33; border-color: #2c323b; }
-  .xn-fa-tab { background: #1a1e25; border-color: #2c323b; color: #cdd3dd; }
-  .xn-fa-tab.is-active { background: rgba(99, 102, 241, .22); border-color: #6366f1; color: #c7cbff; }
-  .xn-fa-frame-wrap { background: #1a1e25; }
+  #xn-fa-root {
+    --xn-fa-surface: #1a1e25;
+    --xn-fa-soft: #242a33;
+    --xn-fa-border: #2c323b;
+    --xn-fa-border-soft: #2c323b;
+    --xn-fa-text: #cdd3dd;
+    --xn-fa-panel-border: #2c323b;
+    /* 暗底上主色本身太重：浅底改成半透明主色，文字取一档兑白的亮色 */
+    --xn-fa-accent-soft: color-mix(in srgb, var(--xn-fa-accent) 22%, transparent);
+    --xn-fa-accent-text: color-mix(in srgb, var(--xn-fa-accent) 65%, #fff);
+  }
 }
 CSS;
     }

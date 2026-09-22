@@ -1,24 +1,37 @@
-/**
- * Eva UI 库 · eva-datepicker（日期 / 时间选择）。【骨架 / 占位 —— 待实现】
- *
- * 规划用途：支撑 date / datetime / time 字段（日历面板 + 可选时间）。
- * 约定：挂到 window.EvaUI.DatePicker 供 Vue 全局注册；样式见同目录 eva-datepicker.css。
- * 现状：占位骨架，逻辑待补。实现后需在 eva-app.js 注册：
- *   if (window.EvaUI && window.EvaUI.DatePicker) { app.component('eva-datepicker', window.EvaUI.DatePicker); }
- * 设计：零依赖、自写日历（不引第三方日期库）。
- */
-(function () {
-  if (typeof window === 'undefined') { return; }
-  window.EvaUI = window.EvaUI || {};
-
-  // TODO: 实现日期选择（月历翻页、选中态、mode=date/datetime/time、format 格式化、弹出面板）。
-  window.EvaUI.DatePicker = {
-    props: {
-      modelValue: { type: String, default: '' },
-      mode: { type: String, default: 'date' }, // date | datetime | time
-      format: { type: String, default: '' }
+(function(){
+  window.EvaUI=window.EvaUI||{};
+  function pad(n){return String(n).padStart(2,'0');}
+  function parse(v){if(!v)return null;if(v instanceof Date)return v;var s=String(v).replace(' ','T'),d=new Date(s);if(!isNaN(d.getTime()))return d;var m=String(v).match(/^(\d{4})[-\/]?(\d{2})[-\/]?(\d{2})/);return m?new Date(Number(m[1]),Number(m[2])-1,Number(m[3])):null;}
+  function fmt(d,f){if(!d)return'';f=f||'Y-m-d';return f.replace(/Y/g,d.getFullYear()).replace(/m/g,pad(d.getMonth()+1)).replace(/d/g,pad(d.getDate())).replace(/H/g,pad(d.getHours())).replace(/i/g,pad(d.getMinutes())).replace(/s/g,pad(d.getSeconds()));}
+  window.EvaUI.DatePicker={
+    props:{modelValue:{default:''},mode:{type:String,default:'date'},range:{type:Boolean,default:false},format:{type:String,default:'Y-m-d'},displayFormat:{type:String,default:''},min:{default:''},max:{default:''},showSeconds:{type:Boolean,default:false},minuteStep:{type:Number,default:1},secondStep:{type:Number,default:1},disabledWeekdays:{default:null},disabledDates:{default:null},placeholder:{type:String,default:''},presets:{default:null},disabled:{type:Boolean,default:false}},
+    emits:['update:modelValue'],
+    data:function(){var n=new Date();return{open:false,viewYear:n.getFullYear(),viewMonth:n.getMonth(),start:null,end:null,hour:pad(n.getHours()),minute:pad(n.getMinutes()),second:'00'};},
+    computed:{
+      title:function(){return this.viewYear+' 年 '+pad(this.viewMonth+1)+' 月';},
+      weekNames:function(){return['日','一','二','三','四','五','六'];},
+      values:function(){if(this.range){if(Array.isArray(this.modelValue))return this.modelValue;var v=this.modelValue||{};return[v.start||'',v.end||''];}return[this.modelValue||''];},
+      displayValue:function(){var f=this.displayFormat||this.format;return this.values.filter(Boolean).map(function(v){var d=parse(v);return d?fmt(d,f):String(v);}).join('  →  ');},
+      cells:function(){var first=new Date(this.viewYear,this.viewMonth,1),start=new Date(this.viewYear,this.viewMonth,1-first.getDay()),out=[];for(var i=0;i<42;i++){var d=new Date(start);d.setDate(start.getDate()+i);out.push(d);}return out;},
+      presetItems:function(){var p=this.presets||{};if(Array.isArray(p))return p.map(function(v){return{label:String(v.label||v),value:v.value||v};});return Object.keys(p).map(function(k){return{label:String(p[k]),value:k};});}
     },
-    emits: ['update:modelValue'],
-    template: '<div class="eva-datepicker eva-datepicker-placeholder">eva-datepicker 占位：日期选择待实现</div>'
+    watch:{modelValue:{immediate:true,deep:true,handler:function(){this.sync();}}},
+    mounted:function(){document.addEventListener('mousedown',this.outside);},beforeUnmount:function(){document.removeEventListener('mousedown',this.outside);},
+    methods:{
+      outside:function(e){if(this.$el&&!this.$el.contains(e.target))this.open=false;},
+      sync:function(){var a=this.values,d=parse(a[0]),e=parse(a[1]);this.start=d;this.end=e;if(d){this.viewYear=d.getFullYear();this.viewMonth=d.getMonth();this.hour=pad(d.getHours());this.minute=pad(d.getMinutes());this.second=pad(d.getSeconds());}},
+      prev:function(){if(this.viewMonth===0){this.viewMonth=11;this.viewYear--;}else this.viewMonth--;},next:function(){if(this.viewMonth===11){this.viewMonth=0;this.viewYear++;}else this.viewMonth++;},today:function(){var d=new Date();this.viewYear=d.getFullYear();this.viewMonth=d.getMonth();this.choose(d);},
+      same:function(a,b){return a&&b&&a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate();},
+      disabledDay:function(d){var lo=parse(this.min),hi=parse(this.max),x=new Date(d.getFullYear(),d.getMonth(),d.getDate()).getTime(),weekdays=Array.isArray(this.disabledWeekdays)?this.disabledWeekdays.map(Number):[],dates=Array.isArray(this.disabledDates)?this.disabledDates.map(String):[],key=fmt(d,'Y-m-d');return weekdays.indexOf(d.getDay())!==-1||dates.indexOf(key)!==-1||(lo&&x<new Date(lo.getFullYear(),lo.getMonth(),lo.getDate()).getTime())||(hi&&x>new Date(hi.getFullYear(),hi.getMonth(),hi.getDate()).getTime());},
+      inRange:function(d){if(!this.start||!this.end)return false;var x=d.setHours(0,0,0,0),a=new Date(this.start).setHours(0,0,0,0),b=new Date(this.end).setHours(0,0,0,0);return x>a&&x<b;},
+      cellClass:function(d){return{'is-other':d.getMonth()!==this.viewMonth,'is-start':this.same(d,this.start),'is-end':this.same(d,this.end),'is-range':this.inRange(new Date(d)),'is-today':this.same(d,new Date()),'is-disabled':this.disabledDay(d)};},
+      withTime:function(d){var x=new Date(d);if(this.mode==='datetime')x.setHours(Number(this.hour)||0,Number(this.minute)||0,this.showSeconds?(Number(this.second)||0):0,0);else x.setHours(0,0,0,0);return x;},
+      choose:function(d){if(this.disabledDay(d))return;d=this.withTime(d);if(this.range){if(!this.start||this.end){this.start=d;this.end=null;}else if(d<this.start){this.end=this.start;this.start=d;}else this.end=d;this.emitValue();}else{this.start=d;this.emitValue();if(this.mode==='date')this.open=false;}},
+      emitValue:function(){if(this.range){this.$emit('update:modelValue',[this.start?fmt(this.withTime(this.start),this.format):'',this.end?fmt(this.withTime(this.end),this.format):'']);}else this.$emit('update:modelValue',this.start?fmt(this.withTime(this.start),this.format):'');},
+      timeChange:function(){var minuteStep=Math.max(1,Number(this.minuteStep)||1),secondStep=Math.max(1,Number(this.secondStep)||1);this.minute=pad(Math.min(59,Math.round((Number(this.minute)||0)/minuteStep)*minuteStep));this.second=pad(Math.min(59,Math.round((Number(this.second)||0)/secondStep)*secondStep));if(this.start){this.start=this.withTime(this.start);this.emitValue();}},
+      clear:function(){this.start=null;this.end=null;this.$emit('update:modelValue',this.range?[]:'');this.open=false;},
+      usePreset:function(item){var v=item.value;if(this.range&&Array.isArray(v)){this.start=parse(v[0]);this.end=parse(v[1]);}else this.start=parse(v);this.emitValue();this.open=false;}
+    },
+    template:['<div class="eva-datepicker" :class="{\'is-open\':open,\'is-disabled\':disabled}">','<button type="button" class="eva-datepicker-trigger" :disabled="disabled" @click="open=!open"><i class="ri-calendar-line"></i><span :class="{\'is-placeholder\':!displayValue}">{{displayValue||placeholder||\'请选择日期\'}}</span><i class="ri-arrow-down-s-line"></i></button>','<div v-if="open" class="eva-datepicker-popover">','<div class="eva-datepicker-nav"><button type="button" @click="prev"><i class="ri-arrow-left-s-line"></i></button><strong>{{title}}</strong><button type="button" @click="next"><i class="ri-arrow-right-s-line"></i></button></div>','<div class="eva-datepicker-week"><span v-for="w in weekNames" :key="w">{{w}}</span></div>','<div class="eva-datepicker-days"><button v-for="(d,i) in cells" :key="i" type="button" :class="cellClass(d)" :disabled="disabledDay(d)" @click="choose(d)"><span>{{d.getDate()}}</span></button></div>','<div v-if="mode===\'datetime\'" class="eva-datepicker-time"><i class="ri-time-line"></i><input v-model="hour" type="number" min="0" max="23" @change="timeChange"><b>:</b><input v-model="minute" type="number" min="0" max="59" :step="minuteStep" @change="timeChange"><template v-if="showSeconds"><b>:</b><input v-model="second" type="number" min="0" max="59" :step="secondStep" @change="timeChange"></template></div>','<div v-if="presetItems.length" class="eva-datepicker-presets"><button v-for="p in presetItems" :key="p.label" type="button" @click="usePreset(p)">{{p.label}}</button></div>','<div class="eva-datepicker-foot"><button type="button" class="is-muted" @click="clear">清除</button><button type="button" class="is-muted" @click="today">今天</button><button v-if="mode===\'datetime\'||range" type="button" class="is-primary" @click="open=false">确定</button></div>','</div>','</div>'].join('')
   };
 })();

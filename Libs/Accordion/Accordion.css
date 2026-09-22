@@ -1,15 +1,194 @@
-/* Eva UI 库 · eva-accordion 样式（骨架 / 占位，遵循 ui-style-guard：5px 圆角、--eva-* 令牌、暗色自适配）。待实现。 */
+/* Eva UI 库 · eva-accordion 样式，遵循 5px 圆角、--eva-* 令牌、暗色自适配。 */
 .eva-accordion {
   width: 100%;
-  /* TODO: 面板头、展开/收起箭头、内容区过渡等样式 */
+  display: grid;
+  gap: 9px;
 }
 
-/* 占位提示（实现后删除） */
-.eva-accordion-placeholder {
-  padding: 12px;
-  border: 1px dashed var(--eva-border);
+.eva-acc-panel {
+  overflow: hidden;
+  border: 1px solid var(--eva-border);
   border-radius: var(--eva-radius);
+  background: var(--eva-surface);
+  box-shadow: var(--eva-shadow-card);
+  transition: border-color var(--eva-ease), box-shadow var(--eva-ease), background var(--eva-ease);
+}
+
+.eva-acc-panel.is-open {
+  border-color: color-mix(in srgb, var(--eva-primary) 26%, var(--eva-border));
+  box-shadow: var(--eva-shadow-card-hover);
+}
+
+.eva-acc-panel.is-dragging { opacity: .48; }
+.eva-acc-panel.is-over {
+  border-color: var(--eva-primary);
+  background: var(--eva-primary-050);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--eva-primary) 12%, transparent);
+}
+
+.eva-acc-panel.is-disabled {
+  opacity: 0.62;
+}
+
+.eva-acc-head {
+  display: flex;
+  width: 100%;
+  min-height: 40px;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 11px;
+  border: 0;
   background: var(--eva-soft);
+  color: var(--eva-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--eva-ease), color var(--eva-ease);
+}
+
+.eva-acc-head:hover {
+  background: color-mix(in srgb, var(--eva-primary) 6%, var(--eva-surface));
+}
+
+.eva-acc-panel.is-open .eva-acc-head {
+  background: color-mix(in srgb, var(--eva-primary) 7%, var(--eva-surface));
+  color: var(--eva-primary);
+}
+
+.eva-acc-panel.is-disabled .eva-acc-head {
+  cursor: not-allowed;
+}
+
+.eva-acc-icon,
+.eva-acc-toggle {
+  display: grid;
+  width: 18px;
+  height: 18px;
+  flex: none;
+  place-items: center;
   color: var(--eva-text-mute);
+  transition: color var(--eva-ease);
+}
+
+.eva-acc-icon {
+  color: var(--eva-primary);
+}
+
+.eva-acc-panel.is-open .eva-acc-toggle {
+  color: var(--eva-primary);
+}
+
+.eva-acc-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.eva-acc-badge {
+  display: inline-flex;
+  min-width: 20px;
+  height: 20px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+  border-radius: var(--eva-radius-full);
+  background: var(--eva-primary-050);
+  color: var(--eva-primary);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.eva-acc-lock,
+.eva-acc-more {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  flex: none;
+  place-items: center;
+  color: var(--eva-text-mute);
+}
+
+.eva-acc-drag {
+  border-radius: var(--eva-radius);
+  cursor: grab;
+  transition: color var(--eva-ease), background var(--eva-ease);
+}
+.eva-acc-drag:hover { color: var(--eva-primary); background: var(--eva-primary-050); }
+.eva-acc-drag:active { cursor: grabbing; }
+
+.eva-acc-toggle {
+  margin-left: auto;
+}
+
+.eva-acc-body {
+  overflow: hidden;
+  border-top: 1px solid var(--eva-border);
+  background: var(--eva-surface);
+  will-change: height, opacity, transform;
+}
+
+.eva-acc-inner {
+  padding: 13px;
+  will-change: opacity, transform;
+}
+
+.eva-accordion-desc {
+  margin: 0 0 12px;
+  color: var(--eva-text-sub);
   font-size: 12.5px;
+  line-height: 1.6;
+}
+
+.eva-accordion-fields {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 12px 14px;
+}
+
+.eva-accordion-field {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.eva-acc-col-12 { grid-column: span 12; }
+.eva-acc-col-9 { grid-column: span 9; }
+.eva-acc-col-8 { grid-column: span 8; }
+.eva-acc-col-6 { grid-column: span 6; }
+.eva-acc-col-4 { grid-column: span 4; }
+.eva-acc-col-3 { grid-column: span 3; }
+
+.eva-accordion-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.eva-accordion-meta span {
+  color: var(--eva-text);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.eva-accordion-meta em {
+  color: var(--eva-text-mute);
+  font-size: 11.5px;
+  font-style: normal;
+  line-height: 1.5;
+}
+
+.eva-accordion-control {
+  min-width: 0;
+}
+
+@media (max-width: 720px) {
+  .eva-accordion-field {
+    grid-column: 1 / -1;
+  }
 }

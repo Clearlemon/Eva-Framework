@@ -51,15 +51,26 @@ class Customize
             $section_id = 'eva_' . $id;
             $cap        = isset($cfg['capability']) ? $cfg['capability'] : 'edit_theme_options';
 
-            // 1) 注册一个 Customizer 区块。
-            $wp_customize->add_section($section_id, [
+            // 1) 注册一个 Customizer 区块。priority 同 CSF：数字越小越靠前。
+            $section_args = [
                 'title'      => isset($cfg['title']) ? $cfg['title'] : $id,
                 'capability' => $cap,
-            ]);
+            ];
+            if (isset($cfg['priority']) && is_numeric($cfg['priority'])) {
+                $section_args['priority'] = (int) $cfg['priority'];
+            }
+            if (! empty($cfg['description']) && is_string($cfg['description'])) {
+                $section_args['description'] = $cfg['description'];
+            }
+            $wp_customize->add_section($section_id, $section_args);
 
-            // 2) 注册 setting：type=option 表示值直接落 wp_options[$id]。
+            // 2) 注册 setting。与 CSF 同名的参数：
+            //    database  => 'option'（默认，值落 wp_options[$id]）或 'theme_mod'（跟随当前主题）；
+            //    transport => 'refresh'（默认，改动后刷新预览）或 'postMessage'（由主题自己的预览脚本即时更新）。
+            //    整个容器是一个 setting（值为 [字段 id => 值]），所以这两个参数是容器级的，字段上单独写 transport 不生效。
             $wp_customize->add_setting($id, [
-                'type'              => 'option',
+                'type'              => (isset($cfg['database']) && $cfg['database'] === 'theme_mod') ? 'theme_mod' : 'option',
+                'transport'         => (isset($cfg['transport']) && $cfg['transport'] === 'postMessage') ? 'postMessage' : 'refresh',
                 'capability'        => $cap,
                 'default'           => [],
                 // 保存前清洗：兼容数组或 JSON 字符串两种提交形态，统一走全框架清洗规则。

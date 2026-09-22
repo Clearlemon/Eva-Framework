@@ -50,7 +50,8 @@ class Comment
                 },
                 'comment',
                 'normal',
-                'default'
+                // priority 同 CSF：high / core / default / low。
+                isset($cfg['priority']) && in_array($cfg['priority'], ['high', 'core', 'default', 'low'], true) ? $cfg['priority'] : 'default'
             );
         }
     }
@@ -69,6 +70,12 @@ class Comment
         // 读取该评论已存值用于回填。
         $values = self::read_values($comment->comment_ID, $id, $cfg);
         echo \Eva::embed_markup('comment', $cfg, $values); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+
+        // show_restore / show_reset（同 CSF）：勾选后更新评论，就删掉这个 metabox 存的值，回到字段默认值。
+        if (! empty($cfg['show_restore']) || ! empty($cfg['show_reset'])) {
+            echo '<label class="eva-mb-restore"><input type="checkbox" name="eva_restore[' . esc_attr($id) . ']" value="1"> '
+                . '<span>恢复默认值（更新评论后生效）</span></label>';
+        }
     }
 
     /**
@@ -92,8 +99,26 @@ class Comment
                 continue;
             }
 
+            // show_restore：勾了「恢复默认值」就删除已存的值，本次提交的字段值不再写入。
+            if (! empty($_POST['eva_restore'][$id]) && (! empty($cfg['show_restore']) || ! empty($cfg['show_reset']))) {
+                if ((isset($cfg['data_type']) ? $cfg['data_type'] : 'serialize') === 'direct') {
+                    foreach ((isset($cfg['sections']) ? $cfg['sections'] : []) as $sec) {
+                        foreach ((isset($sec['fields']) ? $sec['fields'] : []) as $f) {
+                            if (! empty($f['id'])) {
+                                delete_comment_meta($comment_id, $f['id']);
+                            }
+                        }
+                    }
+                } else {
+                    delete_comment_meta($comment_id, $id);
+                }
+                continue;
+            }
+
             // 取提交值并清洗。
             $raw = isset($_POST['eva_fields'][$id]) ? (array) wp_unslash($_POST['eva_fields'][$id]) : [];
+            // 嵌入式外壳把数组 / 对象类的字段值以 JSON 字符串放在隐藏域里提交，清洗前先还原。
+            $raw = Data::decode_embedded_values($raw, isset($cfg['sections']) ? $cfg['sections'] : []);
             $clean = Data::sanitize_by_sections(isset($cfg['sections']) ? $cfg['sections'] : [], $raw);
 
             // 按 data_type 写入 comment_meta。

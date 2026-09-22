@@ -1,0 +1,52 @@
+﻿/* Remote WordPress resource selector */
+.eva-resource-select { position: relative; width: 100%; max-width: 720px; }
+.eva-resource-trigger-wrap { position: relative; display: flex; }
+.eva-resource-trigger { display: flex; align-items: center; min-height: 34px; width: 100%; gap: 8px; padding: 5px 10px; border: 1px solid var(--eva-border); border-radius: var(--eva-radius); background: var(--eva-surface); color: var(--eva-text); font: inherit; font-size: 12px; text-align: left; cursor: pointer; }
+.eva-resource-trigger:hover:not(:disabled), .eva-resource-select.is-open .eva-resource-trigger { border-color: var(--eva-primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--eva-primary) 11%, transparent); }
+.eva-resource-trigger > span { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.eva-resource-trigger .is-placeholder { color: var(--eva-text-mute); }
+.eva-resource-trigger > i { color: var(--eva-primary); }
+.eva-resource-clear { position: absolute; right: 29px; top: 50%; display: grid; place-items: center; width: 22px; height: 22px; border: 0; border-radius: 50%; background: transparent; color: var(--eva-text-mute); transform: translateY(-50%); cursor: pointer; }
+.eva-resource-clear:hover { color: var(--eva-danger); }
+.eva-resource-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.eva-resource-tag { display: inline-flex; align-items: center; max-width: 100%; gap: 5px; padding: 3px 6px; border-radius: var(--eva-radius); background: var(--eva-primary-050); color: var(--eva-primary); cursor: grab; }
+.eva-resource-tag span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.eva-resource-tag i { cursor: pointer; }
+.eva-resource-panel { position: absolute; z-index: 30; top: calc(100% + 5px); left: 0; width: min(520px, 100%); overflow: hidden; border: 1px solid var(--eva-border); border-radius: var(--eva-radius); background: var(--eva-surface); box-shadow: var(--eva-shadow-float); }
+.eva-resource-search { display: flex; align-items: center; gap: 7px; padding: 8px; border-bottom: 1px solid var(--eva-border); }
+.eva-resource-search > i { color: var(--eva-text-mute); }
+.eva-resource-search input { min-width: 0; flex: 1; height: 28px; padding: 0 7px; border: 1px solid var(--eva-border); border-radius: var(--eva-radius); background: var(--eva-surface); color: var(--eva-text); font: inherit; font-size: 12px; outline: 0; }
+.eva-resource-search input:focus { border-color: var(--eva-primary); }
+.eva-resource-list { max-height: 270px; overflow-y: auto; margin: 0; padding: 4px; list-style: none; }
+.eva-resource-list li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px; border-radius: var(--eva-radius); cursor: pointer; }
+.eva-resource-list li:hover, .eva-resource-list li.is-selected { background: var(--eva-primary-050); }
+.eva-resource-list li strong, .eva-resource-list li span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.eva-resource-list li strong { color: var(--eva-text); font-size: 12px; }
+.eva-resource-list li span { display: block; margin-top: 2px; color: var(--eva-text-mute); font-size: 10.5px; }
+.eva-resource-empty { padding: 18px 10px; color: var(--eva-text-mute); font-size: 12px; text-align: center; }
+.eva-resource-select.is-disabled { opacity: .65; }
+/* Relationship */
+.eva-relationship { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; width: 100%; }
+.eva-relationship-column { min-width: 0; overflow: hidden; border: 1px solid var(--eva-border); border-radius: var(--eva-radius); background: var(--eva-surface); }
+.eva-relationship-column > header { display: flex; align-items: baseline; justify-content: space-between; min-height: 36px; padding: 0 10px; border-bottom: 1px solid var(--eva-border); background: var(--eva-soft); }
+.eva-relationship-column > header strong { color: var(--eva-text); font-size: 12px; }
+.eva-relationship-column > header small { color: var(--eva-text-mute); font-size: 10px; }
+.eva-relationship-search { display: flex; align-items: center; gap: 6px; padding: 7px; border-bottom: 1px solid var(--eva-border); }
+.eva-relationship-search > i { color: var(--eva-text-mute); }
+.eva-relationship-search input { min-width: 0; flex: 1; height: 28px; padding: 0 7px; border: 1px solid var(--eva-border); border-radius: var(--eva-radius); background: var(--eva-surface); color: var(--eva-text); font: inherit; font-size: 12px; outline: 0; }
+.eva-relationship-list { max-height: 300px; overflow-y: auto; margin: 0; padding: 4px; list-style: none; }
+.eva-relationship-list li { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 35px; padding: 6px 7px; border-radius: var(--eva-radius); cursor: pointer; }
+.eva-relationship-list li:hover { background: var(--eva-primary-050); }
+.eva-relationship-list li.is-disabled { opacity: .45; cursor: not-allowed; }
+.eva-relationship-list li > span { min-width: 0; flex: 1; }
+.eva-relationship-list li strong, .eva-relationship-list li small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.eva-relationship-list li strong { color: var(--eva-text); font-size: 12px; }
+.eva-relationship-list li small { margin-top: 2px; color: var(--eva-text-mute); font-size: 10.5px; }
+.eva-relationship-list li > i { color: var(--eva-primary); }
+.eva-relationship-list li > div { display: flex; gap: 2px; }
+.eva-relationship-list li > div button { display: grid; place-items: center; width: 23px; height: 23px; padding: 0; border: 0; border-radius: var(--eva-radius); background: transparent; color: var(--eva-text-mute); cursor: pointer; }
+.eva-relationship-list li > div button:hover:not(:disabled) { background: var(--eva-primary-050); color: var(--eva-primary); }
+.eva-relationship-list li > div button:disabled { opacity: .3; cursor: not-allowed; }
+.eva-relationship-list .eva-relationship-empty { display: block; cursor: default; }
+.eva-relationship.is-disabled { opacity: .65; pointer-events: none; }
+@media (max-width: 760px) { .eva-relationship { grid-template-columns: 1fr; } }

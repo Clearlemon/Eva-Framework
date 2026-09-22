@@ -1,0 +1,16 @@
+.eva-textarea-field { width: 100%; min-width: 0; }
+.eva-textarea-field .eva-f-textarea { display: block; box-sizing: border-box; width: 100%; padding: 8px 11px; border-radius: 3px; line-height: 1.6; }
+.eva-textarea-field.is-monospace .eva-f-textarea { font-family: Consolas, Monaco, "Courier New", monospace; font-size: 12.5px; tab-size: 2; }
+.eva-textarea-field.has-error .eva-f-textarea { border-color: #d63638; box-shadow: 0 0 0 2px color-mix(in srgb, #d63638 13%, transparent); }
+.eva-textarea-field.has-success .eva-f-textarea { border-color: #2f8f5b; }
+.eva-textarea-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 28px; padding: 0 2px 5px; color: var(--eva-text-mute); font-size: 12px; }
+.eva-textarea-toolbar > div { display: flex; align-items: center; gap: 2px; flex: none; }
+.eva-textarea-toolbar button { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; min-width: 26px; padding: 0; border: 0; border-radius: 3px; background: transparent; color: var(--eva-text-sub); cursor: pointer; }
+.eva-textarea-toolbar button:hover:not(:disabled) { background: var(--eva-soft); color: var(--eva-primary); }
+.eva-textarea-toolbar button:focus-visible { outline: 2px solid color-mix(in srgb, var(--eva-primary) 45%, transparent); outline-offset: 1px; }
+.eva-textarea-toolbar button:disabled { cursor: not-allowed; opacity: .38; }
+.eva-textarea-meta { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 22px; padding: 4px 2px 0; color: var(--eva-text-mute); font-size: 11.5px; line-height: 1.4; }
+.eva-textarea-message { display: inline-flex; align-items: center; min-width: 0; gap: 4px; }
+.eva-textarea-message.is-error { color: #d63638; } .eva-textarea-message.is-success { color: #2f8f5b; } .eva-textarea-message.is-info { color: var(--eva-primary); }
+.eva-textarea-counter { margin-left: auto; white-space: nowrap; font-variant-numeric: tabular-nums; } .eva-textarea-counter.is-near { color: #b26200; font-weight: 600; }
+@media (max-width: 600px) { .eva-textarea-meta { align-items: flex-start; flex-wrap: wrap; } .eva-textarea-counter { width: 100%; margin-left: 0; text-align: right; white-space: normal; } }

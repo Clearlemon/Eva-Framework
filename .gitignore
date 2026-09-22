@@ -1,0 +1,5 @@
+# 另一个工具的临时工作区，不是源码
+.codex-temp/
+
+# macOS
+.DS_Store

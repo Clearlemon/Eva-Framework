@@ -1,0 +1,68 @@
+/* Eva palette —— 预设配色单选 */
+.eva-palette {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.eva-palette.is-disabled { opacity: .55; }
+
+.eva-palette-item {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 5px;
+  border: 1px solid var(--eva-border);
+  border-radius: var(--eva-radius);
+  background: var(--eva-surface);
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color var(--eva-ease, .22s ease), box-shadow var(--eva-ease, .22s ease);
+}
+.eva-palette-item:hover { border-color: color-mix(in srgb, var(--eva-primary) 45%, var(--eva-border)); }
+.eva-palette-item:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--eva-primary) 22%, transparent);
+}
+.eva-palette-item.is-active {
+  border-color: var(--eva-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--eva-primary) 14%, transparent);
+}
+.eva-palette-item:disabled { cursor: not-allowed; }
+
+/* 色块条：几个颜色等宽并排，外圈圆角由容器裁切。 */
+.eva-palette-colors {
+  display: flex;
+  overflow: hidden;
+  width: 132px;
+  height: 34px;
+  border-radius: var(--eva-radius-sm, var(--eva-radius));
+}
+.eva-palette-colors > span { flex: 1; }
+
+.eva-palette-label {
+  padding: 0 2px 1px;
+  color: var(--eva-text-sub);
+  font-size: 12px;
+  line-height: 1.3;
+  text-align: left;
+}
+.eva-palette-item.is-active .eva-palette-label { color: var(--eva-text); }
+
+/* 选中角标 */
+.eva-palette-check {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  display: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  color: var(--eva-on-primary);
+  background: var(--eva-primary);
+  font-size: 13px;
+  font-style: normal;
+  line-height: 18px;
+  text-align: center;
+}
+.eva-palette-item.is-active .eva-palette-check { display: block; }

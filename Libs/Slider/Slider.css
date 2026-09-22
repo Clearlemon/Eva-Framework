@@ -1,15 +1,1 @@
-/* Eva UI 库 · eva-slider 样式（骨架 / 占位，遵循 ui-style-guard：5px 圆角、--eva-* 令牌、暗色自适配）。待实现。 */
-.eva-slider {
-  width: 100%;
-  /* TODO: 轨道、已填充段、滑块手柄、hover/focus 态、数值气泡 */
-}
-
-/* 占位提示（实现后删除） */
-.eva-slider-placeholder {
-  padding: 12px;
-  border: 1px dashed var(--eva-border);
-  border-radius: var(--eva-radius);
-  background: var(--eva-soft);
-  color: var(--eva-text-mute);
-  font-size: 12.5px;
-}
+.eva-ui-slider{position:relative;width:100%;padding:3px 2px 0}.eva-ui-slider-head{display:flex;justify-content:flex-end;min-height:24px}.eva-ui-slider output{display:inline-flex;align-items:center;justify-content:center;min-width:38px;height:24px;padding:0 8px;border-radius:6px;background:var(--eva-primary);color:#fff;font-size:12px;font-weight:650;line-height:1}.eva-ui-slider-track-wrap{height:22px;display:flex;align-items:center}.eva-ui-slider input[type=range]{--eva-slider-progress:0%;appearance:none;-webkit-appearance:none;width:100%;height:4px;margin:0;border:0;border-radius:999px;outline:0;background:linear-gradient(90deg,var(--eva-primary) 0 var(--eva-slider-progress),var(--eva-border) var(--eva-slider-progress) 100%);cursor:pointer}.eva-ui-slider input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:17px;height:17px;border:3px solid var(--eva-primary);border-radius:50%;background:var(--eva-surface);box-shadow:0 1px 5px color-mix(in srgb,var(--eva-primary) 30%,transparent);transition:transform .16s ease}.eva-ui-slider input[type=range]:focus::-webkit-slider-thumb,.eva-ui-slider input[type=range]:hover::-webkit-slider-thumb{transform:scale(1.1)}.eva-ui-slider input[type=range]::-moz-range-thumb{width:12px;height:12px;border:3px solid var(--eva-primary);border-radius:50%;background:var(--eva-surface)}.eva-ui-slider-limits{display:flex;justify-content:space-between;margin-top:2px;color:var(--eva-text-mute);font-size:11px}.eva-ui-slider-marks{position:relative;height:25px;margin:0 8px}.eva-ui-slider-marks button{position:absolute;top:0;display:grid;justify-items:center;gap:3px;padding:0;border:0;background:none;color:var(--eva-text-mute);font-size:10px;transform:translateX(-50%);cursor:pointer}.eva-ui-slider-marks i{width:5px;height:5px;border-radius:50%;background:var(--eva-border)}.eva-ui-slider-marks button:hover i{background:var(--eva-primary)}.eva-ui-slider.is-disabled{opacity:.55;pointer-events:none}

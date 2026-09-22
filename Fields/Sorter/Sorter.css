@@ -1,0 +1,206 @@
+/* Eva Sorter / Sortable */
+.eva-sorter { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; width: 100%; }
+.eva-sorter.is-dual { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.eva-sorter-tools { grid-column: 1 / -1; display: flex; align-items: center; justify-content: flex-end; gap: 6px; min-height: 30px; }
+.eva-sorter-search { position: relative; display: block; flex: 1; min-width: 0; }
+.eva-sorter-search i { position: absolute; left: 9px; top: 50%; color: var(--eva-text-mute); transform: translateY(-50%); }
+.eva-sorter-search input { width: 100%; height: 30px; padding: 0 9px 0 28px; border: 1px solid var(--eva-border); border-radius: var(--eva-radius); outline: none; color: var(--eva-text); background: var(--eva-surface); font: inherit; font-size: 12px; }
+.eva-sorter-search input:focus { border-color: var(--eva-primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--eva-primary) 12%, transparent); }
+.eva-sorter-zone-search { position: relative; display: block; margin: 7px 7px 0; }
+.eva-sorter-zone-search i { position: absolute; left: 9px; top: 50%; color: var(--eva-text-mute); transform: translateY(-50%); }
+.eva-sorter-zone-search input { width: 100%; height: 28px; padding: 0 9px 0 27px; border: 1px solid var(--eva-border); border-radius: var(--eva-radius); outline: none; color: var(--eva-text); background: var(--eva-surface); font: inherit; font-size: 11px; }
+.eva-sorter-zone-search input:focus { border-color: var(--eva-primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--eva-primary) 12%, transparent); }
+.eva-sorter-undo, .eva-sorter-batch { height: 28px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 0 8px; border: 1px solid var(--eva-border); border-radius: var(--eva-radius); color: var(--eva-primary); background: var(--eva-surface); cursor: pointer; font: inherit; font-size: 11px; }
+.eva-sorter-undo:hover, .eva-sorter-batch:hover { border-color: var(--eva-primary); background: var(--eva-primary-050); }
+.eva-sorter-undo:disabled, .eva-sorter-batch:disabled { opacity: .42; cursor: not-allowed; }
+.eva-sorter-header-actions { display: inline-flex; align-items: center; gap: 4px; }
+.eva-sorter-header-actions > i { color: var(--eva-primary); font-size: 16px; }
+.eva-sorter-zone { min-width: 0; overflow: visible; border: 1px solid var(--eva-border); border-radius: var(--eva-radius); background: var(--eva-soft); transition: border-color var(--eva-ease), box-shadow var(--eva-ease); }
+.eva-sorter-zone.is-over { border-color: var(--eva-primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--eva-primary) 12%, transparent); }
+.eva-sorter-zone > header { display: flex; align-items: center; justify-content: space-between; min-height: 38px; padding: 0 11px; border-bottom: 1px solid var(--eva-border); background: var(--eva-surface); }
+.eva-sorter-zone > header div { display: flex; align-items: baseline; gap: 7px; }
+.eva-sorter-zone > header strong { color: var(--eva-text); font-size: 12.5px; }
+.eva-sorter-zone > header small { color: var(--eva-text-mute); font-size: 10.5px; }
+.eva-sorter-zone > header > i { color: var(--eva-primary); font-size: 16px; }
+.eva-sorter-order {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--eva-radius);
+  color: var(--eva-primary);
+  background: transparent;
+  cursor: pointer;
+  transition: background var(--eva-ease), color var(--eva-ease);
+}
+.eva-sorter-order:hover:not(:disabled) { background: var(--eva-primary-050); color: var(--eva-primary-600); }
+.eva-sorter-order:disabled { opacity: .35; cursor: not-allowed; }
+.eva-sorter-list { min-height: 118px; padding: 7px; }
+.eva-sorter-item { display: flex; align-items: center; min-width: 0; min-height: 32px; gap: 7px; padding: 3px 5px; border: 1px solid var(--eva-border); border-radius: var(--eva-radius); background: var(--eva-surface); color: var(--eva-text); transition: border-color var(--eva-ease), background var(--eva-ease), transform var(--eva-ease); }
+.eva-sorter-item:focus-visible { outline: 2px solid color-mix(in srgb, var(--eva-primary) 35%, transparent); outline-offset: 2px; }
+.eva-sorter-item + .eva-sorter-item { margin-top: 6px; }
+.eva-sorter-item.is-over { border-color: var(--eva-primary); background: var(--eva-primary-050); transform: translateY(1px); }
+.eva-sorter-item.is-over-before,
+.eva-sorter-item.is-over-after { position: relative; }
+.eva-sorter-item.is-over {
+  min-height: 40px;
+  border: 1px dashed var(--eva-primary);
+  background: color-mix(in srgb, var(--eva-primary) 8%, var(--eva-surface));
+  transform: none;
+  transition: none;
+}
+.eva-sorter-item.is-over > * { visibility: hidden; }
+.eva-sorter-item.is-over::after {
+  content: '释放到这里';
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--eva-primary);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .2px;
+}
+.eva-sorter-item.is-over-before::after { content: '释放到上方'; }
+.eva-sorter-item.is-over-after::after { content: '释放到下方'; }
+.eva-sorter-item.is-over-before::before,
+.eva-sorter-item.is-over-after::after {
+  position: absolute;
+  left: 3px;
+  right: 3px;
+  z-index: 4;
+  height: 3px;
+  border-radius: 3px;
+  background: var(--eva-primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--eva-primary) 14%, transparent);
+}
+.eva-sorter-item.is-over-before::before { top: -5px; }
+.eva-sorter-item.is-over-after::after { bottom: -5px; }
+/* 完整占位卡片覆盖分隔线样式。 */
+.eva-sorter-item.is-over::after {
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  height: auto;
+  z-index: 4;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--eva-primary) 8%, var(--eva-surface));
+  box-shadow: none;
+}
+.eva-sorter-item.is-over-before::before { display: none; }
+.eva-sorter-item.is-over > * { visibility: visible; }
+.eva-sorter-item.is-over::after { display: none; }
+.eva-sorter-drop-placeholder {
+  min-height: 40px;
+  display: grid;
+  place-items: center;
+  margin: 6px 0;
+  border: 1px dashed var(--eva-primary);
+  border-radius: var(--eva-radius);
+  color: var(--eva-primary);
+  background: color-mix(in srgb, var(--eva-primary) 8%, var(--eva-surface));
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .2px;
+  transition: none;
+}
+
+/* 占位层采用绝对定位，不改变列表高度，避免拖拽时目标项目被挤动。 */
+.eva-sorter-item.is-over-before::before,
+.eva-sorter-item.is-over-after::after {
+  content: '释放到这里';
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 0;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: 1px dashed var(--eva-primary);
+  border-radius: var(--eva-radius);
+  color: var(--eva-primary);
+  background: color-mix(in srgb, var(--eva-primary) 8%, transparent);
+  box-shadow: none;
+  pointer-events: none;
+}
+.eva-sorter-item.is-over-before::before { top: -44px; display: grid; }
+.eva-sorter-item.is-over-after::after { bottom: -44px; display: grid; }
+.eva-sorter-item.is-over-before::before { content: '释放到上方'; }
+.eva-sorter-item.is-over-after::after { content: '释放到下方'; }
+.eva-sorter-item.is-over > * { position: relative; z-index: 1; }
+.eva-sorter-item.is-locked { background: color-mix(in srgb, var(--eva-soft) 70%, var(--eva-surface)); }
+.eva-sorter-item.is-locked .eva-sorter-handle { color: var(--eva-primary); cursor: not-allowed; }
+.eva-sorter-item.is-selected { border-color: color-mix(in srgb, var(--eva-primary) 45%, var(--eva-border)); background: var(--eva-primary-050); }
+.eva-sorter-select { width: 20px; height: 20px; display: grid; place-items: center; flex: none; padding: 0; border: 1px solid var(--eva-border); border-radius: 4px; color: transparent; background: var(--eva-surface); cursor: pointer; }
+.eva-sorter-select[aria-pressed="true"] { border-color: var(--eva-primary); color: #fff; background: var(--eva-primary); }
+.eva-sorter-select:disabled { opacity: .35; cursor: not-allowed; }
+.eva-sorter:not(.is-dual) .eva-sorter-select { display: none; }
+.eva-sorter-handle { display: grid; place-items: center; width: 24px; height: 24px; color: var(--eva-text-mute); cursor: grab; }
+.eva-sorter-handle:active { cursor: grabbing; }
+.eva-sorter-icon { color: var(--eva-primary); }
+.eva-sorter-label { min-width: 0; flex: 1; overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.eva-sorter-actions { display: flex; align-items: center; gap: 3px; }
+.eva-sorter-actions button { display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 0; border-radius: var(--eva-radius); background: transparent; color: var(--eva-text-mute); cursor: pointer; }
+.eva-sorter-actions button:hover:not(:disabled) { background: var(--eva-primary-050); color: var(--eva-primary); }
+.eva-sorter-actions button:disabled { opacity: .35; cursor: not-allowed; }
+.eva-sorter-reset {
+  grid-column: 1 / -1;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 0 12px;
+  border: 1px solid var(--eva-border);
+  border-radius: var(--eva-radius);
+  color: var(--eva-text-sub);
+  background: var(--eva-surface);
+  cursor: pointer;
+  font-size: 12px;
+  transition: border-color var(--eva-ease), background var(--eva-ease), color var(--eva-ease), box-shadow var(--eva-ease);
+}
+.eva-sorter-reset i { color: var(--eva-primary); font-size: 14px; }
+.eva-sorter-reset:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--eva-primary) 42%, var(--eva-border));
+  color: var(--eva-primary);
+  background: var(--eva-primary-050);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--eva-primary) 10%, transparent);
+}
+.eva-sorter-reset:disabled { opacity: .5; cursor: not-allowed; }
+.eva-sorter-empty { display: grid; min-height: 100px; place-items: center; color: var(--eva-text-mute); font-size: 12px; }
+.eva-sorter.is-disabled { opacity: .65; }
+@media (max-width: 760px) { .eva-sorter.is-dual { grid-template-columns: 1fr; } }
+
+/* 回到轻量插入线提示：保留多选拖拽和空列表投放逻辑。 */
+.eva-sorter-item.is-over {
+  min-height: 32px;
+  border: 1px solid var(--eva-primary);
+  background: var(--eva-primary-050);
+  transform: translateY(1px);
+  transition: none;
+}
+.eva-sorter-item.is-over > * { visibility: visible; position: static; z-index: auto; }
+.eva-sorter-item.is-over::after { display: none !important; }
+.eva-sorter-item.is-over-before,
+.eva-sorter-item.is-over-after { position: relative; }
+.eva-sorter-item.is-over-before::before,
+.eva-sorter-item.is-over-after::after {
+  content: '';
+  position: absolute;
+  left: 3px;
+  right: 3px;
+  z-index: 5;
+  height: 3px;
+  display: block;
+  border: 0;
+  border-radius: 3px;
+  background: var(--eva-primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--eva-primary) 14%, transparent);
+  pointer-events: none;
+}
+.eva-sorter-item.is-over-before::before { top: -5px; }
+.eva-sorter-item.is-over-after::after { bottom: -5px; }

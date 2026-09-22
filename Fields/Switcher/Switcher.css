@@ -1,0 +1,31 @@
+.eva-switcher-field { width: 100%; min-width: 0; --eva-switch-active: var(--eva-primary); --eva-switch-inactive: var(--eva-border); }
+.eva-switcher-field .eva-f-switch { background: var(--eva-switch-inactive); }
+.eva-switcher-field .eva-f-switch.is-on { background: var(--eva-switch-active); }
+.eva-switcher-field .eva-f-switch-dot { display: grid; place-items: center; }
+.eva-switcher-field .eva-f-switch-dot i { color: var(--eva-text-sub); font-size: 11px; line-height: 1; }
+.eva-switcher-field .eva-f-switch.is-on .eva-f-switch-dot i { color: var(--eva-switch-active); }
+.eva-switcher-field.is-small .eva-f-switch { width: 34px; height: 19px; }
+.eva-switcher-field.is-small .eva-f-switch-dot { top: 2px; left: 2px; width: 15px; height: 15px; }
+.eva-switcher-field.is-small .eva-f-switch.is-on .eva-f-switch-dot { transform: translateX(15px); }
+.eva-switcher-field.is-small .eva-f-switch.has-text { width: var(--eva-switch-width, 56px); min-width: 52px; }
+.eva-switcher-field.is-small .eva-f-switch.has-text.is-on .eva-f-switch-dot { transform: translateX(calc(var(--eva-switch-width, 56px) - 19px)); }
+.eva-switcher-field.is-small .eva-f-switch-state { inset: 0 3px 0 19px; font-size: 10.5px; }
+.eva-switcher-field.is-small .eva-f-switch.is-on .eva-f-switch-state { inset: 0 19px 0 3px; }
+.eva-switcher-field.is-large .eva-f-switch { width: 50px; height: 27px; }
+.eva-switcher-field.is-large .eva-f-switch-dot { top: 2px; left: 2px; width: 23px; height: 23px; }
+.eva-switcher-field.is-large .eva-f-switch.is-on .eva-f-switch-dot { transform: translateX(23px); }
+.eva-switcher-field.is-large .eva-f-switch.has-text { width: var(--eva-switch-width, 76px); min-width: 68px; }
+.eva-switcher-field.is-large .eva-f-switch.has-text.is-on .eva-f-switch-dot { transform: translateX(calc(var(--eva-switch-width, 76px) - 27px)); }
+.eva-switcher-field.is-large .eva-f-switch-state { inset: 0 5px 0 28px; }
+.eva-switcher-field.is-large .eva-f-switch.is-on .eva-f-switch-state { inset: 0 28px 0 5px; }
+.eva-switcher-field.is-block .eva-f-switch-wrap { justify-content: space-between; width: 100%; }
+.eva-switcher-field.is-block .eva-f-switch-label { order: -1; flex: 1; }
+.eva-switcher-field.is-loading .eva-f-switch-dot i { opacity: .72; }
+.eva-switcher-field.is-readonly .eva-f-switch { opacity: .78; }
+.eva-switcher-status { display: inline-flex; align-items: center; min-height: 20px; padding: 0 6px; border-radius: 3px; background: var(--eva-soft); color: var(--eva-text-mute); font-size: 11px; line-height: 1; white-space: nowrap; }
+.eva-switcher-status.is-on { background: color-mix(in srgb, var(--eva-switch-active) 12%, transparent); color: var(--eva-switch-active); }
+.eva-switcher-description, .eva-switcher-reason { display: flex; align-items: flex-start; gap: 5px; margin: 6px 0 0; color: var(--eva-text-mute); font-size: 11.5px; line-height: 1.45; }
+.eva-switcher-description i, .eva-switcher-reason i { flex: none; margin-top: 1px; }
+.eva-switcher-field.is-on .eva-switcher-description { color: var(--eva-text-sub); }
+.eva-switcher-reason { color: #a15c00; }
+@media (max-width: 600px) { .eva-switcher-field.is-block .eva-f-switch-wrap { align-items: flex-start; } .eva-switcher-description, .eva-switcher-reason { overflow-wrap: anywhere; } }

@@ -1,0 +1,179 @@
+/* Eva map —— 地图选点 */
+.eva-map {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+.eva-map.is-disabled { opacity: .7; }
+
+/* 地址搜索 */
+.eva-map-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.eva-map-search > i:first-child {
+  position: absolute;
+  left: 10px;
+  color: var(--eva-text-mute);
+  font-size: 15px;
+  font-style: normal;
+  pointer-events: none;
+}
+.eva-map-search input {
+  box-sizing: border-box;
+  width: 100%;
+  height: 34px;
+  padding: 0 32px 0 32px;
+  border: 1px solid var(--eva-border);
+  border-radius: var(--eva-radius);
+  outline: none;
+  color: var(--eva-text);
+  background: var(--eva-soft);
+  font-family: inherit;
+  font-size: 13px;
+  transition: border-color var(--eva-ease, .22s ease), box-shadow var(--eva-ease, .22s ease), background var(--eva-ease, .22s ease);
+}
+.eva-map-search input:focus {
+  border-color: var(--eva-primary);
+  background: var(--eva-surface);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--eva-primary) 12%, transparent);
+}
+.eva-map-search .eva-map-spin {
+  position: absolute;
+  right: 10px;
+  color: var(--eva-primary);
+  font-size: 15px;
+  font-style: normal;
+}
+.eva-map-spin { animation: eva-map-spin 1s linear infinite; }
+@keyframes eva-map-spin { to { transform: rotate(360deg); } }
+
+.eva-map-results {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  left: 0;
+  /* Leaflet 的控件层 z-index 到 1000，搜索结果要盖在地图上面。 */
+  z-index: 1100;
+  max-height: 240px;
+  margin: 0;
+  padding: 4px;
+  overflow-y: auto;
+  border: 1px solid var(--eva-border);
+  border-radius: var(--eva-radius);
+  background: var(--eva-surface);
+  box-shadow: var(--eva-shadow-menu, 0 10px 24px color-mix(in srgb, var(--eva-text) 12%, transparent));
+  list-style: none;
+}
+.eva-map-results li {
+  margin: 0;
+  padding: 7px 9px;
+  border-radius: var(--eva-radius-sm, var(--eva-radius));
+  color: var(--eva-text);
+  font-size: 12.5px;
+  line-height: 1.5;
+  cursor: pointer;
+}
+.eva-map-results li:hover { background: var(--eva-primary-050); }
+.eva-map-results li.is-empty {
+  color: var(--eva-text-mute);
+  cursor: default;
+}
+.eva-map-results li.is-empty:hover { background: transparent; }
+
+/* 地图 */
+.eva-map-canvas {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--eva-border);
+  border-radius: var(--eva-radius);
+  background: var(--eva-soft);
+  /* 建立独立层叠上下文：Leaflet 内部的高 z-index 不会盖住页面上的下拉、弹层。 */
+  isolation: isolate;
+}
+.eva-map-leaflet {
+  width: 100%;
+  height: 100%;
+}
+.eva-map-state {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--eva-text-sub);
+  background: var(--eva-soft);
+  font-size: 12.5px;
+}
+.eva-map-state i {
+  font-size: 16px;
+  font-style: normal;
+}
+
+/* 图钉：纯 CSS 圆点，替代 Leaflet 默认的图片图钉。 */
+.eva-map-pin {
+  border: 3px solid var(--eva-surface);
+  border-radius: 999px;
+  background: var(--eva-primary);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--eva-text) 35%, transparent);
+  cursor: grab;
+}
+
+/* 经纬度 */
+.eva-map-coords {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px 12px;
+}
+.eva-map-coords label {
+  display: flex;
+  flex: 1;
+  min-width: 140px;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--eva-text-sub);
+  font-size: 12px;
+}
+.eva-map-coords input {
+  box-sizing: border-box;
+  width: 100%;
+  height: 32px;
+  padding: 0 9px;
+  border: 1px solid var(--eva-border);
+  border-radius: var(--eva-radius);
+  outline: none;
+  color: var(--eva-text);
+  background: var(--eva-soft);
+  font-family: inherit;
+  font-size: 13px;
+}
+.eva-map-coords input:focus {
+  border-color: var(--eva-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--eva-primary) 12%, transparent);
+}
+.eva-map-clear {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--eva-border);
+  border-radius: var(--eva-radius);
+  color: var(--eva-text-sub);
+  background: var(--eva-surface);
+  font-family: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: color var(--eva-ease, .22s ease), border-color var(--eva-ease, .22s ease);
+}
+.eva-map-clear:hover {
+  border-color: var(--eva-danger);
+  color: var(--eva-danger);
+}
+.eva-map-clear i {
+  font-size: 14px;
+  font-style: normal;
+}

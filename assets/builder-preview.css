@@ -1,0 +1,125 @@
+html,
+html[lang] {
+  margin-top: 0 !important;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+body {
+  margin-top: 0 !important;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+body.admin-bar {
+  margin-top: 0 !important;
+}
+
+#wpadminbar {
+  display: none !important;
+}
+
+.eva-builder-preview-slot:empty {
+  min-height: 96px;
+  outline: 1px dashed rgba(255, 63, 118, .35);
+  outline-offset: -1px;
+}
+
+body.eva-builder-preview [data-eva-builder-slot]:empty {
+  display: none !important;
+}
+
+body.eva-builder-preview.eva-builder-is-dragging [data-eva-builder-slot]:empty {
+  display: flex !important;
+  min-height: 80px;
+  align-items: center;
+  justify-content: center;
+  outline: 1px dashed rgba(255, 77, 127, .42);
+  outline-offset: -1px;
+}
+
+body.eva-builder-preview.eva-builder-is-dragging [data-eva-builder-slot]:empty::before {
+  content: attr(data-eva-builder-slot-title);
+  color: #ff4d7f;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+body.eva-builder-is-dragging [data-eva-builder-slot] {
+  outline: 2px dashed rgba(255, 77, 127, .55);
+  outline-offset: -2px;
+  background-image: linear-gradient(rgba(255, 77, 127, .05), rgba(255, 77, 127, .05));
+  transition: outline-color .16s ease, background-color .16s ease;
+}
+
+.eva-builder-preview-module {
+  position: relative;
+  border: 1px solid transparent;
+  transition: border-color .16s ease, box-shadow .16s ease;
+}
+
+.eva-builder-preview-module:hover,
+.eva-builder-preview-module.is-selected {
+  border-color: #ff4d7f;
+  box-shadow: 0 0 0 1px rgba(255, 77, 127, .18);
+}
+
+.eva-builder-preview-tools {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 30;
+  display: inline-flex;
+  gap: 4px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .16s ease;
+}
+
+.eva-builder-preview-module:hover > .eva-builder-preview-tools,
+.eva-builder-preview-module.is-selected > .eva-builder-preview-tools {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.eva-builder-preview-tools button {
+  min-width: 34px;
+  height: 26px;
+  padding: 0 7px;
+  border: 0;
+  border-radius: 8px;
+  background: #111827;
+  color: #fff;
+  cursor: pointer;
+  font: 600 11px/1.1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.eva-builder-preview-tools button[data-eva-builder-action="remove"] {
+  background: #ef4444;
+}
+
+.eva-builder-preview-pending {
+  display: grid;
+  gap: 6px;
+  min-height: 120px;
+  padding: 32px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(255, 77, 127, .08), rgba(139, 92, 246, .08));
+  color: #172033;
+}
+
+.eva-builder-preview-pending strong {
+  font-size: 18px;
+}
+
+.eva-builder-preview-pending span {
+  color: #64748b;
+  font-size: 13px;
+}

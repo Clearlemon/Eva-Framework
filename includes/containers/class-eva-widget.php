@@ -63,5 +63,26 @@ class Widget
             return;
         }
         \Eva::enqueue_runtime();
+
+        // 「可用小工具」那个列表只有经典小工具页才有，定制器里没有，所以筛选标签也只在那边装。
+        if ($hook !== 'widgets.php') {
+            return;
+        }
+
+        wp_enqueue_script(
+            'eva-widget-filter',
+            EVA_FW_URL . 'assets/eva-widget-filter.js',
+            // 依赖 eva-embed：文案要用它提供的 EvaI18n（嵌入式页面没有 EvaFW.config.messages）。
+            ['eva-embed'],
+            \Eva::asset_ver('assets/eva-widget-filter.js'),
+            true
+        );
+
+        // 把各容器的 id_base 交给前端，用来和列表项的隐藏输入 .id_base 比对出谁是 Eva 的。
+        wp_add_inline_script(
+            'eva-widget-filter',
+            'window.EvaWidgetFilter = ' . wp_json_encode(['bases' => array_keys(\Eva::get_widgets())]) . ';',
+            'before'
+        );
     }
 }

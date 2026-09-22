@@ -1,0 +1,8 @@
+(function(){
+  window.EvaFields=window.EvaFields||{};
+  window.EvaFields.number={
+    props:['field','modelValue'],emits:['update:modelValue'],
+    methods:{emitNumber:function(v){if(v===''){this.$emit('update:modelValue','');return;}var n=Number(v);if(!isFinite(n))return;this.$emit('update:modelValue',n);},change:function(e){this.emitNumber(e.target.value);},normalize:function(e){if(e.target.value==='')return;var n=Number(e.target.value);if(!isFinite(n))return;if(this.field.clamp!==false){if(this.field.min!==undefined)n=Math.max(Number(this.field.min),n);if(this.field.max!==undefined)n=Math.min(Number(this.field.max),n);}if(this.field.precision!==undefined)n=Number(n.toFixed(Math.max(0,Number(this.field.precision)||0)));this.$emit('update:modelValue',n);},clear:function(){if(!this.field.disabled&&!this.field.readonly)this.$emit('update:modelValue','');}},
+    template:'<div class="eva-number-field" :class="{\'is-inline\':field.inline,\'is-disabled\':field.disabled}"><span v-if="field.before" class="eva-input-affix">{{field.before}}</span><input class="eva-common-input" type="number" :value="modelValue" :min="field.min" :max="field.max" :step="field.step||1" :placeholder="field.placeholder||\'\'" :disabled="field.disabled" :readonly="field.readonly" @input="change" @blur="normalize"><button v-if="field.clearable&&modelValue!==\'\'&&!field.disabled&&!field.readonly" type="button" class="eva-number-clear" title="清空" @click="clear"><i class="ri-close-line"></i></button><span v-if="field.units||field.unit||field.after" class="eva-input-affix is-after">{{field.units||field.unit||field.after}}</span></div>'
+  };
+})();

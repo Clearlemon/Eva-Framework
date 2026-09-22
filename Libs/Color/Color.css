@@ -1,16 +1,430 @@
-/* Eva UI 库 · eva-color 样式（骨架 / 占位，遵循 ui-style-guard：5px 圆角、--eva-* 令牌、暗色自适配）。待实现。 */
+/* Eva UI 库 · eva-color 样式，遵循 5px 圆角与 --eva-* 令牌，自动适配暗色。 */
 .eva-color {
   position: relative;
   width: 100%;
-  /* TODO: 触发器（色块+取值）、弹出面板、预设色板等样式 */
+  max-width: 560px;
 }
 
-/* 占位提示（实现后删除） */
-.eva-color-placeholder {
-  padding: 12px;
-  border: 1px dashed var(--eva-border);
+.eva-color.is-small {
+  max-width: 420px;
+}
+
+.eva-color.is-large {
+  max-width: 720px;
+}
+
+.eva-color.is-disabled {
+  opacity: 0.68;
+}
+
+.eva-color-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.eva-color-swatch,
+.eva-color-pop-swatch {
+  position: relative;
+  border: 1px solid var(--eva-border);
+  border-radius: var(--eva-radius);
+  background-clip: padding-box;
+  box-shadow: inset 0 0 0 2px var(--eva-surface);
+}
+
+.eva-color-swatch {
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  padding: 0;
+  cursor: pointer;
+  transition: transform var(--eva-ease), border-color var(--eva-ease), box-shadow var(--eva-ease);
+}
+
+.eva-color.is-small .eva-color-swatch {
+  width: 22px;
+  height: 22px;
+}
+
+.eva-color.is-large .eva-color-swatch {
+  width: 32px;
+  height: 32px;
+}
+
+.eva-color-swatch:disabled,
+.eva-color-input:disabled,
+.eva-color-reset:disabled,
+.eva-color-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.eva-color-swatch:hover,
+.eva-color.is-open .eva-color-swatch {
+  border-color: var(--eva-primary);
+  box-shadow: inset 0 0 0 2px var(--eva-surface), 0 0 0 3px color-mix(in srgb, var(--eva-primary) 16%, transparent);
+}
+
+.eva-color-swatch:active {
+  transform: scale(0.96);
+}
+
+.eva-color-input,
+.eva-color-reset,
+.eva-color-btn {
+  height: 26px;
+  border: 1px solid var(--eva-border);
   border-radius: var(--eva-radius);
   background: var(--eva-soft);
-  color: var(--eva-text-mute);
+  color: var(--eva-text);
+  font: inherit;
   font-size: 12.5px;
+  transition: border-color var(--eva-ease), background var(--eva-ease), box-shadow var(--eva-ease), color var(--eva-ease);
+}
+
+.eva-color-input {
+  width: min(180px, 100%);
+  min-width: 120px;
+  padding: 0 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+.eva-color.is-small .eva-color-input {
+  min-width: 96px;
+}
+
+.eva-color.is-large .eva-color-input {
+  min-width: 220px;
+}
+
+.eva-color-format {
+  flex: 0 0 92px;
+  min-width: 92px;
+}
+
+.eva-color-format .eva-select-trigger {
+  min-height: 26px;
+  padding: 2px 9px;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.eva-color-reset,
+.eva-color-btn {
+  padding: 0 12px;
+  cursor: pointer;
+}
+
+.eva-color-input:hover,
+.eva-color-reset:hover,
+.eva-color-btn:hover {
+  border-color: var(--eva-text-sub);
+  background: var(--eva-surface);
+}
+
+.eva-color-input:focus,
+.eva-color-reset:focus-visible,
+.eva-color-btn:focus-visible {
+  outline: none;
+  border-color: var(--eva-primary);
+  background: var(--eva-surface);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--eva-primary) 18%, transparent);
+}
+
+.eva-color-popover {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 8px);
+  z-index: 80;
+  width: var(--eva-color-popover-width, 236px);
+  padding: 10px;
+  border: 1px solid var(--eva-border);
+  border-radius: var(--eva-radius);
+  background: var(--eva-surface);
+  box-shadow: 0 18px 42px color-mix(in srgb, var(--eva-text) 18%, transparent);
+}
+
+.eva-color.is-inline .eva-color-popover {
+  position: static;
+  display: block;
+  margin-top: 10px;
+  box-shadow: none;
+}
+
+.eva-color-pop-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  color: var(--eva-text-sub);
+  font-size: 11px;
+  line-height: 1;
+}
+
+.eva-color-pop-head strong {
+  color: var(--eva-text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.eva-color-pop-swatch {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+}
+
+.eva-color-board {
+  position: relative;
+  height: var(--eva-color-board-height, 138px);
+  overflow: hidden;
+  border-radius: var(--eva-radius);
+  cursor: crosshair;
+}
+
+.eva-color.is-small .eva-color-board {
+  height: var(--eva-color-board-height, 108px);
+}
+
+.eva-color.is-large .eva-color-board {
+  height: var(--eva-color-board-height, 180px);
+}
+
+.eva-color-board-white,
+.eva-color-board-black,
+.eva-color-alpha-bg,
+.eva-color-alpha-fill {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.eva-color-board-white {
+  background: linear-gradient(90deg, #fff, rgba(255, 255, 255, 0));
+}
+
+.eva-color-board-black {
+  background: linear-gradient(0deg, #000, rgba(0, 0, 0, 0));
+}
+
+.eva-color-pointer,
+.eva-color-slider-point {
+  position: absolute;
+  z-index: 2;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.eva-color-slider {
+  position: relative;
+  height: 9px;
+  margin-top: 10px;
+  border-radius: var(--eva-radius-full);
+  cursor: pointer;
+}
+
+.eva-color-hue {
+  background: linear-gradient(90deg, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
+}
+
+.eva-color-alpha {
+  overflow: hidden;
+  background: var(--eva-soft);
+}
+
+.eva-color-alpha-bg {
+  background-image:
+    linear-gradient(45deg, rgba(120, 120, 120, .28) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(120, 120, 120, .28) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(120, 120, 120, .28) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(120, 120, 120, .28) 75%);
+  background-position: 0 0, 0 5px, 5px -5px, -5px 0;
+  background-size: 10px 10px;
+}
+
+.eva-color-alpha em {
+  position: absolute;
+  right: 0;
+  top: 12px;
+  color: var(--eva-text-mute);
+  font-size: 10.5px;
+  font-style: normal;
+}
+
+.eva-color-slider-point {
+  top: 50%;
+}
+
+.eva-color-presets-wrap {
+  margin-top: 14px;
+}
+
+.eva-color-presets-title {
+  margin-bottom: 7px;
+  color: var(--eva-text-mute);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.eva-color-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.eva-color-presets button {
+  width: 17px;
+  height: 17px;
+  padding: 0;
+  border: 1px solid var(--eva-border);
+  border-radius: var(--eva-radius);
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.45);
+  transition: transform var(--eva-ease), border-color var(--eva-ease), box-shadow var(--eva-ease);
+}
+
+.eva-color.has-circle-presets .eva-color-presets button {
+  border-radius: 50%;
+}
+
+.eva-color-presets button:hover {
+  border-color: var(--eva-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--eva-primary) 16%, transparent);
+  transform: translateY(-1px);
+}
+
+.eva-color-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.eva-color-btn {
+  flex: 1 1 0;
+}
+
+.eva-color-btn.is-primary {
+  border-color: var(--eva-primary);
+  background: var(--eva-primary);
+  color: #fff;
+}
+
+.eva-color-btn.is-primary:hover,
+.eva-color-btn.is-primary:focus-visible {
+  border-color: var(--eva-primary-600);
+  background: var(--eva-primary-600);
+}
+
+@media (max-width: 520px) {
+  .eva-color-control {
+    flex-wrap: wrap;
+  }
+
+  .eva-color-input {
+    flex: 1 1 calc(100% - 38px);
+  }
+}
+
+/* 2026-08 本地视觉约束：颜色字段保持扁平、32px 主控件高度，正文不低于 13px。 */
+.eva-color-control {
+  gap: 7px;
+}
+
+.eva-color-swatch {
+  width: 32px;
+  height: 32px;
+  box-shadow: inset 0 0 0 2px var(--eva-surface);
+}
+
+.eva-color.is-small .eva-color-swatch {
+  width: 28px;
+  height: 28px;
+}
+
+.eva-color.is-large .eva-color-swatch {
+  width: 36px;
+  height: 36px;
+}
+
+.eva-color-input,
+.eva-color-reset,
+.eva-color-btn {
+  height: 32px;
+  font-size: 13px;
+}
+
+.eva-color-format .eva-select-trigger {
+  min-height: 32px;
+  padding: 4px 9px;
+  font-size: 13px;
+}
+
+.eva-color-popover {
+  width: var(--eva-color-popover-width, 252px);
+  padding: 12px;
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--eva-text) 16%, transparent);
+}
+
+.eva-color-pop-head,
+.eva-color-pop-head strong,
+.eva-color-alpha em,
+.eva-color-presets-title {
+  font-size: 13px;
+}
+
+.eva-color-presets button {
+  width: 22px;
+  height: 22px;
+}
+
+.eva-color-actions {
+  margin-top: 13px;
+}
+
+/* 2026-08：防止颜色控件在组合字段中压缩“默认”按钮，并允许输入区弹性收缩。 */
+.eva-color-control {
+  min-width: 0;
+}
+
+.eva-color-input {
+  width: auto;
+  min-width: 84px;
+  flex: 1 1 160px;
+}
+
+.eva-color.is-small .eva-color-input,
+.eva-color.is-large .eva-color-input {
+  min-width: 84px;
+}
+
+.eva-color-format {
+  flex: 0 0 82px;
+  min-width: 82px;
+}
+
+.eva-color-reset {
+  min-width: 52px;
+  flex: 0 0 auto;
+  padding-inline: 10px;
+  white-space: nowrap;
+  word-break: keep-all;
+}
+
+@media (max-width: 520px) {
+  .eva-color-input {
+    min-width: 120px;
+  }
+
+  .eva-color-format {
+    flex-basis: 88px;
+    min-width: 88px;
+  }
 }

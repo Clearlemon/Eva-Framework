@@ -1,0 +1,36 @@
+.eva-text-field { width: 100%; min-width: 0; }
+.eva-text-input-wrap { display: flex; align-items: stretch; width: 100%; min-height: 32px; overflow: hidden; border: 1px solid var(--eva-border); border-radius: var(--eva-radius); background: var(--eva-soft); transition: border-color var(--eva-ease), box-shadow var(--eva-ease), background var(--eva-ease); }
+.eva-text-input-wrap:hover { border-color: var(--eva-text-sub); background: var(--eva-surface); }
+.eva-text-input-wrap:focus-within { border-color: var(--eva-primary); background: var(--eva-surface); box-shadow: 0 0 0 3px color-mix(in srgb, var(--eva-primary) 18%, transparent); }
+.eva-text-field.has-error .eva-text-input-wrap { border-color: var(--eva-danger); box-shadow: 0 0 0 3px color-mix(in srgb, var(--eva-danger) 12%, transparent); }
+.eva-text-field.has-success .eva-text-input-wrap { border-color: var(--eva-success); }
+.eva-text-field .eva-text-input { min-width: 0; min-height: 30px; flex: 1 1 auto; padding: 4px 10px; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.eva-text-field .eva-text-input:hover:not(:disabled):not([readonly]), .eva-text-field .eva-text-input:focus { border: 0; background: transparent; box-shadow: none; }
+.eva-text-affix { display: inline-flex; flex: none; align-items: center; gap: 5px; padding: 0 9px; border-color: var(--eva-border); color: var(--eva-text-sub); background: color-mix(in srgb, var(--eva-soft) 72%, var(--eva-surface)); font-size: 12px; white-space: nowrap; }
+.eva-text-affix.is-prefix { border-right: 1px solid var(--eva-border); }
+.eva-text-affix.is-suffix { border-left: 1px solid var(--eva-border); }
+.eva-text-affix i { color: var(--eva-primary); font-size: 14px; }
+.eva-text-actions { display: inline-flex; flex: none; align-items: center; padding: 2px 3px; border-left: 1px solid var(--eva-border); }
+.eva-text-actions button { width: 26px; height: 26px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 4px; background: transparent; color: var(--eva-text-sub); font: inherit; cursor: pointer; appearance: none; transition: none; }
+.eva-text-actions button:hover:not(:disabled), .eva-text-actions button:focus-visible { outline: 0; color: var(--eva-primary); background: var(--eva-primary-050); }
+.eva-text-actions button:disabled { opacity: .35; cursor: not-allowed; }
+.eva-text-color-preview { width: 20px; height: 20px; flex: 0 0 20px; align-self: center; margin: 0 6px; border: 1px solid color-mix(in srgb, var(--eva-text) 15%, var(--eva-border)); border-radius: 4px; box-shadow: inset 0 0 0 2px var(--eva-surface); }
+.eva-text-meta { display: flex; align-items: center; gap: 10px; min-height: 23px; padding-top: 4px; }
+.eva-text-message { min-width: 0; display: inline-flex; align-items: center; gap: 5px; color: var(--eva-text-mute); font-size: 11px; }
+.eva-text-message.is-error { color: var(--eva-danger); }
+.eva-text-message.is-success { color: var(--eva-success); }
+.eva-text-message.is-info { color: var(--eva-primary); }
+.eva-text-counter { margin-left: auto; color: var(--eva-text-mute); font-size: 10.5px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.eva-text-counter.is-near { color: var(--eva-warning); }
+.eva-password-strength { display: inline-flex; align-items: center; gap: 7px; margin-left: auto; }
+.eva-password-strength > span { display: grid; grid-template-columns: repeat(4, 18px); gap: 3px; }
+.eva-password-strength i { height: 3px; border-radius: 2px; background: var(--eva-border); }
+.eva-password-strength i.is-on { background: var(--eva-warning); }
+.eva-password-strength i.is-on:nth-child(4) { background: var(--eva-success); }
+.eva-password-strength em { color: var(--eva-text-mute); font-size: 10.5px; font-style: normal; }
+.eva-text-image-preview { display: grid; grid-template-columns: 52px minmax(0, 1fr); align-items: center; gap: 9px; margin-top: 6px; padding: 6px; border: 1px solid var(--eva-border); border-radius: var(--eva-radius); background: var(--eva-soft); }
+.eva-text-image-preview img { width: 52px; height: 40px; display: block; object-fit: cover; border-radius: 4px; background: var(--eva-surface); }
+.eva-text-image-preview span { overflow: hidden; color: var(--eva-text-mute); font-size: 10.5px; text-overflow: ellipsis; white-space: nowrap; }
+.eva-text-link-preview { width: fit-content; display: inline-flex; align-items: center; gap: 5px; margin-top: 6px; color: var(--eva-primary); font-size: 11px; text-decoration: none; }
+.eva-text-link-preview:hover { text-decoration: underline; }
+@media (max-width: 640px) { .eva-text-affix span { max-width: 92px; overflow: hidden; text-overflow: ellipsis; } .eva-text-actions button { width: 30px; } }

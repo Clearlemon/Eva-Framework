@@ -2,6 +2,13 @@
 
 namespace Eva\Framework;
 
+/**
+ * WordPress 小工具实例桥接层。
+ *
+ * Widget 容器负责注册 WP_Widget，本文件负责单个 widget 实例的表单渲染、
+ * 保存清洗与前台输出，把 WordPress 原生 widget 生命周期接到 Eva 字段体系。
+ */
+
 // 阻断对该文件的直接 HTTP 访问，必须经由 WordPress 加载。
 if (! defined('ABSPATH')) {
     exit;
@@ -38,11 +45,12 @@ class Eva_Widget_Instance extends \WP_Widget
         // 保存配置供 form/update/widget 复用。
         $this->eva_cfg = is_array($cfg) ? $cfg : [];
         // 调用父类构造：名称缺省用 id_base，描述缺省为空。
-        parent::__construct(
-            $id_base,
-            isset($cfg['title']) ? $cfg['title'] : $id_base,
-            ['description' => isset($cfg['description']) ? $cfg['description'] : '']
-        );
+        $widget_options = ['description' => isset($cfg['description']) ? $cfg['description'] : ''];
+        // classname（同 CSF）：前台小工具外层容器的 class，不写时 WP 用 widget_{id_base}。
+        if (! empty($cfg['classname']) && is_string($cfg['classname'])) {
+            $widget_options['classname'] = $cfg['classname'];
+        }
+        parent::__construct($id_base, isset($cfg['title']) ? $cfg['title'] : $id_base, $widget_options);
     }
 
     /**
@@ -55,7 +63,11 @@ class Eva_Widget_Instance extends \WP_Widget
     {
         // get_field_name('') => widget-{id_base}[{number}][]，去掉末尾 [] 作为字段 name 前缀。
         $prefix = preg_replace('/\[\]$/', '', $this->get_field_name(''));
+        // name 前缀另外放一份在标签属性上：「可用小工具」列表里的表单是模板，编号写成 __i__，
+        // WP 把它克隆成新小工具时只替换标签属性里的 __i__，挂载点 JSON 里那一份不会被替换，前端以属性上的为准。
+        echo '<div class="eva-widget-form" data-eva-name-prefix="' . esc_attr($prefix) . '">';
         echo \Eva::embed_markup('widget', $this->eva_cfg, is_array($instance) ? $instance : [], $prefix); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+        echo '</div>';
         return '';
     }
 
@@ -68,10 +80,9 @@ class Eva_Widget_Instance extends \WP_Widget
      */
     public function update($new_instance, $old_instance)
     {
-        return Data::sanitize_by_sections(
-            isset($this->eva_cfg['sections']) ? $this->eva_cfg['sections'] : [],
-            (array) $new_instance
-        );
+        $sections = isset($this->eva_cfg['sections']) ? $this->eva_cfg['sections'] : [];
+        // 嵌入式外壳把数组 / 对象类的字段值以 JSON 字符串提交，清洗前先还原。
+        return Data::sanitize_by_sections($sections, Data::decode_embedded_values((array) $new_instance, $sections));
     }
 
     /**

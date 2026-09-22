@@ -2,6 +2,13 @@
 
 namespace Eva\Framework;
 
+/**
+ * Customizer 专用控件桥接层。
+ *
+ * 这个文件只在 WordPress Customizer 注册控件时加载，负责把 Eva 的嵌入式字段
+ * 挂载点塞进 WP_Customize_Control，真正字段渲染仍由前端 eva-app 接管。
+ */
+
 // 阻断对该文件的直接 HTTP 访问，必须经由 WordPress 加载。
 if (! defined('ABSPATH')) {
     exit;

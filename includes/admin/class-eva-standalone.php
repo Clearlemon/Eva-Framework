@@ -166,7 +166,25 @@ class Standalone
         // 该页不应被缓存。
         nocache_headers();
 
+        // 独立页不经过 admin_enqueue_scripts，需主动准备媒体库与原生编辑器资源。
+        wp_enqueue_media();
+        // 部分前台主题会改写 jQuery UI 依赖，TinyMCE/媒体库在独立页显式补齐。
+        wp_enqueue_script('jquery-ui-widget');
+        wp_enqueue_script('jquery-ui-position');
+        if (function_exists('wp_enqueue_editor')) {
+            wp_enqueue_editor();
+        }
+        if (function_exists('wp_enqueue_code_editor')) {
+            foreach (['text/html', 'text/css', 'application/javascript', 'application/json', 'application/x-httpd-php'] as $mime_type) {
+                wp_enqueue_code_editor(['type' => $mime_type]);
+            }
+        }
+
+        // 应用 eva_{id}_args / eva_{id}_sections 过滤器后的配置；保存层（Data::ajax_save）用的是同一份。
+        $opt = \Eva::get_resolved($opt['option_id']);
+
         // 组装注入前端的数据（与后台 enqueue 注入结构一致，便于复用同一前端外壳）。
+        // 菜单、分区、依赖来源、已存值、表单前后 HTML 由 page_payload() 统一组装。
         $data = [
             'version'    => EVA_FW_VERSION,
             'adminUrl'   => admin_url(),
@@ -176,12 +194,12 @@ class Standalone
                 'brand'      => $opt['brand'] ?: $opt['menu_title'],
                 'title'    => $opt['menu_title'],
                 'subtitle' => $opt['subtitle'],
-                'menu'     => array_values($opt['menu']),
-                'sections' => \Eva::prepare_sections($opt['sections']),
-                'optionId' => $opt['option_id'],
-                'values'   => \Eva::get_values($opt['option_id']),
-            ], \Eva::runtime()),
+            ], \Eva::page_payload($opt), \Eva::runtime()),
         ];
+
+        // 主题自己的后台资源（对应 CSF 的 csf_enqueue）：此时还没输出任何标签，回调里 wp_enqueue_* 的资源
+        // 会随下面的 wp_print_styles() / wp_print_footer_scripts() 一起输出。
+        do_action('eva_enqueue', $opt);
 
         // 数据用安全选项编码为 JSON；资源 URL 带版本号击穿缓存。
         $json = wp_json_encode($data, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
@@ -201,11 +219,26 @@ class Standalone
         echo '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flag-icons@7/css/flag-icons.min.css">';
         echo '<link rel="stylesheet" href="' . esc_url(includes_url('css/dashicons.min.css')) . '?ver=' . EVA_FW_VERSION . '">';
         echo '<link rel="stylesheet" href="' . esc_url($css) . '">';
+        // 主色覆盖（用户挑的主题色 > 主题品牌色）：紧跟 eva.css 之后，等同后台的 wp_add_inline_style。
+        // 值全部出自 sanitize_hex_color，可直接输出。
+        $theme_color_css = \Eva::theme_color_css();
+        if ($theme_color_css !== '') {
+            echo '<style>' . $theme_color_css . '</style>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+        }
+        echo '<link rel="stylesheet" href="' . esc_url(EVA_FW_URL . 'assets/extension-page.css?ver=' . \Eva::asset_ver('assets/extension-page.css')) . '">';
         // UI 库 CSS（Libs/<name>/）。
         foreach (\Eva::lib_assets() as $lib_name => $lib) {
             if ($lib['css']) {
                 echo '<link rel="stylesheet" href="' . esc_url($lib['css'] . '?ver=' . \Eva::asset_ver($lib['cssRel'])) . '">';
             }
+        }
+        // 字段样式（Fields/<name>/<name>.css）。
+        foreach (\Eva::field_styles() as $field_name => $field_css) {
+            echo '<link rel="stylesheet" href="' . esc_url($field_css . '?ver=' . \Eva::asset_ver(\Eva::field_asset_rel($field_name, 'css'))) . '">';
+        }
+        // 输出 WordPress 编辑器 / CodeMirror 等通过 enqueue 注册的样式。
+        if (function_exists('wp_print_styles')) {
+            wp_print_styles();
         }
         echo '</head>';
 
@@ -213,6 +246,15 @@ class Standalone
         echo '<body class="eva-standalone">';
         echo '<div id="eva-app" class="eva-root"><div class="eva-boot">Eva Framework 正在加载…</div></div>';
         echo '<script>window.EvaFW = ' . $json . ';</script>';
+        // 自定义图标集（过滤器 eva_field_icon_add_icons），图标选择器首次打开时读取。
+        $icon_sets = \Eva::icon_sets_script();
+        if ($icon_sets !== '') {
+            echo '<script>' . $icon_sets . '</script>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+        }
+        // 输出媒体库、TinyMCE 与 CodeMirror 的脚本和内联配置。
+        if (function_exists('wp_print_footer_scripts')) {
+            wp_print_footer_scripts();
+        }
         echo '<script src="' . esc_url($vue) . '"></script>';
         // UI 库脚本（Libs/<name>/，先于字段与外壳）。
         foreach (\Eva::lib_assets() as $lib_name => $lib) {
@@ -220,21 +262,19 @@ class Standalone
                 echo '<script src="' . esc_url($lib['js'] . '?ver=' . \Eva::asset_ver($lib['jsRel'])) . '"></script>';
             }
         }
-        // 字段脚本：一字段一文件，扫描 Fields/ 逐个加载（在 eva-app.js 之前）。
+        // 字段脚本：一字段一目录，递归扫描（在 eva-app.js 之前）。
         foreach (\Eva::field_scripts() as $field_name => $field_url) {
-            echo '<script src="' . esc_url($field_url . '?ver=' . \Eva::asset_ver('Fields/' . $field_name . '.js')) . '"></script>';
+            echo '<script src="' . esc_url($field_url . '?ver=' . \Eva::asset_ver(\Eva::field_asset_rel($field_name, 'js'))) . '"></script>';
         }
         echo '<script src="' . esc_url($js) . '"></script>';
         // 版本计划/系统更新：自动挂载 callback 输出的 #update 挂载点（非 EvaFields 字段）。
         echo '<script src="' . esc_url(EVA_FW_URL . 'assets/update-page.js?ver=' . \Eva::asset_ver('assets/update-page.js')) . '"></script>';
+        echo '<script src="' . esc_url(EVA_FW_URL . 'assets/extension-page.js?ver=' . \Eva::asset_ver('assets/extension-page.js')) . '"></script>';
 
         // 开发期热刷新（可删；或 wp-config 设 EVA_FW_DEV=false 关闭）。
         if (defined('EVA_FW_DEV') && EVA_FW_DEV) {
-            $lr = EVA_FW_URL . 'assets/eva-livereload.js?ver=' . EVA_FW_VERSION;
-            $devcfg = wp_json_encode([
-                'enabled' => true,
-                'assets'  => \Eva::dev_watch_assets(),
-            ], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+            $lr = EVA_FW_URL . 'assets/eva-livereload.js?ver=' . \Eva::asset_ver('assets/eva-livereload.js');
+            $devcfg = wp_json_encode(\Eva::dev_config(), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
             echo '<script>window.EvaFWDev = ' . $devcfg . ';</script>';
             echo '<script src="' . esc_url($lr) . '"></script>';
         }
