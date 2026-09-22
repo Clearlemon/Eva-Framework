@@ -60,7 +60,7 @@
 
   /**
    * 兜底：隐藏输入缺失时从元素 id 里取 id_base。
-   * 可用列表项的 id 形如 widget-3_eva_demo_widget-__i__。
+   * 可用列表项的 id 形如 widget-3_<id_base>-__i__。
    *
    * @param {string} id 元素 id。
    * @return {string}
