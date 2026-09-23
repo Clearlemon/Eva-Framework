@@ -457,4 +457,33 @@ return [
     'wgf_native'             => '기본',
     'wgf_label'              => '소스별 필터',
 
+
+    //页面构建器（builder 字段的外壳文案）
+    'pb_search_modules'       => '모듈 검색...',
+    'pb_no_modules'           => '등록된 모듈이 없습니다. window.EvaModules로 등록하면 여기에 표시됩니다.',
+    'pb_structure'            => '구조',
+    'pb_component_settings'   => '모듈 설정',
+    'pb_page_blocks'          => '페이지 블록',
+    'pb_slot_structure'       => '현재 슬롯 구조',
+    'pb_no_blocks'            => '블록이 없습니다',
+    'pb_slot_empty'           => '이 슬롯은 비어 있습니다',
+    'pb_drop_here'            => '여기에 모듈을 놓으세요',
+    'pb_rendering'            => '렌더링 중...',
+    'pb_select_hint'          => '캔버스에서 모듈을 선택하면 설정을 편집할 수 있습니다',
+    'pb_no_fields'            => '이 모듈에는 필드가 정의되어 있지 않습니다.',
+    'pb_move_up'              => '위로',
+    'pb_move_down'            => '아래로',
+    'pb_duplicate'            => '복제',
+    'pb_delete'               => '삭제',
+    'pb_fullscreen'           => '전체 화면',
+    'pb_exit_fullscreen'      => '전체 화면 종료',
+    'pb_resize_left'          => '왼쪽 패널 너비 조정',
+    'pb_resize_right'         => '오른쪽 패널 너비 조정',
+    'pb_expand_left'          => '클릭하여 왼쪽 패널 펼치기',
+    'pb_collapse_left'        => '드래그로 너비 조정, 클릭하여 왼쪽 패널 접기',
+    'pb_expand_right'         => '클릭하여 오른쪽 패널 펼치기',
+    'pb_collapse_right'       => '드래그로 너비 조정, 클릭하여 오른쪽 패널 접기',
+    'pb_missing_render'      => '모듈에 render 콜백이 없습니다: ',
+    'pb_render_error'        => '모듈 렌더링 실패: ',
+
 ];

@@ -456,4 +456,33 @@ return [
     'wgf_native'             => 'ネイティブ',
     'wgf_label'              => 'ソースで絞り込み',
 
+
+    //页面构建器（builder 字段的外壳文案）
+    'pb_search_modules'       => 'モジュールを検索...',
+    'pb_no_modules'           => 'モジュールが未登録です。window.EvaModules で登録すると表示されます。',
+    'pb_structure'            => '構造',
+    'pb_component_settings'   => 'モジュール設定',
+    'pb_page_blocks'          => 'ページブロック',
+    'pb_slot_structure'       => '現在のスロット構造',
+    'pb_no_blocks'            => 'ブロックがありません',
+    'pb_slot_empty'           => 'このスロットは空です',
+    'pb_drop_here'            => 'ここにモジュールをドロップ',
+    'pb_rendering'            => 'レンダリング中...',
+    'pb_select_hint'          => 'キャンバスでモジュールを選ぶと設定を編集できます',
+    'pb_no_fields'            => 'このモジュールにはフィールドがありません。',
+    'pb_move_up'              => '上へ',
+    'pb_move_down'            => '下へ',
+    'pb_duplicate'            => '複製',
+    'pb_delete'               => '削除',
+    'pb_fullscreen'           => '全画面',
+    'pb_exit_fullscreen'      => '全画面を終了',
+    'pb_resize_left'          => '左パネルの幅を調整',
+    'pb_resize_right'         => '右パネルの幅を調整',
+    'pb_expand_left'          => 'クリックで左パネルを展開',
+    'pb_collapse_left'        => 'ドラッグで幅を調整、クリックで左パネルを折りたたみ',
+    'pb_expand_right'         => 'クリックで右パネルを展開',
+    'pb_collapse_right'       => 'ドラッグで幅を調整、クリックで右パネルを折りたたみ',
+    'pb_missing_render'      => 'モジュールに render がありません：',
+    'pb_render_error'        => 'モジュールのレンダリングに失敗：',
+
 ];

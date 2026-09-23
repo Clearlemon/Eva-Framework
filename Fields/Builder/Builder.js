@@ -80,6 +80,8 @@
         device: 'desktop',
         fullScreen: false,
         activeSlot: '',
+        activePage: '',
+        pageMenuOpen: false,
         draggingModule: '',
         previewTimer: null,
         previewReady: false,
@@ -141,13 +143,36 @@
       tv: function (value) {
         return window.EvaI18n && window.EvaI18n.tv ? window.EvaI18n.tv(value) : (value || '');
       },
+      // 功能：取词条。外壳文案走 Languages/*.php 的 pb_* 键。
+      t: function (key) {
+        return window.EvaI18n && window.EvaI18n.t ? window.EvaI18n.t(key) : key;
+      },
+      // 功能：顶栏品牌名。字段可用 brand 指定，让构建器显示宿主主题/插件的名字，
+      // 不传才回落到框架自己的标识。
+      brandName: function () {
+        return (this.field && this.field.brand) || 'EVA Framework';
+      },
+      // 功能：顶栏品牌版本号，同样可由字段的 brand_version 指定。
+      brandVersion: function () {
+        return (this.field && this.field.brand_version) || 'v1.0.0';
+      },
       // 功能：模块注册表。
       registry: function () {
         return window.EvaModules || {};
       },
       // 功能：真实前台 iframe 预览地址。
+      // 字段可用 preview_url 指定自己的预览目标（例如文章页画布预览一篇文章），
+      // 没指定时回落到全局的首页预览地址。
       previewUrl: function () {
-        return cfg.builderPreviewUrl || '/';
+        var page = this.currentPage();
+        if (page && page.preview_url) { return page.preview_url; }
+        return (this.field && this.field.preview_url) || cfg.builderPreviewUrl || '/';
+      },
+      // 功能：预览目标的显示名，字段可用 preview_label 指定。
+      previewLabel: function () {
+        var page = this.currentPage();
+        if (page) { return page.label; }
+        return (this.field && this.field.preview_label) || '首页 (Home)';
       },
       // 功能：监听 iframe 准备完成消息。
       handlePreviewMessage: function (event) {
@@ -187,10 +212,10 @@
       // 功能：生成预览工具条 HTML，先用于本地乐观预览，随后由 PHP 真实渲染替换。
       previewToolsHtml: function () {
         return '<div class="eva-builder-preview-tools" aria-hidden="true">'
-          + '<button type="button" data-eva-builder-action="up">上移</button>'
-          + '<button type="button" data-eva-builder-action="down">下移</button>'
-          + '<button type="button" data-eva-builder-action="duplicate">复制</button>'
-          + '<button type="button" data-eva-builder-action="remove">删除</button>'
+          + '<button type="button" data-eva-builder-action="up">' + this.t('pb_move_up') + '</button>'
+          + '<button type="button" data-eva-builder-action="down">' + this.t('pb_move_down') + '</button>'
+          + '<button type="button" data-eva-builder-action="duplicate">' + this.t('pb_duplicate') + '</button>'
+          + '<button type="button" data-eva-builder-action="remove">{{ t(\'pb_delete\') }}</button>'
           + '</div>';
       },
       // 功能：用模块的前端 render 或 preview 模板生成即时真实预览。
@@ -218,7 +243,7 @@
         var instant = this.renderInstantModule(item);
         return '<div class="eva-builder-preview-module is-pending" data-eva-builder-module="' + uid + '" data-eva-builder-type="' + type + '">'
           + this.previewToolsHtml()
-          + (instant || '<section class="eva-builder-preview-pending"><strong>' + label + '</strong><span>正在渲染...</span></section>')
+          + (instant || '<section class="eva-builder-preview-pending"><strong>' + label + '</strong><span>' + this.t('pb_rendering') + '</span></section>')
           + '</div>';
       },
       // 功能：把当前 Builder 值转换成 iframe 可立即显示的占位 HTML。
@@ -296,9 +321,41 @@
         });
         return Object.keys(groups).map(function (key) { return groups[key]; });
       },
-      // 功能：Builder 可编辑的 hook slot 清单。
+      // 功能：可构建的页面清单。字段传了 pages 就是多页面模式，
+      // 顶栏出现页面下拉，每个页面各有自己的 slots 与预览地址。
+      pages: function () {
+        var pages = Array.isArray(this.field.pages) ? this.field.pages : [];
+        return pages.map(function (page, index) {
+          return {
+            id: String(page.id || index),
+            label: page.label || page.title || page.id || ('Page ' + (index + 1)),
+            icon: page.icon || 'ri-file-list-3-line',
+            preview_url: page.preview_url || '',
+            slots: Array.isArray(page.slots) ? page.slots : []
+          };
+        });
+      },
+      // 功能：当前正在编辑的页面；未选择时取第一个。
+      currentPage: function () {
+        var pages = this.pages();
+        if (!pages.length) { return null; }
+        for (var i = 0; i < pages.length; i++) {
+          if (pages[i].id === this.activePage) { return pages[i]; }
+        }
+        return pages[0];
+      },
+      // 功能：切换页面，同时把 slot 与选中项复位。
+      switchPage: function (id) {
+        this.activePage = id;
+        this.activeSlot = '';
+        this.selectedUid = '';
+        this.pageMenuOpen = false;
+        this.queuePreview(0);
+      },
+      // 功能：Builder 可编辑的 hook slot 清单（多页面模式下取当前页面的）。
       slots: function () {
-        var slots = Array.isArray(this.field.slots) ? this.field.slots : [];
+        var page = this.currentPage();
+        var slots = page ? page.slots : (Array.isArray(this.field.slots) ? this.field.slots : []);
         if (!slots.length) {
           slots = [{ id: 'main', label: '页面内容' }];
         }
@@ -319,6 +376,7 @@
       },
       // 功能：判断当前字段是否启用 slots 保存结构。
       usesSlots: function () {
+        if (Array.isArray(this.field.pages) && this.field.pages.length) { return true; }
         return Array.isArray(this.field.slots) && this.field.slots.length > 0;
       },
       // 功能：把旧数组或新 slots 值统一成 slots 对象。
@@ -689,10 +747,10 @@
           try {
             return m.render(item.values || {});
           } catch (e) {
-            return '<div style="color:#b91c1c;font-size:12px">模块「' + item.type + '」渲染出错：' + (e && e.message ? e.message : e) + '</div>';
+            return '<div class="eva-pb-render-error">' + this.t('pb_render_error') + item.type + ' — ' + (e && e.message ? e.message : e) + '</div>';
           }
         }
-        return '<div style="opacity:.5;font-size:12px">未注册模块「' + item.type + '」的 render</div>';
+        return '<div style="opacity:.5;font-size:12px">' + this.t('pb_missing_render') + item.type + '</div>';
       },
       // 功能：同步浏览器全屏状态到组件状态。
       syncFullscreenState: function () {
@@ -718,9 +776,16 @@
     template: [
       '<div ref="pbRoot" class="eva-pb" :class="{ \'is-fullscreen\': fullScreen }">',
       '  <header class="eva-pb-topbar">',
-      '    <div class="eva-pb-brand"><span><i class="ri-book-open-fill"></i></span><strong>EVA Framework</strong><em>v1.0.0</em></div>',
+      '    <div class="eva-pb-brand"><span><i class="ri-book-open-fill"></i></span><strong>{{ tv(brandName()) }}</strong><em>{{ brandVersion() }}</em></div>',
       '    <div class="eva-pb-center">',
-      '      <button type="button" class="eva-pb-page-select"><i class="ri-file-list-3-line"></i><span>首页 (Home)</span><i class="ri-arrow-down-s-line"></i></button>',
+      '      <div v-if="pages().length" class="eva-pb-page-picker">',
+      '        <button type="button" class="eva-pb-page-select is-menu" @click="pageMenuOpen = !pageMenuOpen"><i :class="currentPage().icon"></i><span>{{ tv(previewLabel()) }}</span><i class="ri-arrow-down-s-line"></i></button>',
+      '        <div v-if="pageMenuOpen" class="eva-pb-page-backdrop" @click="pageMenuOpen = false"></div>',
+      '        <div v-if="pageMenuOpen" class="eva-pb-page-menu">',
+      '          <button v-for="p in pages()" :key="p.id" type="button" :class="{ \'is-active\': currentPage().id === p.id }" @click="switchPage(p.id)"><i :class="p.icon"></i><span>{{ tv(p.label) }}</span></button>',
+      '        </div>',
+      '      </div>',
+      '      <span v-else class="eva-pb-page-select"><i class="ri-file-list-3-line"></i><span>{{ tv(previewLabel()) }}</span></span>',
       '      <span class="eva-pb-divider"></span>',
       '      <div class="eva-pb-devices">',
       '        <button type="button" :class="{ \'is-active\': device === \'desktop\' }" @click="device = \'desktop\'"><i class="ri-computer-line"></i></button>',
@@ -728,15 +793,15 @@
       '        <button type="button" :class="{ \'is-active\': device === \'mobile\' }" @click="device = \'mobile\'"><i class="ri-smartphone-line"></i></button>',
       '      </div>',
       '    </div>',
-      '    <div class="eva-pb-actions"><button type="button" :title="fullScreen ? \'退出全屏\' : \'全屏\'" :aria-label="fullScreen ? \'退出全屏\' : \'全屏\'" @click="toggleFullscreen"><i :class="fullScreen ? \'ri-fullscreen-exit-line\' : \'ri-fullscreen-line\'"></i></button></div>',
+      '    <div class="eva-pb-actions"><button type="button" :title="fullScreen ? t(\'pb_exit_fullscreen\') : t(\'pb_fullscreen\')" :aria-label="fullScreen ? t(\'pb_exit_fullscreen\') : t(\'pb_fullscreen\')" @click="toggleFullscreen"><i :class="fullScreen ? \'ri-fullscreen-exit-line\' : \'ri-fullscreen-line\'"></i></button></div>',
       '  </header>',
       '  <div class="eva-pb-body" :class="{ \'is-left-collapsed\': leftCollapsed, \'is-right-collapsed\': rightCollapsed, \'is-resizing-left\': resizingPanel === \'left\', \'is-resizing-right\': resizingPanel === \'right\' }" :style="{ \'--eva-pb-left-width\': leftWidth + \'px\', \'--eva-pb-right-width\': rightWidth + \'px\' }">',
-      '    <button type="button" class="eva-pb-side-toggle eva-pb-side-toggle--left" :title="leftCollapsed ? \'点击展开左侧面板\' : \'拖拽调整宽度，点击折叠左侧面板\'" @pointerdown.stop="startPanelToggleDrag($event, \'left\')" @click.stop="finishPanelToggleClick(\'left\')"><i :class="leftCollapsed ? \'ri-layout-left-2-line\' : \'ri-side-bar-line\'"></i></button>',
-      '    <button type="button" class="eva-pb-side-toggle eva-pb-side-toggle--right" :title="rightCollapsed ? \'点击展开右侧面板\' : \'拖拽调整宽度，点击折叠右侧面板\'" @pointerdown.stop="startPanelToggleDrag($event, \'right\')" @click.stop="finishPanelToggleClick(\'right\')"><i :class="rightCollapsed ? \'ri-layout-right-2-line\' : \'ri-sidebar-fold-line\'"></i></button>',
-      '    <div v-show="!leftCollapsed" class="eva-pb-resize-handle eva-pb-resize-handle--left" role="separator" aria-label="调整左侧面板宽度" @pointerdown.prevent="startPanelResize($event, \'left\')"></div>',
-      '    <div v-show="!rightCollapsed" class="eva-pb-resize-handle eva-pb-resize-handle--right" role="separator" aria-label="调整右侧面板宽度" @pointerdown.prevent="startPanelResize($event, \'right\')"></div>',
+      '    <button type="button" class="eva-pb-side-toggle eva-pb-side-toggle--left" :title="leftCollapsed ? t(\'pb_expand_left\') : t(\'pb_collapse_left\')" @pointerdown.stop="startPanelToggleDrag($event, \'left\')" @click.stop="finishPanelToggleClick(\'left\')"><i :class="leftCollapsed ? \'ri-layout-left-2-line\' : \'ri-side-bar-line\'"></i></button>',
+      '    <button type="button" class="eva-pb-side-toggle eva-pb-side-toggle--right" :title="rightCollapsed ? t(\'pb_expand_right\') : t(\'pb_collapse_right\')" @pointerdown.stop="startPanelToggleDrag($event, \'right\')" @click.stop="finishPanelToggleClick(\'right\')"><i :class="rightCollapsed ? \'ri-layout-right-2-line\' : \'ri-sidebar-fold-line\'"></i></button>',
+      '    <div v-show="!leftCollapsed" class="eva-pb-resize-handle eva-pb-resize-handle--left" role="separator" :aria-label="t(\'pb_resize_left\')" @pointerdown.prevent="startPanelResize($event, \'left\')"></div>',
+      '    <div v-show="!rightCollapsed" class="eva-pb-resize-handle eva-pb-resize-handle--right" role="separator" :aria-label="t(\'pb_resize_right\')" @pointerdown.prevent="startPanelResize($event, \'right\')"></div>',
       '    <aside class="eva-pb-left">',
-      '      <div class="eva-pb-search"><i class="ri-search-line"></i><input type="search" placeholder="搜索组件..."><kbd>⌘K</kbd></div>',
+      '      <div class="eva-pb-search"><i class="ri-search-line"></i><input type="search" :placeholder="t(\'pb_search_modules\')"><kbd>⌘K</kbd></div>',
       '      <div class="eva-pb-modules">',
       '        <section class="eva-pb-mod-group" v-for="group in moduleGroups()" :key="group.id">',
       '          <h4 @click="toggleGroup(group.id)"><span>{{ group.label }}</span><i :class="isGroupOpen(group.id) ? \'ri-arrow-down-s-line\' : \'ri-arrow-right-s-line\'"></i></h4>',
@@ -748,7 +813,7 @@
       '            </div>',
       '          </transition>',
       '        </section>',
-      '        <p v-if="!moduleList().length" class="eva-pb-empty-sm">未注册模块。用 window.EvaModules 注册后出现在这里。</p>',
+      '        <p v-if="!moduleList().length" class="eva-pb-empty-sm">{{ t(\'pb_no_modules\') }}</p>',
       '      </div>',
       '    </aside>',
       '    <main class="eva-pb-stage">',
@@ -758,16 +823,16 @@
       '          <iframe ref="previewFrame" class="eva-pb-iframe" :src="previewUrl()" @load="queuePreview(0)"></iframe>',
       '        </div>',
       '        <template v-else>',
-      '          <div v-if="!items().length" class="eva-pb-dropzone"><i class="ri-drag-drop-line"></i><span>拖拽模块到这里</span></div>',
+      '          <div v-if="!items().length" class="eva-pb-dropzone"><i class="ri-drag-drop-line"></i><span>{{ t(\'pb_drop_here\') }}</span></div>',
       '          <template v-for="(item, idx) in items()" :key="item.uid">',
       '            <div v-if="idx === 0" class="eva-pb-insert eva-pb-insert--before" :class="{ \'is-dragging\': draggingModule }" @dragover.prevent="onCanvasDragOver" @drop.stop.prevent="onInsertDrop($event, 0)"><span></span></div>',
       '            <div class="eva-pb-item" :class="{ \'is-active\': item.uid === selectedUid }" @click="select(item.uid)">',
       '              <div class="eva-pb-item-tag"><span>{{ tv(moduleLabel(item.type)) }}</span></div>',
       '              <div class="eva-pb-item-tools">',
-      '                <button type="button" @click.stop="moveItem(item.uid, -1)" :disabled="idx === 0" title="上移"><i class="ri-arrow-up-line"></i></button>',
-      '                <button type="button" @click.stop="moveItem(item.uid, 1)" :disabled="idx === items().length - 1" title="下移"><i class="ri-arrow-down-line"></i></button>',
-      '                <button type="button" @click.stop="duplicateItem(item.uid)" title="复制"><i class="ri-file-copy-line"></i></button>',
-      '                <button type="button" @click.stop="removeItem(item.uid)" title="删除"><i class="ri-delete-bin-line"></i></button>',
+      '                <button type="button" @click.stop="moveItem(item.uid, -1)" :disabled="idx === 0" :title="t(\'pb_move_up\')"><i class="ri-arrow-up-line"></i></button>',
+      '                <button type="button" @click.stop="moveItem(item.uid, 1)" :disabled="idx === items().length - 1" :title="t(\'pb_move_down\')"><i class="ri-arrow-down-line"></i></button>',
+      '                <button type="button" @click.stop="duplicateItem(item.uid)" :title="t(\'pb_duplicate\')"><i class="ri-file-copy-line"></i></button>',
+      '                <button type="button" @click.stop="removeItem(item.uid)" :title="t(\'pb_delete\')"><i class="ri-delete-bin-line"></i></button>',
       '              </div>',
       '              <div class="eva-pb-render" v-html="renderHtml(item)"></div>',
       '            </div>',
@@ -777,12 +842,12 @@
       '      </section>',
       '    </main>',
       '    <aside class="eva-pb-right">',
-      '      <div class="eva-pb-right-tabs"><button type="button" :class="{ \'is-active\': rightTab === \'page\' }" @click="rightTab = \'page\'">结构</button><button type="button" :class="{ \'is-active\': rightTab === \'component\' }" @click="rightTab = \'component\'">组件设置</button></div>',
+      '      <div class="eva-pb-right-tabs"><button type="button" :class="{ \'is-active\': rightTab === \'page\' }" @click="rightTab = \'page\'">{{ t(\'pb_structure\') }}</button><button type="button" :class="{ \'is-active\': rightTab === \'component\' }" @click="rightTab = \'component\'">{{ t(\'pb_component_settings\') }}</button></div>',
       '      <template v-if="rightTab === \'page\'">',
-      '        <div class="eva-pb-panel"><h4>当前 Slot 结构</h4><div class="eva-pb-tree"><div v-for="item in items()" :key="item.uid" class="eva-pb-tree-row" :class="{ \'is-active\': item.uid === selectedUid }" @click="select(item.uid)"><i :class="moduleIcon(item.type)"></i><span>{{ tv(moduleLabel(item.type)) }}</span></div><p v-if="!items().length" class="eva-pb-empty-sm">当前 Slot 暂无模块</p></div></div>',
+      '        <div class="eva-pb-panel"><h4>{{ t(\'pb_slot_structure\') }}</h4><div class="eva-pb-tree"><div v-for="item in items()" :key="item.uid" class="eva-pb-tree-row" :class="{ \'is-active\': item.uid === selectedUid }" @click="select(item.uid)"><i :class="moduleIcon(item.type)"></i><span>{{ tv(moduleLabel(item.type)) }}</span></div><p v-if="!items().length" class="eva-pb-empty-sm">{{ t(\'pb_slot_empty\') }}</p></div></div>',
       '      </template>',
       '      <template v-else>',
-      '        <div class="eva-pb-panel eva-pb-panel--blocks"><h4>页面区块</h4><div class="eva-pb-tree"><template v-for="group in slotGroups()" :key="group.id"><div class="eva-pb-tree-slot">{{ tv(group.label) }}</div><div v-for="item in group.items" :key="group.id + \'-\' + item.uid" class="eva-pb-tree-row" :class="{ \'is-active\': item.uid === selectedUid }" @click="activeSlot = group.id; select(item.uid)"><i :class="moduleIcon(item.type)"></i><span>{{ tv(moduleLabel(item.type)) }}</span></div><p v-if="!group.items.length" class="eva-pb-empty-sm">暂无区块</p></template></div></div>',
+      '        <div class="eva-pb-panel eva-pb-panel--blocks"><h4>{{ t(\'pb_page_blocks\') }}</h4><div class="eva-pb-tree"><template v-for="group in slotGroups()" :key="group.id"><div class="eva-pb-tree-slot">{{ tv(group.label) }}</div><div v-for="item in group.items" :key="group.id + \'-\' + item.uid" class="eva-pb-tree-row" :class="{ \'is-active\': item.uid === selectedUid }" @click="activeSlot = group.id; select(item.uid)"><i :class="moduleIcon(item.type)"></i><span>{{ tv(moduleLabel(item.type)) }}</span></div><p v-if="!group.items.length" class="eva-pb-empty-sm">{{ t(\'pb_no_blocks\') }}</p></template></div></div>',
       '        <div class="eva-pb-right-sep"></div>',
       '        <template v-if="selectedItem()">',
       '          <div class="eva-pb-right-head"><i :class="moduleIcon(selectedItem().type)"></i><span>{{ tv(moduleLabel(selectedItem().type)) }}</span></div>',
@@ -791,10 +856,10 @@
       '              <label class="eva-pb-field-label">{{ tv(f.title || f.id) }}</label>',
       '              <eva-field :field="f" :model-value="childValue(f)" @update:model-value="updateChild(f, $event)"></eva-field>',
       '            </div>',
-      '            <p v-if="!selectedFields().length" class="eva-pb-empty-sm">该模块未定义 fields。</p>',
+      '            <p v-if="!selectedFields().length" class="eva-pb-empty-sm">{{ t(\'pb_no_fields\') }}</p>',
       '          </div>',
       '        </template>',
-      '        <div v-else class="eva-pb-empty-sm"><i class="ri-cursor-line"></i> 选中中间的模块，在此编辑参数</div>',
+      '        <div v-else class="eva-pb-empty-sm"><i class="ri-cursor-line"></i> {{ t(\'pb_select_hint\') }}</div>',
       '      </template>',
       '    </aside>',
       '  </div>',

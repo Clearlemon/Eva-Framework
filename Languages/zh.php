@@ -462,4 +462,33 @@ return [
     'wgf_native'             => '原生',
     'wgf_label'              => '按来源筛选小工具',
 
+
+    //页面构建器（builder 字段的外壳文案）
+    'pb_search_modules'       => '搜索组件...',
+    'pb_no_modules'           => '未注册模块。用 window.EvaModules 注册后出现在这里。',
+    'pb_structure'            => '结构',
+    'pb_component_settings'   => '组件设置',
+    'pb_page_blocks'          => '页面区块',
+    'pb_slot_structure'       => '当前 Slot 结构',
+    'pb_no_blocks'            => '暂无区块',
+    'pb_slot_empty'           => '当前 Slot 暂无模块',
+    'pb_drop_here'            => '拖拽模块到这里',
+    'pb_rendering'            => '正在渲染...',
+    'pb_select_hint'          => '选中中间的模块，在此编辑参数',
+    'pb_no_fields'            => '该模块未定义 fields。',
+    'pb_move_up'              => '上移',
+    'pb_move_down'            => '下移',
+    'pb_duplicate'            => '复制',
+    'pb_delete'               => '删除',
+    'pb_fullscreen'           => '全屏',
+    'pb_exit_fullscreen'      => '退出全屏',
+    'pb_resize_left'          => '调整左侧面板宽度',
+    'pb_resize_right'         => '调整右侧面板宽度',
+    'pb_expand_left'          => '点击展开左侧面板',
+    'pb_collapse_left'        => '拖拽调整宽度，点击折叠左侧面板',
+    'pb_expand_right'         => '点击展开右侧面板',
+    'pb_collapse_right'       => '拖拽调整宽度，点击折叠右侧面板',
+    'pb_missing_render'      => '模块未定义 render：',
+    'pb_render_error'        => '模块渲染出错：',
+
 ];

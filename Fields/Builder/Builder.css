@@ -205,10 +205,10 @@
   flex-direction: column;
   gap: 10px;
   margin: 0;
-  border: 1px dashed #cbd5e1;
+  border: 1px dashed var(--eva-border);
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.54);
-  color: #94a3b8;
+  background: color-mix(in srgb, var(--eva-surface) 54%, transparent);
+  color: var(--eva-text-mute);
   pointer-events: none;
 }
 
@@ -299,7 +299,7 @@
   min-height: 720px;
   flex-direction: column;
   border-radius: 0;
-  background: #f7f8fb;
+  background: var(--eva-soft);
   box-shadow: none;
 }
 
@@ -312,7 +312,7 @@
   height: 100vh;
   min-height: 100vh;
   border: 0;
-  background: #f7f8fb;
+  background: var(--eva-soft);
 }
 
 .eva-pb.is-fullscreen .eva-pb-body,
@@ -336,7 +336,7 @@
   min-height: 54px;
   padding: 0 16px;
   border-bottom: 1px solid var(--eva-border);
-  background: rgba(255, 255, 255, 0.92);
+  background: color-mix(in srgb, var(--eva-surface) 92%, transparent);
   backdrop-filter: blur(12px);
   overflow: visible;
 }
@@ -363,15 +363,15 @@
   align-items: center;
   justify-content: center;
   border-radius: 6px;
-  background: linear-gradient(135deg, #ff6b8e, #ff3f76);
-  color: #fff;
+  background: linear-gradient(135deg, var(--eva-primary), var(--eva-primary-600));
+  color: var(--eva-on-primary);
 }
 
 .eva-pb-brand em {
   padding: 2px 5px;
   border-radius: 999px;
-  background: #ffe5ed;
-  color: #ff3f76;
+  background: var(--eva-primary-050);
+  color: var(--eva-primary-600);
   font-size: 10px;
   font-style: normal;
   font-weight: 700;
@@ -390,24 +390,14 @@
   padding: 0 10px;
   border: 1px solid var(--eva-border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--eva-surface);
   color: var(--eva-text);
-  cursor: pointer;
   font: inherit;
   font-size: 12px;
   font-weight: 700;
   transition: border-color var(--eva-ease), background var(--eva-ease), color var(--eva-ease), box-shadow var(--eva-ease), transform var(--eva-ease);
 }
 
-.eva-pb-page-select:hover,
-.eva-pb-page-select:focus-visible {
-  border-color: #ffafc2;
-  background: #fff3f6;
-  color: #ff3f76;
-  box-shadow: 0 8px 18px rgba(255, 77, 127, 0.12);
-  outline: none;
-  transform: translateY(-1px);
-}
 
 .eva-pb-divider {
   width: 1px;
@@ -443,9 +433,9 @@
 }
 
 .eva-pb-devices button.is-active {
-  border-color: #ffafc2;
-  background: #fff;
-  color: #ff3f76;
+  border-color: color-mix(in srgb, var(--eva-primary) 55%, var(--eva-surface));
+  background: var(--eva-surface);
+  color: var(--eva-primary-600);
 }
 
 .eva-pb-actions {
@@ -462,7 +452,7 @@
   min-height: 30px;
   padding: 0;
   border-color: var(--eva-border);
-  background: #fff;
+  background: var(--eva-surface);
   color: var(--eva-text);
   font-size: 15px;
   font-weight: 600;
@@ -470,10 +460,10 @@
 
 .eva-pb-actions button:hover,
 .eva-pb-actions button:focus-visible {
-  border-color: #ffafc2;
-  background: #fff3f6;
-  color: #ff3f76;
-  box-shadow: 0 8px 18px rgba(255, 77, 127, 0.12);
+  border-color: color-mix(in srgb, var(--eva-primary) 55%, var(--eva-surface));
+  background: color-mix(in srgb, var(--eva-primary) 7%, var(--eva-surface));
+  color: var(--eva-primary-600);
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--eva-primary) 12%, transparent);
   outline: none;
   transform: translateY(-1px);
 }
@@ -484,17 +474,17 @@
 }
 
 .eva-pb-actions button.is-primary {
-  border-color: #ff4d7f;
-  background: #ff4d7f;
-  color: #fff;
+  border-color: var(--eva-primary);
+  background: var(--eva-primary);
+  color: var(--eva-on-primary);
 }
 
 .eva-pb-actions button.is-primary:hover,
 .eva-pb-actions button.is-primary:focus-visible {
-  border-color: #f02f68;
-  background: #f02f68;
-  color: #fff;
-  box-shadow: 0 10px 22px rgba(255, 63, 118, 0.24);
+  border-color: var(--eva-primary-600);
+  background: var(--eva-primary-600);
+  color: var(--eva-on-primary);
+  box-shadow: 0 10px 22px color-mix(in srgb, var(--eva-primary-600) 24%, transparent);
 }
 
 .eva-pb-body {
@@ -553,18 +543,18 @@
   justify-content: center;
   border: 1px solid var(--eva-border);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.94);
+  background: color-mix(in srgb, var(--eva-surface) 94%, transparent);
   color: var(--eva-text-sub);
   cursor: col-resize;
   touch-action: none;
-  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--eva-text) 8%, transparent);
   transition: left var(--eva-ease), right var(--eva-ease), color var(--eva-ease), border-color var(--eva-ease), background var(--eva-ease);
 }
 
 .eva-pb-side-toggle:hover {
-  border-color: #ffafc2;
-  background: #fff3f6;
-  color: #ff3f76;
+  border-color: color-mix(in srgb, var(--eva-primary) 55%, var(--eva-surface));
+  background: color-mix(in srgb, var(--eva-primary) 7%, var(--eva-surface));
+  color: var(--eva-primary-600);
 }
 
 .eva-pb-side-toggle--left {
@@ -653,7 +643,7 @@ body.eva-pb-resizing * {
 
 .eva-pb-left,
 .eva-pb-right {
-  background: #fff;
+  background: var(--eva-surface);
 }
 
 .eva-pb-left-tabs,
@@ -682,7 +672,7 @@ body.eva-pb-resizing * {
 
 .eva-pb-left-tabs button.is-active,
 .eva-pb-right-tabs button.is-active {
-  color: #ff3f76;
+  color: var(--eva-primary-600);
 }
 
 .eva-pb-left-tabs button.is-active::after,
@@ -694,7 +684,7 @@ body.eva-pb-resizing * {
   left: 0;
   height: 2px;
   border-radius: 999px;
-  background: #ff4d7f;
+  background: var(--eva-primary);
 }
 
 .eva-pb-search {
@@ -706,7 +696,7 @@ body.eva-pb-resizing * {
   padding: 0 8px;
   border: 1px solid var(--eva-border);
   border-radius: 8px;
-  background: #f8fafc;
+  background: var(--eva-soft);
   color: var(--eva-text-mute);
 }
 
@@ -726,7 +716,7 @@ body.eva-pb-resizing * {
   padding: 0 4px;
   border: 1px solid var(--eva-border);
   border-radius: 5px;
-  background: #fff;
+  background: var(--eva-surface);
   color: var(--eva-text-mute);
   font-size: 10px;
   line-height: 16px;
@@ -758,7 +748,7 @@ body.eva-pb-resizing * {
 }
 
 .eva-pb-mod-group h4:hover i {
-  color: #ff3f76;
+  color: var(--eva-primary-600);
 }
 
 .eva-pb-mod-grid {
@@ -790,7 +780,7 @@ body.eva-pb-resizing * {
   width: auto;
   height: auto;
   background: transparent;
-  color: #1f2937;
+  color: var(--eva-text);
   font-size: 20px;
 }
 
@@ -804,7 +794,7 @@ body.eva-pb-resizing * {
   display: flex;
   min-width: 0;
   flex-direction: column;
-  background: #fbfcff;
+  background: var(--eva-surface);
 }
 
 .eva-pb-pagebar {
@@ -814,7 +804,7 @@ body.eva-pb-resizing * {
   height: 48px;
   padding: 0 18px;
   border-bottom: 1px solid var(--eva-border);
-  background: #fff;
+  background: var(--eva-surface);
   color: var(--eva-text);
   font-size: 12px;
 }
@@ -845,9 +835,9 @@ body.eva-pb-resizing * {
 }
 
 .eva-pb-pagebar .eva-pb-slot-tabs button.is-active {
-  border-color: #ffafc2;
-  background: #fff3f6;
-  color: #ff3f76;
+  border-color: color-mix(in srgb, var(--eva-primary) 55%, var(--eva-surface));
+  background: color-mix(in srgb, var(--eva-primary) 7%, var(--eva-surface));
+  color: var(--eva-primary-600);
   font-weight: 700;
 }
 
@@ -867,10 +857,10 @@ body.eva-pb-resizing * {
   min-height: 620px;
   height: 100%;
   padding: 28px;
-  background: #fbfcff;
+  background: var(--eva-surface);
   background-image:
-    linear-gradient(rgba(15, 23, 42, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(15, 23, 42, 0.035) 1px, transparent 1px);
+    linear-gradient(color-mix(in srgb, var(--eva-text) 4%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--eva-text) 4%, transparent) 1px, transparent 1px);
   background-size: 22px 22px;
 }
 
@@ -888,7 +878,7 @@ body.eva-pb-resizing * {
 
 .eva-pb-canvas.is-preview {
   padding: 0;
-  background: #fff;
+  background: var(--eva-surface);
   background-image: none;
 }
 
@@ -899,7 +889,7 @@ body.eva-pb-resizing * {
   border: 0;
   border-radius: 0;
   overflow: hidden;
-  background: #fff;
+  background: var(--eva-surface);
   box-shadow: none;
 }
 
@@ -908,7 +898,7 @@ body.eva-pb-resizing * {
   width: 100%;
   height: max(720px, calc(100vh - 210px));
   border: 0;
-  background: #fff;
+  background: var(--eva-surface);
   pointer-events: auto;
 }
 
@@ -932,8 +922,8 @@ body.eva-pb-resizing * {
 
 .eva-pb-item:hover,
 .eva-pb-item.is-active {
-  border-color: #ff4d7f;
-  box-shadow: 0 0 0 1px #ff4d7f;
+  border-color: var(--eva-primary);
+  box-shadow: 0 0 0 1px var(--eva-primary);
 }
 
 .eva-pb-item-tag {
@@ -944,8 +934,8 @@ body.eva-pb-resizing * {
   display: none;
   padding: 4px 8px;
   border-radius: 6px 6px 0 0;
-  background: #ff4d7f;
-  color: #fff;
+  background: var(--eva-primary);
+  color: var(--eva-on-primary);
   font-size: 10px;
   font-weight: 700;
 }
@@ -963,7 +953,7 @@ body.eva-pb-resizing * {
   display: none;
   padding: 3px 5px;
   border-radius: 6px;
-  background: #ff4d7f;
+  background: var(--eva-primary);
   transform: translateX(-50%);
 }
 
@@ -975,12 +965,12 @@ body.eva-pb-resizing * {
 .eva-pb-item-tools button {
   width: 22px;
   height: 22px;
-  color: rgba(255, 255, 255, 0.9);
+  color: color-mix(in srgb, var(--eva-on-primary) 90%, transparent);
 }
 
 .eva-pb-item-tools button:hover {
-  background: rgba(255, 255, 255, 0.18);
-  color: #fff;
+  background: color-mix(in srgb, var(--eva-on-primary) 18%, transparent);
+  color: var(--eva-on-primary);
 }
 
 .eva-pb-render {
@@ -1014,14 +1004,14 @@ body.eva-pb-resizing * {
 
 .eva-pb-insert:hover,
 .eva-pb-insert.is-dragging {
-  background: color-mix(in srgb, #ff4d7f 7%, transparent);
+  background: color-mix(in srgb, var(--eva-primary) 7%, transparent);
 }
 
 .eva-pb-insert:hover span,
 .eva-pb-insert.is-dragging span {
   height: 3px;
-  background: #ff4d7f;
-  box-shadow: 0 0 0 3px color-mix(in srgb, #ff4d7f 12%, transparent);
+  background: var(--eva-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--eva-primary) 12%, transparent);
 }
 
 .eva-pb-panel {
@@ -1067,16 +1057,16 @@ body.eva-pb-resizing * {
   padding: 0 8px;
   border: 1px solid var(--eva-border);
   border-radius: 7px;
-  background: #fff;
+  background: var(--eva-surface);
   color: var(--eva-text-sub);
   cursor: pointer;
   font-size: 11.5px;
 }
 
 .eva-pb-tree-row.is-active {
-  border-color: #ffd3df;
-  background: #fff3f6;
-  color: #ff3f76;
+  border-color: color-mix(in srgb, var(--eva-primary) 35%, var(--eva-surface));
+  background: color-mix(in srgb, var(--eva-primary) 7%, var(--eva-surface));
+  color: var(--eva-primary-600);
 }
 
 .eva-pb-tree-row span {
@@ -1099,7 +1089,7 @@ body.eva-pb-resizing * {
   padding: 0 10px;
   border: 1px solid var(--eva-border);
   border-radius: 7px;
-  background: #fff;
+  background: var(--eva-surface);
   color: var(--eva-text);
   font-size: 12px;
 }
@@ -1112,17 +1102,17 @@ body.eva-pb-resizing * {
 
 .eva-pb-publish button {
   height: 32px;
-  border: 1px solid #ffafc2;
+  border: 1px solid color-mix(in srgb, var(--eva-primary) 55%, var(--eva-surface));
   border-radius: 7px;
-  background: #fff;
-  color: #ff3f76;
+  background: var(--eva-surface);
+  color: var(--eva-primary-600);
   cursor: pointer;
   font-size: 12px;
   font-weight: 700;
 }
 
 .eva-pb-publish button:last-child {
-  background: #fff3f6;
+  background: color-mix(in srgb, var(--eva-primary) 7%, var(--eva-surface));
 }
 
 .eva-pb-demo-hero {
@@ -1130,8 +1120,8 @@ body.eva-pb-resizing * {
   border-radius: 0;
   background:
     radial-gradient(circle at 66% 28%, rgba(168, 85, 247, 0.18), transparent 30%),
-    radial-gradient(circle at 70% 48%, rgba(255, 77, 127, 0.14), transparent 28%),
-    #fff;
+    radial-gradient(circle at 70% 48%, color-mix(in srgb, var(--eva-primary) 14%, transparent), transparent 28%),
+    var(--eva-surface);
 }
 
 .eva-pb-demo-nav,
@@ -1148,7 +1138,7 @@ body.eva-pb-resizing * {
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 70px;
-  color: #0f172a;
+  color: var(--eva-text);
   font-size: 12px;
 }
 
@@ -1158,15 +1148,15 @@ body.eva-pb-resizing * {
 }
 
 .eva-pb-demo-nav strong i {
-  color: #ff4d7f;
+  color: var(--eva-primary);
 }
 
 .eva-pb-demo-nav button,
 .eva-pb-demo-actions button:first-child {
   border: 0;
   border-radius: 8px;
-  background: #ff4d7f;
-  color: #fff;
+  background: var(--eva-primary);
+  color: var(--eva-on-primary);
 }
 
 .eva-pb-demo-nav button {
@@ -1185,29 +1175,29 @@ body.eva-pb-resizing * {
   margin: 0 0 18px;
   padding: 6px 10px;
   border-radius: 999px;
-  background: #fff1f5;
-  color: #ff4d7f;
+  background: color-mix(in srgb, var(--eva-primary) 9%, var(--eva-surface));
+  color: var(--eva-primary);
   font-size: 12px;
   font-weight: 700;
 }
 
 .eva-pb-demo-hero h1 {
   margin: 0 0 14px;
-  color: #0f172a;
+  color: var(--eva-text);
   font-size: clamp(32px, 4vw, 52px);
   line-height: 1.12;
   letter-spacing: -0.04em;
 }
 
 .eva-pb-demo-hero h1 em {
-  color: #ff4d7f;
+  color: var(--eva-primary);
   font-style: normal;
 }
 
 .eva-pb-demo-sub {
   max-width: 520px;
   margin: 0 0 22px;
-  color: #64748b;
+  color: var(--eva-text-sub);
   font-size: 14px;
   line-height: 1.8;
 }
@@ -1220,10 +1210,10 @@ body.eva-pb-resizing * {
 .eva-pb-demo-actions button {
   min-width: 112px;
   height: 42px;
-  border: 1px solid #e8edf5;
+  border: 1px solid var(--eva-border);
   border-radius: 9px;
-  background: #fff;
-  color: #0f172a;
+  background: var(--eva-surface);
+  color: var(--eva-text);
   font-weight: 800;
 }
 
@@ -1235,8 +1225,8 @@ body.eva-pb-resizing * {
 .eva-pb-demo-tags span {
   padding: 7px 10px;
   border-radius: 999px;
-  background: #f8fafc;
-  color: #334155;
+  background: var(--eva-soft);
+  color: var(--eva-text);
   font-size: 12px;
   font-weight: 700;
 }
@@ -1244,24 +1234,24 @@ body.eva-pb-resizing * {
 .eva-pb-demo-card {
   width: min(360px, 42%);
   padding: 22px;
-  border: 1px solid #edf2f7;
+  border: 1px solid var(--eva-border);
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.86);
-  box-shadow: 0 22px 70px rgba(15, 23, 42, 0.16);
-  color: #ff4d7f;
+  background: color-mix(in srgb, var(--eva-surface) 86%, transparent);
+  box-shadow: 0 22px 70px color-mix(in srgb, var(--eva-text) 16%, transparent);
+  color: var(--eva-primary);
   transform: rotate(-2deg);
 }
 
 .eva-pb-demo-card-title {
   margin-bottom: 14px;
-  color: #0f172a;
+  color: var(--eva-text);
   font-weight: 800;
 }
 
 .eva-pb-demo-metrics {
   justify-content: space-between;
   margin-bottom: 14px;
-  color: #0f172a;
+  color: var(--eva-text);
 }
 
 .eva-pb-demo-card svg {
@@ -1273,15 +1263,15 @@ body.eva-pb-resizing * {
   grid-template-columns: repeat(4, 1fr);
   gap: 18px;
   padding: 30px;
-  background: #fff;
+  background: var(--eva-surface);
 }
 
 .eva-pb-demo-feature-grid article {
   padding: 26px 22px;
-  border: 1px solid #e9eef6;
+  border: 1px solid var(--eva-border);
   border-radius: 14px;
-  background: #fff;
-  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+  background: var(--eva-surface);
+  box-shadow: 0 12px 30px color-mix(in srgb, var(--eva-text) 6%, transparent);
 }
 
 .eva-pb-demo-feature-grid i,
@@ -1293,21 +1283,21 @@ body.eva-pb-resizing * {
   justify-content: center;
   margin-bottom: 16px;
   border-radius: 12px;
-  background: #fff0f5;
-  color: #ff4d7f;
+  background: color-mix(in srgb, var(--eva-primary) 10%, var(--eva-surface));
+  color: var(--eva-primary);
   font-size: 20px;
 }
 
 .eva-pb-demo-feature-grid strong {
   display: block;
   margin-bottom: 8px;
-  color: #0f172a;
+  color: var(--eva-text);
   font-size: 16px;
 }
 
 .eva-pb-demo-feature-grid p {
   margin: 0;
-  color: #64748b;
+  color: var(--eva-text-sub);
   font-size: 13px;
   line-height: 1.65;
 }
@@ -1317,7 +1307,7 @@ body.eva-pb-resizing * {
   grid-template-columns: repeat(4, 1fr);
   gap: 20px;
   padding: 30px;
-  background: #fff;
+  background: var(--eva-surface);
 }
 
 .eva-pb-demo-stats div {
@@ -1330,18 +1320,18 @@ body.eva-pb-resizing * {
 .eva-pb-demo-stats i {
   grid-row: span 2;
   margin: 0;
-  background: #eef6ff;
-  color: #3b82f6;
+  background: color-mix(in srgb, var(--eva-accent) 12%, var(--eva-surface));
+  color: var(--eva-accent);
 }
 
 .eva-pb-demo-stats strong {
-  color: #1d4ed8;
+  color: var(--eva-accent);
   font-size: 28px;
   line-height: 1;
 }
 
 .eva-pb-demo-stats span {
-  color: #64748b;
+  color: var(--eva-text-sub);
   font-size: 13px;
 }
 
@@ -1357,4 +1347,66 @@ body.eva-pb-resizing * {
   .eva-pb-right {
     grid-column: 1 / -1;
   }
+}
+
+/* 页面选择下拉：字段传了 pages 时顶栏出现，用来在多个可构建页面之间切换 */
+.eva-pb-page-picker {
+  position: relative;
+}
+
+.eva-pb-page-select.is-menu {
+  cursor: pointer;
+}
+
+.eva-pb-page-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
+
+.eva-pb-page-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 41;
+  min-width: 160px;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border: 1px solid var(--eva-border);
+  border-radius: var(--eva-radius);
+  background: var(--eva-surface);
+  box-shadow: var(--eva-shadow-menu);
+}
+
+.eva-pb-page-menu button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: var(--eva-radius-sm);
+  background: transparent;
+  color: var(--eva-text);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--eva-ease), color var(--eva-ease);
+}
+
+.eva-pb-page-menu button:hover {
+  background: var(--eva-soft);
+}
+
+.eva-pb-page-menu button.is-active {
+  color: var(--eva-primary);
+  background: var(--eva-primary-050);
+}
+
+/* 模块 render 抛异常时的行内提示（开发期可见） */
+.eva-pb-render-error {
+  color: var(--eva-danger);
+  font-size: 12px;
 }

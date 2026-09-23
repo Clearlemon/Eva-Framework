@@ -456,4 +456,33 @@ return [
     'wgf_native'             => 'Native',
     'wgf_label'              => 'Filter widgets by source',
 
+
+    //页面构建器（builder 字段的外壳文案）
+    'pb_search_modules'       => 'Search modules...',
+    'pb_no_modules'           => 'No modules registered. Register via window.EvaModules and they appear here.',
+    'pb_structure'            => 'Structure',
+    'pb_component_settings'   => 'Module settings',
+    'pb_page_blocks'          => 'Page blocks',
+    'pb_slot_structure'       => 'Current slot structure',
+    'pb_no_blocks'            => 'No blocks yet',
+    'pb_slot_empty'           => 'This slot is empty',
+    'pb_drop_here'            => 'Drop a module here',
+    'pb_rendering'            => 'Rendering...',
+    'pb_select_hint'          => 'Select a module in the canvas to edit its settings',
+    'pb_no_fields'            => 'This module defines no fields.',
+    'pb_move_up'              => 'Move up',
+    'pb_move_down'            => 'Move down',
+    'pb_duplicate'            => 'Duplicate',
+    'pb_delete'               => 'Delete',
+    'pb_fullscreen'           => 'Fullscreen',
+    'pb_exit_fullscreen'      => 'Exit fullscreen',
+    'pb_resize_left'          => 'Resize left panel',
+    'pb_resize_right'         => 'Resize right panel',
+    'pb_expand_left'          => 'Click to expand the left panel',
+    'pb_collapse_left'        => 'Drag to resize, click to collapse the left panel',
+    'pb_expand_right'         => 'Click to expand the right panel',
+    'pb_collapse_right'       => 'Drag to resize, click to collapse the right panel',
+    'pb_missing_render'      => 'Module has no render callback: ',
+    'pb_render_error'        => 'Module failed to render: ',
+
 ];
