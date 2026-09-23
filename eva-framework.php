@@ -104,3 +104,10 @@ register_activation_hook(__FILE__, static function () {
 
 // 框架就绪（对应 CSF 的 csf_init）：注册表与各容器都已挂好，主题 / 扩展可以在这里开始 create*。
 do_action('eva_loaded');
+
+// 内置演示设置页（可删除此 require 与 includes/demo-options.php）
+require_once EVA_FW_DIR . 'includes/demo-options.php';
+// 区块演示：四个区块分别对应 createBlock 的四种形态（可删除此 require 与 includes/demo-blocks.php）
+require_once EVA_FW_DIR . 'includes/demo-blocks.php';
+// 小工具演示：一个最小的经典 WP_Widget 容器（可删除此 require 与 includes/demo-widgets.php）
+require_once EVA_FW_DIR . 'includes/demo-widgets.php';
