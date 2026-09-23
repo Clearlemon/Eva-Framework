@@ -211,7 +211,6 @@ class Admin
         // 主色覆盖（用户挑的主题色 > 主题品牌色）：和 Eva::enqueue_runtime() 走同一套令牌，
         // 服务端先出好，免得 Vue 挂载后再刷一次颜色。
         \Eva::add_theme_color_inline_style();
-        wp_enqueue_style('eva-extension-page', EVA_FW_URL . 'assets/extension-page.css', ['eva-framework'], \Eva::asset_ver('assets/extension-page.css'));
 
         // UI 库（Libs/<name>/，含同名 js/css）：先于字段与外壳加载，逐个累积为 eva-app 的依赖。
         $lib_deps = ['eva-vue3'];
@@ -264,9 +263,6 @@ class Admin
         }
         do_action('eva_enqueue', $current);
 
-        // 版本计划/系统更新：自动挂载 callback 输出的 #update 挂载点（非 EvaFields 字段）。
-        wp_enqueue_script('eva-update-page', EVA_FW_URL . 'assets/update-page.js', ['eva-framework'], \Eva::asset_ver('assets/update-page.js'), true);
-        wp_enqueue_script('eva-extension-page', EVA_FW_URL . 'assets/extension-page.js', ['eva-framework'], \Eva::asset_ver('assets/extension-page.js'), true);
 
         // 开发期热刷新（可删；或 wp-config 设 EVA_FW_DEV=false 关闭）。
         if (defined('EVA_FW_DEV') && EVA_FW_DEV) {

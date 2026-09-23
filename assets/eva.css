@@ -1439,16 +1439,16 @@ body.folded .eva-savebar {
 
 /* === checkbox 备选样式 === */
 /* 方案 A：选项卡片（自定义勾选圈 + 选中高亮 + hover 浮起） */
-.eva-backup .backup-opt-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.6rem; }
-.eva-backup .backup-opt-card { position: relative; display: flex; align-items: center; gap: 0.55rem; padding: 0.65rem 0.75rem; border: 1.5px solid var(--eva-border); border-radius: var(--eva-radius); background: var(--eva-surface); cursor: pointer; transition: border-color var(--eva-ease), background var(--eva-ease), box-shadow var(--eva-ease), transform var(--eva-ease); }
+.eva-backup .backup-opt-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 0.45rem; }
+.eva-backup .backup-opt-card { position: relative; display: flex; align-items: center; gap: 0.45rem; padding: 0.42rem 0.6rem; border: 1px solid var(--eva-border); border-radius: var(--eva-radius); background: var(--eva-surface); cursor: pointer; transition: border-color var(--eva-ease), background var(--eva-ease), box-shadow var(--eva-ease), transform var(--eva-ease); }
 .eva-backup .backup-opt-card input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 .eva-backup .backup-opt-card:hover { border-color: var(--eva-primary); transform: translateY(-1px); box-shadow: var(--eva-shadow-card); }
 .eva-backup .backup-opt-card.is-on { border-color: var(--eva-primary); background: color-mix(in srgb, var(--eva-primary) 8%, var(--eva-surface)); }
-.eva-backup .backup-opt-check { width: 1.25rem; height: 1.25rem; flex: none; display: flex; align-items: center; justify-content: center; border: 1.5px solid var(--eva-text-mute); border-radius: 50%; color: var(--eva-surface); font-size: 0.78rem; transition: border-color var(--eva-ease), background var(--eva-ease); }
+.eva-backup .backup-opt-check { width: 1rem; height: 1rem; flex: none; display: flex; align-items: center; justify-content: center; border: 1px solid var(--eva-text-mute); border-radius: 50%; color: var(--eva-surface); font-size: 0.66rem; transition: border-color var(--eva-ease), background var(--eva-ease); }
 .eva-backup .backup-opt-card.is-on .backup-opt-check { border-color: var(--eva-primary); background: var(--eva-primary); }
 .eva-backup .backup-opt-check i { transform: scale(0); transition: transform var(--eva-ease); }
 .eva-backup .backup-opt-card.is-on .backup-opt-check i { transform: scale(1); }
-.eva-backup .backup-opt-text { font-size: 0.82rem; color: var(--eva-text); }
+.eva-backup .backup-opt-text { font-size: 0.78rem; color: var(--eva-text); }
 /* 备份时间：时:分 双下拉（复用 eva-select） */
 .eva-backup .backup-time-row { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 0.5rem; }
 .eva-backup .backup-time-row .eva-select { width: 100%; }

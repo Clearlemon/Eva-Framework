@@ -225,7 +225,6 @@ class Standalone
         if ($theme_color_css !== '') {
             echo '<style>' . $theme_color_css . '</style>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
         }
-        echo '<link rel="stylesheet" href="' . esc_url(EVA_FW_URL . 'assets/extension-page.css?ver=' . \Eva::asset_ver('assets/extension-page.css')) . '">';
         // UI 库 CSS（Libs/<name>/）。
         foreach (\Eva::lib_assets() as $lib_name => $lib) {
             if ($lib['css']) {
@@ -267,9 +266,10 @@ class Standalone
             echo '<script src="' . esc_url($field_url . '?ver=' . \Eva::asset_ver(\Eva::field_asset_rel($field_name, 'js'))) . '"></script>';
         }
         echo '<script src="' . esc_url($js) . '"></script>';
-        // 版本计划/系统更新：自动挂载 callback 输出的 #update 挂载点（非 EvaFields 字段）。
-        echo '<script src="' . esc_url(EVA_FW_URL . 'assets/update-page.js?ver=' . \Eva::asset_ver('assets/update-page.js')) . '"></script>';
-        echo '<script src="' . esc_url(EVA_FW_URL . 'assets/extension-page.js?ver=' . \Eva::asset_ver('assets/extension-page.js')) . '"></script>';
+        // 外壳已就绪（Vue / UI 库 / 字段 / eva-app 都已输出）。整页型的自定义应用脚本挂这里，
+        // 才拿得到 window.Vue、window.EvaUI、window.EvaI18n —— wp_print_footer_scripts()
+        // 在上面更早的位置，用 wp_enqueue_script 排不到这个位置。
+        do_action('eva_footer_scripts', $opt);
 
         // 开发期热刷新（可删；或 wp-config 设 EVA_FW_DEV=false 关闭）。
         if (defined('EVA_FW_DEV') && EVA_FW_DEV) {

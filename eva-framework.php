@@ -23,7 +23,49 @@ define('EVA_FW_LOADED', true);
 define('EVA_FW_VERSION', '1.4.0');
 define('EVA_FW_FILE', __FILE__);
 define('EVA_FW_DIR', plugin_dir_path(__FILE__));
-define('EVA_FW_URL', plugin_dir_url(__FILE__));
+
+/**
+ * 资源 URL 的推导（不能直接用 plugin_dir_url）。
+ *
+ * plugin_dir_url() 只在 wp-content/plugins/ 之下成立。框架内嵌进主题时
+ * （Lentasy/Library/Eva-framework/），它会把整个绝对路径拼到 plugins/ 后面，
+ * 得到 wp-content/plugins/Users/xxx/Library/Eva-framework/ 这种地址，
+ * 于是全部 CSS/JS 都 404 —— 页面能打开但完全没有样式。
+ *
+ * 所以先判断本文件是否位于子主题或父主题目录内，是就按主题 URL 推导。
+ * 两侧都过 realpath()：主题以符号链接挂进 wp-content/themes 时，__FILE__ 给的是
+ * 真实路径而 get_*_directory() 给的是链接路径，不解析就永远匹配不上
+ * （CSF 在本地开发站踩的正是这个坑，见主题的 mu-plugin 01-fix-csf-symlink-url.php）。
+ *
+ * 匹配不上（正常插件安装、mu-plugin、其它任意位置）则回落到 plugin_dir_url()，
+ * 行为与改动前完全一致。
+ */
+$eva_fw_url  = '';
+$eva_fw_self = wp_normalize_path((string) realpath(__DIR__));
+
+if ($eva_fw_self !== '' && function_exists('get_template_directory')) {
+    // 子主题在前：子主题内嵌一份时应当用子主题的 URL。
+    $eva_fw_roots = [
+        [get_stylesheet_directory(), get_stylesheet_directory_uri()],
+        [get_template_directory(), get_template_directory_uri()],
+    ];
+
+    foreach ($eva_fw_roots as $eva_fw_root) {
+        $eva_fw_base = $eva_fw_root[0] ? wp_normalize_path((string) realpath($eva_fw_root[0])) : '';
+
+        if ($eva_fw_base === '' || strpos($eva_fw_self, $eva_fw_base) !== 0) {
+            continue;
+        }
+
+        $eva_fw_rel = ltrim(substr($eva_fw_self, strlen($eva_fw_base)), '/');
+        $eva_fw_url = trailingslashit($eva_fw_root[1] . ($eva_fw_rel !== '' ? '/' . $eva_fw_rel : ''));
+        break;
+    }
+}
+
+define('EVA_FW_URL', $eva_fw_url !== '' ? $eva_fw_url : plugin_dir_url(__FILE__));
+
+unset($eva_fw_url, $eva_fw_self, $eva_fw_roots, $eva_fw_root, $eva_fw_base, $eva_fw_rel);
 
 // 开发期热刷新（live reload）开关：上线请在 wp-config.php 设 define('EVA_FW_DEV', false);
 if (! defined('EVA_FW_DEV')) {
@@ -104,6 +146,3 @@ register_activation_hook(__FILE__, static function () {
 
 // 框架就绪（对应 CSF 的 csf_init）：注册表与各容器都已挂好，主题 / 扩展可以在这里开始 create*。
 do_action('eva_loaded');
-
-// 内置演示设置页（可删除此 require 与 includes/demo-options.php）
-require_once EVA_FW_DIR . 'includes/demo-options.php';
