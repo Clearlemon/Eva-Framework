@@ -196,6 +196,7 @@ if (! class_exists('Eva')) {
                 'icon'   => 'ri-layout-line',
                 'group'  => 'basic',
                 'fields' => [],
+                'tabs'   => [],
                 'render' => null,
             ], (array) $args);
             self::$builder_modules[$type]['type'] = $type;
@@ -545,6 +546,7 @@ if (! class_exists('Eva')) {
                     'icon'   => isset($module['icon']) ? $module['icon'] : 'ri-layout-line',
                     'group'  => isset($module['group']) ? $module['group'] : 'basic',
                     'fields' => isset($module['fields']) && is_array($module['fields']) ? $module['fields'] : [],
+                    'tabs'   => isset($module['tabs']) && is_array($module['tabs']) ? array_values($module['tabs']) : [],
                 ];
                 if (isset($module['preview']) && is_string($module['preview'])) {
                     $out[$type]['preview'] = $module['preview'];
@@ -968,6 +970,91 @@ if (! class_exists('Eva')) {
         }
 
         /**
+         * Builder 预览身份选项：只供管理员在预览 iframe 中切换，不改变真实登录用户。
+         *
+         * @return array<int,array{value:string,label:string}>
+         */
+        public static function builder_preview_roles()
+        {
+            $roles = [
+                ['value' => 'current', 'label' => '当前用户'],
+                ['value' => 'guest', 'label' => '游客'],
+            ];
+
+            if (function_exists('wp_roles')) {
+                foreach ((array) wp_roles()->roles as $slug => $role) {
+                    $label = isset($role['name']) ? (string) $role['name'] : (string) $slug;
+                    if (function_exists('translate_user_role')) {
+                        $label = translate_user_role($label);
+                    }
+                    if ($slug === 'guest' || array_search($slug, array_column($roles, 'value'), true) !== false) {
+                        continue;
+                    }
+                    $roles[] = ['value' => sanitize_key($slug), 'label' => $label];
+                }
+            }
+
+            return $roles;
+        }
+
+        /**
+         * 规整 Builder 预览身份，只允许 WordPress 已注册角色或游客。
+         *
+         * @param mixed $raw 原始角色值。
+         * @return string
+         */
+        public static function builder_preview_role($raw = null)
+        {
+            if ($raw === null) {
+                $raw = isset($_GET['eva_preview_role']) ? wp_unslash($_GET['eva_preview_role']) : 'current';
+            }
+            $value = sanitize_key((string) $raw);
+            $allowed = array_column(self::builder_preview_roles(), 'value');
+
+            return in_array($value, $allowed, true) ? $value : 'current';
+        }
+
+        /**
+         * 将当前请求临时切换为预览身份。
+         * 只在 Builder iframe / AJAX 请求中调用，请求结束后不会写回登录状态。
+         *
+         * @param string $role 预览角色 slug。
+         * @return void
+         */
+        public static function apply_builder_preview_role($role)
+        {
+            $role = self::builder_preview_role($role);
+            if ($role === 'current') {
+                return;
+            }
+
+            if ($role === 'guest') {
+                wp_set_current_user(0);
+                return;
+            }
+
+            $wp_roles = function_exists('wp_roles') ? wp_roles() : null;
+            $current  = wp_get_current_user();
+            if (! $wp_roles || ! $current || ! $current->ID || empty($wp_roles->roles[$role])) {
+                return;
+            }
+
+            $preview = new \WP_User($current->ID);
+            $caps = isset($wp_roles->roles[$role]['capabilities']) && is_array($wp_roles->roles[$role]['capabilities'])
+                ? $wp_roles->roles[$role]['capabilities']
+                : [];
+            $preview->roles = [$role];
+            $preview->caps = $caps;
+            $preview->allcaps = [];
+            foreach ($caps as $capability => $grant) {
+                if ($grant) {
+                    $preview->allcaps[$capability] = true;
+                }
+            }
+            $GLOBALS['current_user'] = $preview;
+        }
+
+        /**
          * 运行时状态：注入到前端 EvaFW.config，供 Vue 外壳读取。
          * - isAdmin：是否管理员（仅其可开关固定菜单等全局项）
          * - guideVisible：《EVA框架使用指南》固定菜单的全站显隐（持久化于 wp_options）
@@ -991,6 +1078,10 @@ if (! class_exists('Eva')) {
                 'restUrl'         => esc_url_raw(rest_url()),
                 'restNonce'       => wp_create_nonce('wp_rest'),
                 'builderPreviewUrl' => esc_url_raw(add_query_arg('eva_builder_preview', '1', home_url('/'))),
+                'builderPreviewRoles' => self::builder_preview_roles(),
+                'builderPreviewRole'  => 'current',
+                'gsapUrl'         => self::vendor_url('gsap.min.js', 'https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js'),
+                'remixCssUrl'     => self::vendor_url('remixicon.css', 'https://cdn.jsdelivr.net/npm/remixicon@4.5.0/fonts/remixicon.css'),
                 'messages'        => self::load_messages(),
                 'languages'       => self::load_languages(),
                 'builderModules'  => self::builder_module_manifest(),
@@ -1262,15 +1353,39 @@ if (! class_exists('Eva')) {
         {
             $id         = $opt['option_id'];
             $registered = isset($opt['sections']) ? $opt['sections'] : [];
+            $menu       = self::build_menu($opt, $registered);
+            $values     = \Eva\Framework\Csf_Compat::values_to_eva($registered, self::get_values($id));
+            $field_ids  = static function ($sections) {
+                $ids = [];
+                foreach ($sections as $section) {
+                    foreach ($section['fields'] ?? [] as $field) {
+                        if (! empty($field['id'])) { $ids[] = $field['id']; }
+                    }
+                }
+                return array_values(array_unique($ids));
+            };
+            $save_groups = [['optionId' => $id, 'fieldIds' => $field_ids($registered)]];
+            // 合并展示层，保存仍使用各容器原 schema 和权限，不把演示字段写进主题配置。
+            foreach ($opt['embedded_options'] ?? [] as $embedded_id) {
+                $embedded = self::get_resolved($embedded_id);
+                if (! $embedded || ! current_user_can($embedded['capability'] ?? 'manage_options')) { continue; }
+                $extra = $embedded['sections'] ?? [];
+                if (array_intersect($field_ids($registered), $field_ids($extra))) { continue; }
+                $registered = array_merge($registered, $extra);
+                $menu = array_merge($menu, self::build_menu($embedded, $extra));
+                $values = array_merge($values, \Eva\Framework\Csf_Compat::values_to_eva($extra, self::get_values($embedded_id)));
+                $save_groups[] = ['optionId' => $embedded_id, 'fieldIds' => $field_ids($extra)];
+            }
             $sections   = self::prepare_sections($registered);
 
             return [
-                'menu'              => self::build_menu($opt, $registered),
+                'menu'              => $menu,
+                'saveGroups'        => $save_groups,
                 'sections'          => $sections,
                 'optionId'          => $id,
                 'dependencySources' => \Eva\Framework\Admin\Dependency::dependency_sources($sections),
                 // 库里是 CSF 格式的值，转成组件要的结构再回填。
-                'values'            => \Eva\Framework\Csf_Compat::values_to_eva($registered, self::get_values($id)),
+                'values'            => $values,
                 // 对应 CSF 的 csf_options_before / csf_options_after：回调里 echo 的 HTML 显示在表单上方 / 下方。
                 'beforeHtml'        => self::capture_action('eva_options_before', $id, $opt),
                 'afterHtml'         => self::capture_action('eva_options_after', $id, $opt) . self::footer_html($opt),
@@ -1626,7 +1741,11 @@ if (! class_exists('Eva')) {
             }
 
             $values = isset($item['values']) && is_array($item['values']) ? $item['values'] : [];
-            return (string) call_user_func(self::$builder_modules[$type]['render'], $values, $item);
+            $render_item = $item;
+            if (self::is_builder_preview()) {
+                $render_item['_eva_preview'] = true;
+            }
+            return (string) call_user_func(self::$builder_modules[$type]['render'], $values, $render_item);
         }
 
         /**
@@ -1637,6 +1756,7 @@ if (! class_exists('Eva')) {
          */
         public static function render_builder_preview_module($item)
         {
+            $item['_eva_preview'] = true;
             $html = self::render_builder_module($item);
             if ($html === '') {
                 return '';
@@ -1779,7 +1899,14 @@ if (! class_exists('Eva')) {
          */
         public static function is_builder_preview()
         {
-            return isset($_GET['eva_builder_preview']) && $_GET['eva_builder_preview'] === '1' && current_user_can('manage_options');
+            if (! empty($GLOBALS['eva_builder_preview_authorized'])) {
+                return true;
+            }
+            $allowed = isset($_GET['eva_builder_preview']) && $_GET['eva_builder_preview'] === '1' && current_user_can('manage_options');
+            if ($allowed) {
+                $GLOBALS['eva_builder_preview_authorized'] = true;
+            }
+            return $allowed;
         }
 
         /**
@@ -1793,6 +1920,7 @@ if (! class_exists('Eva')) {
                 return;
             }
 
+            self::apply_builder_preview_role(self::builder_preview_role());
             show_admin_bar(false);
         }
 
@@ -1807,7 +1935,7 @@ if (! class_exists('Eva')) {
                 return;
             }
 
-            echo '<link rel="stylesheet" id="eva-builder-preview-css" href="' . esc_url(EVA_FW_URL . 'Assets/builder-preview.css?ver=' . self::asset_ver('Assets/builder-preview.css')) . '" />' . "\n";
+            echo '<link rel="stylesheet" id="eva-builder-preview-css" href="' . esc_url(EVA_FW_URL . 'assets/builder-preview.css?ver=' . self::asset_ver('assets/builder-preview.css')) . '" />' . "\n";
         }
 
         /**
@@ -1821,7 +1949,7 @@ if (! class_exists('Eva')) {
                 return;
             }
 
-            echo '<script src="' . esc_url(EVA_FW_URL . 'Assets/builder-preview.js?ver=' . self::asset_ver('Assets/builder-preview.js')) . '"></script>' . "\n";
+            echo '<script src="' . esc_url(EVA_FW_URL . 'assets/builder-preview.js?ver=' . self::asset_ver('assets/builder-preview.js')) . '"></script>' . "\n";
         }
 
         /**
@@ -1836,6 +1964,9 @@ if (! class_exists('Eva')) {
                 wp_send_json_error(['message' => 'forbidden'], 403);
             }
 
+            $preview_role = isset($_POST['preview_role']) ? wp_unslash($_POST['preview_role']) : 'current';
+            self::apply_builder_preview_role(self::builder_preview_role($preview_role));
+
             $raw = isset($_POST['value']) ? wp_unslash((string) $_POST['value']) : '';
             $value = json_decode($raw, true);
             if (! is_array($value)) {
@@ -1848,7 +1979,12 @@ if (! class_exists('Eva')) {
                 $slots[$slot] = self::render_builder_slot_value($builder, $slot, true);
             }
 
-            wp_send_json_success(['slots' => $slots]);
+            $option_id = isset($_POST['option_id']) && is_scalar($_POST['option_id']) ? sanitize_key(wp_unslash($_POST['option_id'])) : '';
+            $field_id = isset($_POST['field_id']) && is_scalar($_POST['field_id']) ? sanitize_key(wp_unslash($_POST['field_id'])) : '';
+            $page_id = isset($_POST['page_id']) && is_scalar($_POST['page_id']) ? sanitize_key(wp_unslash($_POST['page_id'])) : '';
+            $raw_structure = isset($_POST['structure_values']) && is_string($_POST['structure_values']) ? json_decode(wp_unslash($_POST['structure_values']), true) : [];
+            $structures = \Eva\Framework\Builder\FixedStructure::render_preview($option_id, $field_id, is_array($raw_structure) ? $raw_structure : [], $page_id);
+            wp_send_json_success(['slots' => $slots, 'structures' => $structures]);
         }
 
         /**
@@ -2256,6 +2392,31 @@ if (! class_exists('Eva')) {
 
                 // CSF 的字符串数据源（'options' => 'categories'）在这里查库展开成选项数组。
                 $f = \Eva\Framework\Csf_Compat::resolve_field($f);
+                // Builder demo 的菜单位置在主题完成 register_nav_menus 后再解析。
+                if (isset($f['menu_location_data']) && $f['menu_location_data'] === '__registered_nav_menus__') {
+                    $locations = function_exists('get_registered_nav_menus') ? get_registered_nav_menus() : [];
+                    if (empty($locations) && function_exists('get_stylesheet') && strtolower((string) get_stylesheet()) === 'lentasy') {
+                        $locations = [
+                            'top-menu-left'  => '顶部页眉菜单（左侧）',
+                            'top-menu-right' => '顶部页眉菜单（右侧）',
+                            'secondary-menu' => '二栏页眉菜单',
+                            'footer-menu'    => '底部菜单（快速链接）',
+                            'footer-menu-2'  => '底部菜单（帮助）',
+                        ];
+                    }
+                    $assigned = function_exists('get_nav_menu_locations') ? get_nav_menu_locations() : [];
+                $f['menu_location_data'] = [];
+                foreach ((array) $locations as $location_id => $location_label) {
+                    $menu_id = absint($assigned[$location_id] ?? 0);
+                    $menu    = $menu_id && function_exists('wp_get_nav_menu_object') ? wp_get_nav_menu_object($menu_id) : null;
+                    $f['menu_location_data'][] = [
+                        'id'        => sanitize_key($location_id),
+                        'label'     => sanitize_text_field($location_label),
+                        'menu_id'   => $menu_id,
+                        'menu_name' => $menu ? sanitize_text_field($menu->name) : '',
+                    ];
+                }
+                }
 
                 // 标题、提示这类纯展示字段在 CSF 里通常不写 id；两个外壳都用 id 当渲染 key，这里补一个且不参与保存。
                 if (! isset($f['id']) || $f['id'] === '') {
@@ -2268,12 +2429,15 @@ if (! class_exists('Eva')) {
                 if (! empty($f['fields']) && is_array($f['fields'])) {
                     $f['fields'] = self::prepare_fields($f['fields'], $child_path);
                 }
-                foreach (['tabs', 'sections'] as $list_key) {
+                foreach (['tabs', 'sections', 'fixed_structure'] as $list_key) {
                     if (empty($f[$list_key]) || ! is_array($f[$list_key])) {
                         continue;
                     }
                     $f[$list_key] = array_values($f[$list_key]);
                     foreach ($f[$list_key] as $n => $item) {
+                        if ($list_key === 'fixed_structure') {
+                            unset($f[$list_key][$n]['render']);
+                        }
                         if (is_array($item) && ! empty($item['fields']) && is_array($item['fields'])) {
                             $f[$list_key][$n]['fields'] = self::prepare_fields($item['fields'], $child_path . '_' . $n);
                         }
@@ -2572,11 +2736,19 @@ if (! class_exists('Eva')) {
             exit;
         }
 
+        /** Prefer a bundled dependency when available, retaining its upstream fallback. */
+        public static function vendor_url($file, $fallback)
+        {
+            return is_file(EVA_FW_DIR . 'assets/vendor/' . $file)
+                ? EVA_FW_URL . 'assets/vendor/' . $file
+                : $fallback;
+        }
+
         /**
-         * 资源版本号：开发期用文件 mtime 击穿缓存（改动即换号，强制取最新）；生产用固定版本。
+         * 资源版本号：开发期用文件 mtime 击穿缓存；生产用固定版本。
          *
          * @param string $rel 相对插件根目录的资源路径。
-         * @return string      版本号字符串。
+         * @return string 版本号字符串。
          */
         public static function asset_ver($rel)
         {

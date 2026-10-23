@@ -128,9 +128,34 @@ class Data_Selector
         self::ajax_search();
     }
 
-    private static function search_posts($query, $include, $limit)
+    /** Fetch menu insertion groups in one authenticated request without changing global request data. */
+    public static function menu_resources($queries, $limit = 50)
     {
-        $types = self::post_types_from_request();
+        $allowed = ['page', 'post', 'category', 'post_tag', 'post_format'];
+        if (!is_array($queries) || !$queries || count($queries) > count($allowed)) {
+            return new \WP_Error('invalid_resources', 'Invalid resource groups.');
+        }
+        $limit = max(1, min(50, absint($limit)));
+        $resources = [];
+        foreach ($queries as $type => $query) {
+            if (!in_array($type, $allowed, true) || !is_string($query) || strlen($query) > 500) {
+                return new \WP_Error('invalid_resources', 'Invalid resource query.');
+            }
+            $is_term = in_array($type, ['category', 'post_tag', 'post_format'], true);
+            if (!self::can_search($is_term ? 'terms' : 'posts')) {
+                return new \WP_Error('forbidden', 'You are not allowed to read these resources.');
+            }
+            $query = sanitize_text_field($query);
+            $resources[$type] = $is_term
+                ? self::search_terms($query, [], $limit, $type)
+                : self::search_posts($query, [], $limit, [$type]);
+        }
+        return $resources;
+    }
+
+    private static function search_posts($query, $include, $limit, $types = null)
+    {
+        $types = $types === null ? self::post_types_from_request() : $types;
         $args = [
             'post_type' => $types,
             'post_status' => ['publish', 'draft', 'pending', 'future', 'private'],
@@ -154,9 +179,9 @@ class Data_Selector
         return $items;
     }
 
-    private static function search_terms($query, $include, $limit)
+    private static function search_terms($query, $include, $limit, $taxonomy = null)
     {
-        $taxonomy = self::first_taxonomy_from_request();
+        $taxonomy = $taxonomy === null ? self::first_taxonomy_from_request() : $taxonomy;
         $args = ['taxonomy' => $taxonomy, 'hide_empty' => false, 'number' => $limit, 'orderby' => $include ? 'include' : 'name'];
         if ($include) { $args['include'] = $include; } else { $args['search'] = $query; }
         $terms = get_terms($args);

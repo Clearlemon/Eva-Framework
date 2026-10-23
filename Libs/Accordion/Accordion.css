@@ -46,6 +46,52 @@
   transition: background var(--eva-ease), color var(--eva-ease);
 }
 
+.eva-acc-header { display: flex; align-items: stretch; background: var(--eva-soft); }
+.eva-acc-head { flex: 1; min-width: 0; width: auto; }
+.eva-acc-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+.eva-acc-tools, .eva-acc-actions { display: flex; align-items: center; gap: 6px; }
+.eva-acc-tools { flex-wrap: wrap; }
+.eva-acc-tools button, .eva-acc-actions button, .eva-acc-reset-confirm button {
+  border: 1px solid var(--eva-border); border-radius: var(--eva-radius); background: var(--eva-surface); color: var(--eva-text-sub); font: inherit; font-size: 12px; padding: 5px 9px; cursor: pointer;
+}
+.eva-acc-tools button[aria-pressed="true"] { color: var(--eva-primary); border-color: var(--eva-primary); background: var(--eva-primary-050); }
+.eva-acc-tools button:disabled, .eva-acc-actions button:disabled { opacity: .5; cursor: not-allowed; }
+.eva-acc-actions { padding: 0 10px 0 0; flex: none; }
+.eva-acc-actions button { display: inline-flex; align-items: center; gap: 3px; border-color: transparent; background: transparent; }
+.eva-acc-search { display: flex; align-items: center; gap: 7px; border: 1px solid var(--eva-border); border-radius: var(--eva-radius); padding: 4px 9px; background: var(--eva-surface); color: var(--eva-text-mute); }
+.eva-acc-search input[type="search"] { min-width: 120px; width: 180px; border: 0; box-shadow: none; background: transparent; color: var(--eva-text); font: inherit; font-size: 12px; padding: 2px; margin: 0; }
+.eva-acc-summary { max-width: 42%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11.5px; color: var(--eva-text-sub); font-weight: normal; }
+.eva-acc-dirty { width: 7px; height: 7px; flex: none; border-radius: 50%; background: var(--eva-warning); }
+.eva-acc-errors { flex: none; padding: 2px 6px; border-radius: var(--eva-radius); color: var(--eva-danger); background: var(--eva-danger-surface); font-size: 11px; }
+.eva-acc-help { display: inline-flex; position: relative; color: var(--eva-text-mute); cursor: help; }
+.eva-acc-help > span { display: none; position: absolute; z-index: 20; top: 22px; right: 0; width: 220px; padding: 9px 11px; border: 1px solid var(--eva-border); border-radius: var(--eva-radius); background: var(--eva-surface); color: var(--eva-text); box-shadow: var(--eva-shadow-card-hover); font-size: 12px; line-height: 1.6; }
+.eva-acc-help:hover > span, .eva-acc-help:focus > span { display: block; }
+.eva-acc-panel:has(.eva-acc-help:hover), .eva-acc-panel:has(.eva-acc-help:focus) { overflow: visible; position: relative; z-index: 2; }
+.eva-acc-head:focus-visible, .eva-acc-tools button:focus-visible, .eva-acc-actions button:focus-visible, .eva-acc-help:focus-visible { outline: 2px solid var(--eva-primary); outline-offset: -2px; }
+.eva-accordion-field.is-search-match { background: var(--eva-primary-050); outline: 2px solid var(--eva-primary); outline-offset: 4px; border-radius: var(--eva-radius); }
+.eva-accordion-field.has-error { outline: 1px solid var(--eva-danger); outline-offset: 4px; border-radius: var(--eva-radius); }
+.eva-acc-field-error { margin: 0; color: var(--eva-danger); font-size: 12px; }
+.eva-acc-reset-anchor { position: relative; display: inline-flex; }
+.eva-acc-reset-confirm {
+  position: absolute; z-index: 40; right: 0; bottom: calc(100% + 12px);
+  box-sizing: border-box; width: min(310px, calc(100vw - 40px)); padding: 14px;
+  border: 1px solid var(--eva-border); border-radius: var(--eva-radius);
+  color: var(--eva-text); background: var(--eva-surface); text-align: left;
+  box-shadow: 0 8px 28px color-mix(in srgb, var(--eva-text) 14%, transparent);
+}
+.eva-acc-reset-confirm::after {
+  content: ''; position: absolute; right: 28px; bottom: -6px; width: 10px; height: 10px;
+  border-right: 1px solid var(--eva-border); border-bottom: 1px solid var(--eva-border);
+  background: var(--eva-surface); transform: rotate(45deg);
+}
+.eva-acc-reset-confirm strong { display: block; margin-bottom: 7px; font-size: 13px; font-weight: 600; }
+.eva-acc-reset-confirm p { margin: 0 0 13px; color: var(--eva-text-sub); font-size: 12px; line-height: 1.7; }
+.eva-acc-reset-buttons { display: flex; justify-content: flex-end; gap: 7px; }
+.eva-acc-reset-confirm .eva-acc-reset-cancel { border: 1px solid var(--eva-border); background: var(--eva-surface); }
+.eva-acc-reset-confirm .eva-acc-reset-submit { border: 1px solid var(--eva-primary); background: var(--eva-primary); color: var(--eva-on-primary, #fff); }
+.eva-acc-panel:has(.eva-acc-reset-confirm) { position: relative; z-index: 30; overflow: visible; }
+.eva-field-row:has(.eva-acc-reset-confirm) { z-index: 30; }
+
 .eva-acc-head:hover {
   background: color-mix(in srgb, var(--eva-primary) 6%, var(--eva-surface));
 }
@@ -188,6 +234,11 @@
 }
 
 @media (max-width: 720px) {
+  .eva-field-row.eva-accordion-demo { grid-column: 1 / -1; }
+  .eva-acc-header { flex-wrap: wrap; }
+  .eva-acc-head { flex-basis: 100%; }
+  .eva-acc-actions { width: 100%; justify-content: flex-end; padding: 0 10px 5px; }
+  .eva-acc-summary { max-width: 35%; }
   .eva-accordion-field {
     grid-column: 1 / -1;
   }

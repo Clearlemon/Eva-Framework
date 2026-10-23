@@ -78,7 +78,8 @@
         } catch (e) { return {}; }
       }
       function validWorkspacePage(id) {
-        return id === 'eva-guide' || !!findMenuItem(id);
+        if (id === 'eva-guide') { return true; }
+        return !!findMenuItem(id);
       }
       function workspaceTab(id, closable) {
         if (id === 'eva-guide') {
@@ -145,6 +146,7 @@
       // 搜索命令面板（右上角按钮 / Ctrl+K 弹出）：检索一级与二级菜单，仅列可跳转的叶子页
       var searchOpen = Vue.ref(false);
       var searchQuery = Vue.ref('');
+      var accordionSearchTarget = Vue.ref(null);
       var searchInput = Vue.ref(null);
 
       // 全局「当前编辑语言」：顶部切换器与所有多语言字段(i18n)共享同一状态。
@@ -223,6 +225,30 @@
             if (sHit || hit(f.title) || hit(f.desc)) {
               out.push({ id: f.id, sectionId: s.id, label: tv(f.title) || f.id, desc: tv(f.desc) || '', icon: s.icon, parent: tv(s.title) });
             }
+            // 手风琴子字段保留完整路径，搜索结果可直接打开所属面板。
+            function walkAccordion(field, value, path, parent) {
+              if (field.type !== 'accordion' || field.disabled) { return; }
+              var values = {};
+              (field.sections || []).forEach(function (panel, index) {
+                var id = panel.id != null && panel.id !== '' ? String(panel.id) : String(panel.key != null ? panel.key : index);
+                var children = Object.assign({}, (value || {})[id] || {});
+                (panel.fields || []).forEach(function (child) { if (!(child.id in children)) { children[child.id] = child.default !== undefined ? child.default : ''; } });
+                values[id] = children;
+              });
+              (field.sections || []).forEach(function (panel, index) {
+                if (panel.disabled || (panel.eva_dependency && !Dependency_Match_Group(panel.eva_dependency.visible, values))) { return; }
+                var id = panel.id != null && panel.id !== '' ? String(panel.id) : String(panel.key != null ? panel.key : index);
+                (panel.fields || []).forEach(function (child) {
+                  if (child.disabled || (child.eva_dependency && !Dependency_Match_Group(child.eva_dependency.visible, values[id]))) { return; }
+                  var childPath = path + '/' + encodeURIComponent(id) + '/' + encodeURIComponent(child.id);
+                  if (hit(child.title) || hit(child.desc) || hit(panel.title)) {
+                    out.push({ id: childPath, path: childPath, sectionId: s.id, label: tv(child.title) || child.id, desc: tv(child.desc) || '', icon: panel.icon || s.icon, parent: parent + ' / ' + tv(panel.title) });
+                  }
+                  walkAccordion(child, values[id][child.id], childPath, parent + ' / ' + tv(panel.title));
+                });
+              });
+            }
+            if (Field_Row_Show(f)) { walkAccordion(f, model[f.id], f.id, tv(f.title)); }
           });
         });
         return out;
@@ -246,6 +272,12 @@
           activeTab.value = r.sectionId;
         }
         closeSearch();
+        accordionSearchTarget.value = { path: r.path || r.id, reason: 'search', token: Date.now() };
+        Vue.nextTick(function () {
+          if (r.path) { return; }
+          var el = Array.from(document.querySelectorAll('[data-eva-field-id]')).find(function (node) { return node.dataset.evaFieldId === r.id; });
+          if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+        });
       }
       function onSearchEnter() {
         var list = searchResults.value;
@@ -297,6 +329,7 @@
 
       // 打开菜单对应内容页；首次打开时同步创建一个可关闭页签。
       function openMenu(id) {
+        if (id === 'eva-guide') { openGuide(); return; }
         suppressDependencyAnimationOnce();
         var m = findMenuItem(id);
         if (!m) return;
@@ -1547,6 +1580,9 @@
 
       // 脏状态：当前 model 与上次保存快照不一致即为「有未保存更改」
       var savedSnapshot = Vue.ref(JSON.stringify(model));
+      Vue.provide('evaFormContext', { optionId: optionId, model: model, errors: fieldErrors, savedSnapshot: savedSnapshot, searchTarget: accordionSearchTarget, clearError: function (path, descendants) {
+        Object.keys(fieldErrors).forEach(function (key) { if (key === path || (descendants && key.indexOf(path + '/') === 0)) { delete fieldErrors[key]; } });
+      } });
       var isDirty = Vue.computed(function () { return JSON.stringify(model) !== savedSnapshot.value; });
       // 指南正文一次性平铺全部分组，锚点 id 沿用 eva-guide-<分组>-<小节>，
       // 这样 #eva-guide-fields-field-basic 之类的老链接仍然有效。
@@ -1643,13 +1679,20 @@
       var guideHash = String(window.location.hash || '');
       if (guideHash.indexOf('#eva-guide-') === 0) {
         var hashAnchor = guideHash.slice(1);
-        active.value = 'eva-guide';
-        activeTab.value = 'eva-guide';
-        if (!tabs.find(function (tab) { return tab.id === 'eva-guide'; })) {
-          tabs.push({ id: 'eva-guide', label: 'EVA框架使用指南', icon: 'ri-book-open-line', closable: true });
-        }
+        openGuide();
         if (guideSections.some(function (s) { return s.anchor === hashAnchor; })) {
           activeGuideAnchor.value = hashAnchor;
+        }
+      }
+      if (active.value === 'eva-guide') { openGuide(); }
+      var sectionHash = String(window.location.hash || '');
+      if (sectionHash.indexOf('#eva-section-') === 0) {
+        var linkedSection = sectionHash.slice('#eva-section-'.length);
+        if (findMenuItem(linkedSection)) {
+          openMenu(linkedSection);
+          menu.forEach(function (item) {
+            if ((item.children || []).some(function (child) { return child.id === linkedSection; })) { openMenus[item.id] = true; }
+          });
         }
       }
       function discardChanges() {
@@ -1732,8 +1775,17 @@
       function Focus_First_Field_Error(errors) {
         var keys = Object.keys(errors || {});
         if (!keys.length) { return; }
+        var currentIds = currentSection.value ? (currentSection.value.fields || []).map(function (field) { return field.id; }) : [];
+        var first = keys.find(function (key) { return currentIds.indexOf(key.split('/')[0]) !== -1; }) || keys[0];
+        var root = first.split('/')[0];
+        var section = sections.find(function (item) { return (item.fields || []).some(function (f) { return f.id === root; }); });
+        if (section) { openMenu(section.id); active.value = section.id; activeTab.value = section.id; }
+        if (first.indexOf('/') !== -1) {
+          accordionSearchTarget.value = { path: first, reason: 'error', token: Date.now() };
+          return;
+        }
         Vue.nextTick(function () {
-          var el = document.querySelector('[data-eva-field-id="' + keys[0] + '"]');
+          var el = Array.from(document.querySelectorAll('[data-eva-field-id]')).find(function (node) { return node.dataset.evaFieldId === first; });
           if (el && el.scrollIntoView) {
             el.scrollIntoView({ behavior: 'smooth', block: 'center' });
           }
@@ -1780,7 +1832,7 @@
       }
 
       // 功能：读取依赖规则对应的数据源值。
-      function Dependency_Source_Value(rule) {
+      function Dependency_Source_Value(rule, scope) {
         if (!rule) { return undefined; }
         var source = rule.source || 'field';
         if (source === 'option' || source === 'site_option') {
@@ -1791,7 +1843,8 @@
           }
           return Dependency_Path_Value(optionValues.__value, rule.key || '__value');
         }
-        return model[rule.id];
+        var values = scope || model;
+        return Object.prototype.hasOwnProperty.call(values, rule.id) ? values[rule.id] : Dependency_Path_Value(values, rule.id);
       }
 
       // 功能：判断实际值是否命中依赖期望集合。
@@ -1802,9 +1855,9 @@
       }
 
       // 功能：执行单条依赖规则比较。
-      function Dependency_Match_Rule(rule) {
+      function Dependency_Match_Rule(rule, scope) {
         if (!rule) { return true; }
-        var actual = Dependency_Source_Value(rule);
+        var actual = Dependency_Source_Value(rule, scope);
         var expected = rule.value;
         var operator = rule.operator || '==';
 
@@ -1838,14 +1891,14 @@
       }
 
       // 功能：执行一个依赖规则组，relation=or/any 时任一满足即可。
-      function Dependency_Match_Group(group) {
+      function Dependency_Match_Group(group, scope) {
         var rules = (group && Array.isArray(group.rules)) ? group.rules : [];
         if (!rules.length) { return true; }
         var relation = group.relation || 'and';
         if (relation === 'or' || relation === 'any') {
-          return rules.some(Dependency_Match_Rule);
+          return rules.some(function (rule) { return Dependency_Match_Rule(rule, scope); });
         }
-        return rules.every(Dependency_Match_Rule);
+        return rules.every(function (rule) { return Dependency_Match_Rule(rule, scope); });
       }
 
       // 功能：计算字段当前依赖状态。
@@ -1893,11 +1946,20 @@
       // 功能：为字段组件合并依赖产生的 disabled/readonly 状态。
       function Field_For_Render(f) {
         var state = Field_State(f);
-        if (!state.disabled && !state.readonly) { return f; }
-        return Object.assign({}, f, {
+        var rendered = (!state.disabled && !state.readonly) ? f : Object.assign({}, f, {
           disabled: state.disabled || f.disabled,
           readonly: state.readonly || f.readonly,
         });
+        if (f && f.type === 'builder' && Array.isArray(f.global_fields)) {
+          rendered = Object.assign({}, rendered, { global_values: model });
+        }
+        if (f && f.type === 'builder' && Array.isArray(f.fixed_structure)) {
+          rendered = Object.assign({}, rendered, { structure_values: model });
+        }
+        if (f && f.type === 'builder' && Array.isArray(f.container_fields)) {
+          rendered = Object.assign({}, rendered, { container_values: model });
+        }
+        return rendered;
       }
 
       // 功能：仅在图像选择演示页显示字段代码入口。
@@ -1959,7 +2021,7 @@
         if (dependencyGsapPromise) { return dependencyGsapPromise; }
         dependencyGsapPromise = new Promise(function (resolve, reject) {
           var script = document.createElement('script');
-          script.src = 'https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js';
+          script.src = cfg.gsapUrl || 'https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js';
           script.async = true;
           script.onload = function () { resolve(window.gsap); };
           script.onerror = function () { reject(new Error('GSAP load failed')); };
@@ -2028,44 +2090,66 @@
 
       var saving = Vue.ref(false);
       var saveMsg = Vue.ref('');
+      function saveGroups() {
+        return cfg.saveGroups && cfg.saveGroups.length > 1 ? cfg.saveGroups : [{ optionId: optionId, fieldIds: Object.keys(model) }];
+      }
       // 保存设置页字段：通过 admin-ajax 调用 Data::ajax_save，后端按 schema 清洗未知字段。
       function saveOptions() {
         if (saving.value) { return; }
+        var submitted = JSON.parse(JSON.stringify(model));
+        var baseline = JSON.parse(savedSnapshot.value);
+        var groups = saveGroups().filter(function (group) {
+          return group.fieldIds.some(function (id) { return JSON.stringify(submitted[id]) !== JSON.stringify(baseline[id]); });
+        });
+        if (!groups.length) { return; }
         saving.value = true;
         saveMsg.value = '保存中…';
         Clear_Field_Errors();
         var url = cfg.ajaxUrl || ((boot.adminUrl || '') + 'admin-ajax.php');
-        var body = 'action=eva_fw_save_options&nonce=' + encodeURIComponent(cfg.nonce || '') +
-          '&option_id=' + encodeURIComponent(optionId) +
-          '&values=' + encodeURIComponent(JSON.stringify(model));
-        fetch(url, {
-          method: 'POST',
-          credentials: 'same-origin',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
-          body: body
-        }).then(function (r) { return r.json(); }).then(function (res) {
+        // 同一外壳可展示多个容器，仅提交有修改的容器；每次请求仍独立校验和清洗。
+        Promise.all(groups.map(function (group) {
+          var values = {};
+          group.fieldIds.forEach(function (id) { values[id] = submitted[id]; });
+          var body = 'action=eva_fw_save_options&nonce=' + encodeURIComponent(cfg.nonce || '') +
+            '&option_id=' + encodeURIComponent(group.optionId) +
+            '&values=' + encodeURIComponent(JSON.stringify(values));
+          return fetch(url, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+            body: body
+          }).then(function (r) { return r.json(); }).then(function (res) {
+            return { group: group, response: res };
+          }).catch(function () { return { group: group, response: null }; });
+        })).then(function (results) {
           saving.value = false;
-          var linger = 2500;
-          if (res && res.success) {
-            // 后端已落库。带 errors 表示这几个字段没过校验、值被还原成了库里的旧值，
-            // 其余字段正常保存（与 CSF 的逐字段回滚同语义），所以走的是成功分支。
-            var invalid = (res.data && res.data.errors) ? res.data.errors : null;
-            var invalidCount = invalid ? Object.keys(invalid).length : 0;
-            if (res.data && res.data.values) { Object.assign(model, res.data.values); }
-            savedSnapshot.value = JSON.stringify(model);
-            if (invalidCount) {
-              Object.assign(fieldErrors, invalid);
-              Focus_First_Field_Error(invalid);
-              saveMsg.value = '已保存（' + invalidCount + ' 项有误，已还原）';
-              linger = 4500;
-            } else {
-              saveMsg.value = '已保存';
+          var invalid = {};
+          var failed = [];
+          var snapshot = JSON.parse(savedSnapshot.value);
+          results.forEach(function (result) {
+            var res = result.response;
+            if (!res || !res.success) {
+              failed.push(res && res.data && res.data.msg ? res.data.msg : '请求失败');
+              return;
             }
-          } else {
-            // 整次请求不成立：nonce 失效、无权限、设置页不存在等。
-            saveMsg.value = (res && res.data && res.data.msg) ? ('保存失败: ' + res.data.msg) : '保存失败';
+            var values = res.data && res.data.values ? res.data.values : {};
+            result.group.fieldIds.forEach(function (id) {
+              var value = Object.prototype.hasOwnProperty.call(values, id) ? values[id] : submitted[id];
+              snapshot[id] = value;
+              // 请求期间继续编辑的字段保留新输入，并继续显示未保存状态。
+              if (JSON.stringify(model[id]) === JSON.stringify(submitted[id])) { model[id] = value; }
+            });
+            Object.assign(invalid, res.data && res.data.errors ? res.data.errors : {});
+          });
+          savedSnapshot.value = JSON.stringify(snapshot);
+          var invalidCount = Object.keys(invalid).length;
+          if (invalidCount) {
+            Object.assign(fieldErrors, invalid);
+            Focus_First_Field_Error(invalid);
           }
-          setTimeout(function () { saveMsg.value = ''; }, linger);
+          saveMsg.value = failed.length ? '部分配置保存失败: ' + failed.join('、') :
+            (invalidCount ? '已保存（' + invalidCount + ' 项有误，已还原）' : '已保存');
+          setTimeout(function () { saveMsg.value = ''; }, invalidCount || failed.length ? 4500 : 2500);
         }).catch(function () {
           saving.value = false;
           saveMsg.value = '保存失败';
@@ -2132,8 +2216,8 @@
         accent: accent,
         setAccent: setAccent,
         fontOptions: fontOptions,
-        uiFont: uiFont,
-        setFont: setFont,
+         uiFont: uiFont,
+         setFont: setFont,
         isAdmin: isAdmin,
         guideVisible: guideVisible,
         openGuide: openGuide,
@@ -2400,7 +2484,7 @@
       '            <div class="eva-field-meta"><span class="eva-field-title">{{ tv(f.title) }}<span v-if="tv(f.help)" class="eva-field-help" tabindex="0"><i class="ri-question-line"></i><em>{{ tv(f.help) }}</em></span></span><span v-if="tv(f.subtitle)" class="eva-field-subtitle" v-html="tv(f.subtitle)"></span><span v-if="tv(f.desc)" class="eva-field-desc" v-html="tv(f.desc)"></span></div>',
       '            <div v-if="Field_Has_Html(f.before)" class="eva-field-before" v-html="f.before"></div>',
       '            <div v-if="Field_Has_Html(f.content)" class="eva-field-content" v-html="f.content"></div>',
-      '            <div class="eva-field-control"><eva-field :field="Field_For_Render(f)" v-model="model[f.id]" @update:model-value="Clear_Field_Error(f.id)"></eva-field></div>',
+      '            <div class="eva-field-control"><eva-field :field="Field_For_Render(f)" v-model="model[f.id]" @update:model-value="Clear_Field_Error(f.id)" @update:global="model[$event.id] = $event.value" @update:container="model[$event.id] = $event.value"></eva-field></div>',
       '            <div v-if="Field_Has_Html(f.after)" class="eva-field-after" v-html="f.after"></div>',
       '            <div v-if="Field_Error(f)" class="eva-field-error"><i class="ri-error-warning-line"></i><span>{{ Field_Error(f) }}</span></div>',
       '          </div>',
@@ -2436,10 +2520,10 @@
       '          <div class="eva-set-label"><i class="ri-contrast-2-line"></i><span>{{ t(\'dark_mode\') }}</span></div>',
       '          <button type="button" class="eva-switch" :class="{ \'is-on\': dark }" role="switch" :aria-checked="dark ? \'true\' : \'false\'" @click="toggleDark"><span class="eva-switch-dot"></span></button>',
       '        </div>',
-      '        <div class="eva-set-row">',
-      '          <div class="eva-set-label"><i class="ri-layout-left-line"></i><span>{{ t(\'collapse_sidebar_label\') }}</span></div>',
-      '          <button type="button" class="eva-switch" :class="{ \'is-on\': sidebarCollapsed }" role="switch" :aria-checked="sidebarCollapsed ? \'true\' : \'false\'" @click="toggleSidebar"><span class="eva-switch-dot"></span></button>',
-      '        </div>',
+       '        <div class="eva-set-row">',
+       '          <div class="eva-set-label"><i class="ri-layout-left-line"></i><span>{{ t(\'collapse_sidebar_label\') }}</span></div>',
+       '          <button type="button" class="eva-switch" :class="{ \'is-on\': sidebarCollapsed }" role="switch" :aria-checked="sidebarCollapsed ? \'true\' : \'false\'" @click="toggleSidebar"><span class="eva-switch-dot"></span></button>',
+       '        </div>',
       '      </div>',
       '      <div class="eva-set-section" v-if="isAdmin">',
       '        <p class="eva-set-title">{{ t(\'features\') }}</p>',
@@ -2585,7 +2669,7 @@
     // 字段分发组件：按 field.type 从 window.EvaFields 注册表取对应组件渲染
     app.component('eva-field', {
       props: ['field', 'modelValue'],
-      emits: ['update:modelValue'],
+      emits: ['update:modelValue', 'update:global', 'update:container'],
       computed: {
         comp: function () {
           var reg = window.EvaFields || {};
@@ -2601,7 +2685,7 @@
           return reg[type] || reg.text || null;
         }
       },
-      template: '<component v-if="comp" :is="comp" :field="field" :model-value="modelValue" @update:model-value="$emit(\'update:modelValue\', $event)"></component>'
+      template: '<component v-if="comp" :is="comp" :field="field" :model-value="modelValue" @update:model-value="$emit(\'update:modelValue\', $event)" @update:global="$emit(\'update:global\', $event)" @update:container="$emit(\'update:container\', $event)"></component>'
     });
     // 最后挂载主应用。字段脚本和 UI 库必须在此之前已被 WordPress enqueue。
     app.mount('#eva-app');

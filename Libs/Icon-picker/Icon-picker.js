@@ -8,6 +8,27 @@
   if (typeof window === 'undefined') { return; }
   window.EvaUI = window.EvaUI || {};
 
+  var gsapPromise = null;
+  var pickerScript = document.currentScript && document.currentScript.src;
+  // 优先复用框架配置及已加载的 GSAP；独立使用组件时也读取同目录内的本地资源。
+  function Ensure_Gsap() {
+    if (window.gsap) { return Promise.resolve(window.gsap); }
+    if (gsapPromise) { return gsapPromise; }
+    var config = window.EvaFW && window.EvaFW.config || {};
+    var url = config.gsapUrl || (pickerScript ? new URL('../../assets/vendor/gsap.min.js', pickerScript).href : '');
+    if (!url) { return Promise.reject(new Error('GSAP URL unavailable')); }
+    url = new URL(url, document.baseURI).href;
+    gsapPromise = new Promise(function (resolve, reject) {
+      var script = Array.from(document.scripts).find(function (item) { return item.src === url; });
+      var created = !script;
+      if (!script) { script = document.createElement('script'); script.src = url; script.async = true; }
+      script.addEventListener('load', function () { if (window.gsap) { resolve(window.gsap); } else { reject(new Error('GSAP unavailable')); } }, { once: true });
+      script.addEventListener('error', function () { if (created) { script.remove(); } reject(new Error('GSAP load failed')); }, { once: true });
+      if (created) { document.head.appendChild(script); }
+    }).catch(function (error) { gsapPromise = null; throw error; });
+    return gsapPromise;
+  }
+
   var FA_MAP = {
     star: 'ri-star-fill',
     heart: 'ri-heart-line',
@@ -99,45 +120,64 @@
     ['format-video', '视频', 'media'], ['format-audio', '音乐', 'media'], ['wordpress', 'WordPress', 'brand']
   ];
 
-  var CAT_LABELS = {
-    all: '全部',
-    common: '常用',
-    direction: '方向',
-    interface: '界面',
-    media: '媒体',
-    brand: '品牌',
-    iconfont: 'Iconfont'
-  };
-
   var REMIX_CACHE = null;
-  var REMIX_CSS = 'https://cdn.jsdelivr.net/npm/remixicon@4.5.0/fonts/remixicon.css';
+  var REMIX_PROMISE = null;
+
+  // 使用主题实际加载的图标文件，保证完整清单与字体版本一致；多个选择器共用一次请求。
+  function Load_Remix_Items() {
+    if (REMIX_CACHE) { return Promise.resolve(REMIX_CACHE); }
+    if (REMIX_PROMISE) { return REMIX_PROMISE; }
+    var config = window.EvaFW && window.EvaFW.config || {};
+    var sheet = document.querySelector('link[href*="remixicon.css"]');
+    var url = config.remixCssUrl || (sheet && sheet.href) || (pickerScript ? new URL('../../assets/vendor/remixicon.css', pickerScript).href : '');
+    if (!url || !window.fetch) { return Promise.reject(new Error('Remixicon source unavailable')); }
+    REMIX_PROMISE = window.fetch(new URL(url, document.baseURI).href)
+      .then(function (res) {
+        if (!res.ok) { throw new Error('Remixicon load failed'); }
+        return res.text();
+      })
+      .then(function (css) {
+        var seen = {}, labels = {}, items = [], match;
+        REMIX_ITEMS.forEach(function (item) { labels[item[0]] = item[1]; });
+        var re = /\.ri-([a-z0-9-]+)\s*::?before\b/g;
+        while ((match = re.exec(css))) {
+          var value = 'ri-' + match[1];
+          if (seen[value]) { continue; }
+          seen[value] = true;
+          items.push({ value: value, label: labels[value] || Label_From_Icon(value) });
+        }
+        if (!items.length) { throw new Error('Remixicon list is empty'); }
+        REMIX_CACHE = items.sort(function (a, b) { return a.value.localeCompare(b.value); });
+        return REMIX_CACHE;
+      })
+      .catch(function (error) { REMIX_PROMISE = null; throw error; });
+    return REMIX_PROMISE;
+  }
 
   // 功能：处理 To Items 相关逻辑。
   function To_Items(list) {
     return list.map(function (x) {
-      return { value: x[0], label: x[1], cat: x[2] };
+      return { value: x[0], label: x[1] };
     });
   }
 
   // 功能：读取主题注入的自定义图标集。
   // 来源：PHP 过滤器 eva_field_icon_add_icons（格式与 CSF 的 csf_field_icon_add_icons 相同：
   // [{ title: '名称', icons: ['类名或 symbol id', …] }]），由后端输出为 window.EvaIconSets。
-  // 每个图标集在选择器里是一个分类；保存值就是注册时写的字符串本身，不加任何库前缀。
+  // 所有图标集合并展示；保存值就是注册时写的字符串本身，不加任何库前缀。
   var CUSTOM_CACHE = null;
   var CUSTOM_MAP = {};
   function Custom_Items() {
     if (CUSTOM_CACHE) { return CUSTOM_CACHE; }
     var sets = Array.isArray(window.EvaIconSets) ? window.EvaIconSets : [];
     var out = [];
-    sets.forEach(function (set, index) {
+    sets.forEach(function (set) {
       if (!set || !Array.isArray(set.icons)) { return; }
-      var cat = 'custom-' + index;
-      CAT_LABELS[cat] = String(set.title || ('自定义 ' + (index + 1)));
       set.icons.forEach(function (icon) {
         icon = String(icon == null ? '' : icon).trim();
         if (!icon || CUSTOM_MAP[icon]) { return; }
         CUSTOM_MAP[icon] = true;
-        out.push({ value: icon, label: icon.replace(/^(fa[srbl]?\s+)?(fa|ri|icon|dashicons)-/, '').replace(/[-_]/g, ' '), cat: cat });
+        out.push({ value: icon, label: icon.replace(/^(fa[srbl]?\s+)?(fa|ri|icon|dashicons)-/, '').replace(/[-_]/g, ' ') });
       });
     });
     CUSTOM_CACHE = out;
@@ -158,15 +198,6 @@
     if (value === 'ali' || value === 'alibaba' || value === 'iconfont' || value === 'symbol' || value === 'svg') { return 'svg'; }
     if (value === 'eva') { return 'remix'; }
     return value || 'remix';
-  }
-
-  // 功能：处理 Remix Category 相关逻辑。
-  function Remix_Category(value) {
-    if (/ri-(arrow|skip|corner|expand|collapse|login|logout|drag|scroll|route)/.test(value)) { return 'direction'; }
-    if (/ri-(image|gallery|camera|movie|video|music|volume|mic|play|pause|record|radio|dvd|disc|live|broadcast)/.test(value)) { return 'media'; }
-    if (/ri-(github|wordpress|twitter|facebook|wechat|youtube|google|apple|android|windows|qq|weibo|instagram|linkedin|tiktok|telegram|discord|paypal|amazon|chrome|edge|firefox)/.test(value)) { return 'brand'; }
-    if (/ri-(home|user|star|heart|settings|search|notification|calendar|time|bookmark|folder|file|menu|eye|mail|phone|message|lock|key)/.test(value)) { return 'common'; }
-    return 'interface';
   }
 
   // 功能：处理 Label From Icon 相关逻辑。
@@ -211,10 +242,10 @@
       return {
         open: false,
         query: '',
-        activeCat: 'common',
         draft: '',
         remixItems: REMIX_CACHE || [],
         remixLoading: false,
+        remixError: '',
         svgItems: []
       };
     },
@@ -232,32 +263,17 @@
         } else if (this.lib === 'dashicons') {
           base = To_Items(DASH_ITEMS);
         } else {
-          base = this.remixItems.length ? this.remixItems : To_Items(REMIX_ITEMS);
+          base = this.remixItems;
         }
         var custom = Custom_Items();
         var merged = this.svgItems.length ? base.concat(this.svgItems) : base;
         return custom.length ? merged.concat(custom) : merged;
       },
-      // 功能：处理 categories 相关逻辑。
-      categories: function () {
-        var seen = { all: true };
-        var out = [{ id: 'all', label: CAT_LABELS.all }];
-        this.items.forEach(function (item) {
-          if (!seen[item.cat]) {
-            seen[item.cat] = true;
-            out.push({ id: item.cat, label: CAT_LABELS[item.cat] || item.cat, separated: item.cat === 'iconfont' });
-          }
-        });
-        return out;
-      },
       // 功能：处理 visible Items 相关逻辑。
       visibleItems: function () {
         var q = this.query.trim().toLowerCase();
-        var cat = this.activeCat;
         return this.items.filter(function (item) {
-          var inCat = cat === 'all' || item.cat === cat;
-          var hit = !q || item.value.toLowerCase().indexOf(q) !== -1 || item.label.toLowerCase().indexOf(q) !== -1;
-          return inCat && hit;
+          return !q || item.value.toLowerCase().indexOf(q) !== -1 || item.label.toLowerCase().indexOf(q) !== -1;
         });
       },
       // 功能：处理 display Value 相关逻辑。
@@ -274,6 +290,13 @@
       }
     },
     watch: {
+      visibleItems: function () {
+        if (this.open) { this.$nextTick(this.animateGrid); }
+      },
+      query: function () {
+        var grid = this.$refs.popover && this.$refs.popover.querySelector('.eva-icon-grid');
+        if (grid) { grid.scrollTop = 0; }
+      },
       modelValue: {
         immediate: true,
         // 功能：响应监听值变化并同步组件状态。
@@ -283,7 +306,6 @@
       },
       // 功能：处理 lib 相关逻辑。
       lib: function () {
-        this.activeCat = 'common';
         this.draft = this.normalizeValue(this.modelValue || this.defaultValue || '');
         if (this.lib === 'remix') { this.ensureRemixItems(); }
         if (this.lib === 'svg') { this.scanSvgSymbols(); }
@@ -298,10 +320,77 @@
     },
     // 功能：组件销毁前清理事件、计时器或临时状态。
     beforeUnmount: function () {
+      this._disposed = true;
+      this.cancelPopover();
       document.removeEventListener('mousedown', this.onDocumentDown, true);
       window.removeEventListener('eva:iconfont-loaded', this.onIconfontLoaded);
     },
     methods: {
+      reduceMotion: function () { return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); },
+      clearMotion: function (el) {
+        if (!el) { return; }
+        ['opacity', 'visibility', 'transform'].forEach(function (property) { el.style.removeProperty(property); });
+      },
+      stopGridMotion: function () {
+        var self = this;
+        (this._gridTargets || []).forEach(function (el) { if (window.gsap) { window.gsap.killTweensOf(el); } self.clearMotion(el); });
+        this._gridTargets = [];
+      },
+      // Vue transition 负责显示与隐藏，GSAP 只处理动效，避免关闭时闪回或快速连点后残留透明状态。
+      cancelPopover: function () {
+        this._motionRun = (this._motionRun || 0) + 1;
+        this._popoverEntering = false;
+        this.stopGridMotion();
+        var el = this.$refs.popover;
+        if (el && window.gsap) { window.gsap.killTweensOf(el); }
+        this.clearMotion(el);
+      },
+      beforeEnterPopover: function (el) {
+        this.cancelPopover();
+        this._popoverEntering = true;
+        if (!this.reduceMotion()) { el.style.opacity = '0'; el.style.transform = 'translateY(-8px) scale(0.96)'; }
+      },
+      enterPopover: function (el, done) {
+        var self = this, run = this._motionRun;
+        if (this.reduceMotion()) { this._popoverEntering = false; this.clearMotion(el); done(); return; }
+        Ensure_Gsap().then(function (gsap) {
+          if (self._disposed || !self.open || run !== self._motionRun) { return; }
+          gsap.fromTo(el, { autoAlpha: 0, y: -8, scale: 0.96 }, {
+            autoAlpha: 1, y: 0, scale: 1, duration: 0.24, ease: 'power3.out',
+            clearProps: 'opacity,visibility,transform',
+            onComplete: function () { self._popoverEntering = false; done(); self.animateGrid(); }
+          });
+        }).catch(function () {
+          if (self._disposed || run !== self._motionRun) { return; }
+          self._popoverEntering = false; self.clearMotion(el); done();
+        });
+      },
+      leavePopover: function (el, done) {
+        // 从当前帧收起；取消尚未完成的入场与图标交错动画。
+        this._motionRun = (this._motionRun || 0) + 1;
+        this._popoverEntering = false;
+        this.stopGridMotion();
+        if (window.gsap) { window.gsap.killTweensOf(el); }
+        if (!window.gsap || this.reduceMotion()) { this.clearMotion(el); done(); return; }
+        window.gsap.to(el, { autoAlpha: 0, y: -6, scale: 0.975, duration: 0.15, ease: 'power2.in', onComplete: done });
+      },
+      afterLeavePopover: function (el) { this.clearMotion(el); },
+      // 图标或搜索更新时仅动画当前可见区域，避免全量图标库产生大量 tween。
+      animateGrid: function () {
+        if (!this.open || this._disposed || this._popoverEntering || !window.gsap || this.reduceMotion()) { return; }
+        var grid = this.$refs.popover && this.$refs.popover.querySelector('.eva-icon-grid');
+        if (!grid) { return; }
+        this.stopGridMotion();
+        var top = grid.scrollTop, bottom = top + grid.clientHeight;
+        this._gridTargets = Array.from(grid.querySelectorAll('button')).filter(function (button) {
+          return button.offsetTop + button.offsetHeight > top && button.offsetTop < bottom;
+        }).slice(0, 36);
+        if (!this._gridTargets.length) { return; }
+        // 从上方进入，避免末行向下位移短暂撑大 scrollHeight，产生闪现的滚动条。
+        window.gsap.fromTo(this._gridTargets, { opacity: 0, y: -5, scale: 0.94 }, {
+          opacity: 1, y: 0, scale: 1, duration: 0.18, stagger: { amount: 0.1 }, ease: 'power2.out', clearProps: 'opacity,transform'
+        });
+      },
       // 功能：归一化 normalize Value 数据结构。
       normalizeValue: function (value) {
         value = String(value || '').trim();
@@ -352,46 +441,33 @@
         for (var i = 0; i < nodes.length; i++) {
           var id = nodes[i].getAttribute('id');
           if (!id) { continue; }
-          out.push({ value: '#' + id, label: id.replace(/^icon-/, '').replace(/[-_]/g, ' '), cat: 'iconfont' });
+          out.push({ value: '#' + id, label: id.replace(/^icon-/, '').replace(/[-_]/g, ' ') });
         }
         this.svgItems = out.sort(function (a, b) { return a.value.localeCompare(b.value); });
       },
       // 功能：阿里 Iconfont Symbol 脚本加载后，刷新当前 SVG 图标库。
       onIconfontLoaded: function () {
         this.scanSvgSymbols();
-        if (this.open && this.svgItems.length) {
-          this.activeCat = 'iconfont';
-        }
       },
       // 功能：处理 ensure Remix Items 相关逻辑。
       ensureRemixItems: function () {
         var self = this;
         if (REMIX_CACHE && REMIX_CACHE.length) {
           this.remixItems = REMIX_CACHE;
+          this.remixError = '';
           return;
         }
-        if (this.remixLoading || !window.fetch) { return; }
+        if (this.remixLoading) { return; }
         this.remixLoading = true;
-        window.fetch(REMIX_CSS, { mode: 'cors' })
-          .then(function (res) { return res.ok ? res.text() : ''; })
-          .then(function (css) {
-            var seen = {};
-            var items = [];
-            var re = /\.ri-([a-z0-9-]+):before/g;
-            var match;
-            while ((match = re.exec(css))) {
-              var value = 'ri-' + match[1];
-              if (seen[value]) { continue; }
-              seen[value] = true;
-              items.push({ value: value, label: Label_From_Icon(value), cat: Remix_Category(value) });
-            }
-            if (items.length) {
-              REMIX_CACHE = items.sort(function (a, b) { return a.value.localeCompare(b.value); });
-              self.remixItems = REMIX_CACHE;
-            }
+        this.remixError = '';
+        return Load_Remix_Items()
+          .then(function (items) {
+            if (!self._disposed && self.lib === 'remix') { self.remixItems = items; }
           })
-          .catch(function () {})
-          .finally(function () { self.remixLoading = false; });
+          .catch(function () {
+            if (!self._disposed) { self.remixError = '完整图标库加载失败，请重试'; }
+          })
+          .finally(function () { if (!self._disposed) { self.remixLoading = false; } });
       },
       // 功能：切换 toggle 状态。
       toggle: function () {
@@ -452,12 +528,11 @@
       '    <button type="button" class="eva-icon-open" :class="{ \'is-active\': open }" :disabled="disabled || readonly" @click="toggle" aria-label="选择图标"><i class="ri-grid-line"></i></button>',
       '    <button v-if="showReset" type="button" class="eva-icon-reset" :disabled="disabled || readonly" @click="reset" aria-label="恢复默认"><i class="ri-restart-line"></i></button>',
       '  </div>',
-      '  <div v-show="open" class="eva-icon-popover">',
+      '  <transition :css="false" @before-enter="beforeEnterPopover" @enter="enterPopover" @leave="leavePopover" @after-leave="afterLeavePopover" @enter-cancelled="cancelPopover" @leave-cancelled="cancelPopover">',
+      '  <div v-show="open" ref="popover" class="eva-icon-popover">',
       '    <div v-if="searchable" class="eva-icon-search"><i class="ri-search-line"></i><input v-model="query" type="search" placeholder="搜索图标..."></div>',
-      '    <div class="eva-icon-cats">',
-      '      <button v-for="cat in categories" :key="cat.id" type="button" :class="{ \'is-active\': activeCat === cat.id, \'has-separator\': cat.separated }" @click="activeCat = cat.id">{{ cat.label }}</button>',
-      '    </div>',
       '    <div v-if="remixLoading" class="eva-icon-loading">正在加载 Remixicon 全量图标...</div>',
+      '    <div v-else-if="lib === \'remix\' && remixError" class="eva-icon-loading" role="status">{{ remixError }} <button type="button" class="eva-icon-btn" @click="ensureRemixItems">重试</button></div>',
       '    <div class="eva-icon-grid">',
       '      <button v-for="item in visibleItems" :key="item.value" type="button" :class="{ \'is-selected\': draft === item.value }" :title="item.value" @click="setDraft(item)">',
       '        <eva-symbol-icon v-if="isSymbol(item.value)" :href="symbolHref(item.value)"></eva-symbol-icon><i v-else :class="iconClass(item.value)"></i>',
@@ -470,6 +545,7 @@
       '      <button type="button" class="eva-icon-btn is-primary" @click="apply">应用</button>',
       '    </div>',
       '  </div>',
+      '  </transition>',
       '</div>'
     ].join('\n')
   };

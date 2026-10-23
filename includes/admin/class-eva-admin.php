@@ -185,12 +185,25 @@ class Admin
             return;
         }
 
+        $current = \Eva::get_resolved($current['option_id']);
+        $payload = \Eva::page_payload($current);
+        $selective = ($current['asset_loading'] ?? '') === 'used';
+        $types = \Eva\Framework\Admin\Assets::field_types($payload['sections'] ?? []);
+        $scripts = \Eva::field_scripts();
+        $styles = \Eva::field_styles();
+        if ($selective) {
+            $styles = \Eva\Framework\Admin\Assets::filter_assets($styles, $types, $scripts);
+            $scripts = \Eva\Framework\Admin\Assets::filter_assets($scripts, $types, $scripts);
+        }
+
         // Upload / Gallery / Media 与编辑器字段需要 WordPress 原生资源。
-        wp_enqueue_media();
-        if (function_exists('wp_enqueue_editor')) {
+        if (! $selective || array_intersect($types, ['image_select', 'wp_editor', 'editor'])) {
+            wp_enqueue_media();
+        }
+        if ((! $selective || array_intersect($types, ['wp_editor', 'editor'])) && function_exists('wp_enqueue_editor')) {
             wp_enqueue_editor();
         }
-        if (function_exists('wp_enqueue_code_editor')) {
+        if ((! $selective || in_array('code_editor', $types, true)) && function_exists('wp_enqueue_code_editor')) {
             foreach (['text/html', 'text/css', 'application/javascript', 'application/json', 'application/x-httpd-php'] as $mime_type) {
                 wp_enqueue_code_editor(['type' => $mime_type]);
             }
@@ -199,14 +212,14 @@ class Admin
         // 基础依赖：Vue3 运行时 + Remixicon 图标字体 + 框架样式。
         wp_enqueue_script(
             'eva-vue3',
-            'https://cdn.jsdelivr.net/npm/vue@3.4.38/dist/vue.global.prod.js',
+            \Eva::vendor_url('vue.global.prod.js', 'https://cdn.jsdelivr.net/npm/vue@3.4.38/dist/vue.global.prod.js'),
             [],
             '3.4.38',
             true
         );
-        wp_enqueue_style('eva-remixicon', 'https://cdn.jsdelivr.net/npm/remixicon@4.5.0/fonts/remixicon.css', [], '4.5.0');
+        wp_enqueue_style('eva-remixicon', \Eva::vendor_url('remixicon.css', 'https://cdn.jsdelivr.net/npm/remixicon@4.5.0/fonts/remixicon.css'), [], '4.5.0');
         // 国旗图标（语言切换器用），跨平台显示真国旗。
-        wp_enqueue_style('eva-flag-icons', 'https://cdn.jsdelivr.net/npm/flag-icons@7/css/flag-icons.min.css', [], '7');
+        wp_enqueue_style('eva-flag-icons', \Eva::vendor_url('css/flag-icons.min.css', 'https://cdn.jsdelivr.net/npm/flag-icons@7/css/flag-icons.min.css'), [], '7');
         wp_enqueue_style('eva-framework', EVA_FW_URL . 'assets/eva.css', [], \Eva::asset_ver('assets/eva.css'));
         // 主色覆盖（用户挑的主题色 > 主题品牌色）：和 Eva::enqueue_runtime() 走同一套令牌，
         // 服务端先出好，免得 Vue 挂载后再刷一次颜色。
@@ -226,13 +239,13 @@ class Admin
         }
 
         // 字段样式：一字段一目录，递归扫描 Fields/<name>/ 逐个加载。
-        foreach (\Eva::field_styles() as $name => $style_url) {
+        foreach ($styles as $name => $style_url) {
             wp_enqueue_style('eva-field-' . $name, $style_url, ['eva-framework'], \Eva::asset_ver(\Eva::field_asset_rel($name, 'css')));
         }
 
         // 字段脚本：一字段一目录，递归扫描 Fields/<name>/；eva-app 依赖它们全部。
         $field_deps = $lib_deps;
-        foreach (\Eva::field_scripts() as $name => $field_url) {
+        foreach ($scripts as $name => $field_url) {
             $handle = 'eva-field-' . $name;
             wp_enqueue_script($handle, $field_url, ['eva-vue3'], \Eva::asset_ver(\Eva::field_asset_rel($name, 'js')), true);
             $field_deps[] = $handle;
@@ -241,11 +254,10 @@ class Admin
         wp_enqueue_script('eva-framework', EVA_FW_URL . 'assets/eva-app.js', $field_deps, \Eva::asset_ver('assets/eva-app.js'), true);
 
         // 应用 eva_{id}_args / eva_{id}_sections 过滤器后的配置；保存层（Data::ajax_save）用的是同一份。
-        $current = \Eva::get_resolved($current['option_id']);
-
         // 把当前页完整配置 + 运行时状态注入前端 window.EvaFW。
         // 菜单、分区（已做可 JSON 化预处理）、依赖来源、已存值、表单前后 HTML 由 page_payload() 统一组装。
-        wp_localize_script('eva-framework', 'EvaFW', [
+        // Field scripts read EvaFW when evaluated, so supply it before their Vue dependency.
+        wp_localize_script('eva-vue3', 'EvaFW', [
             'version'  => EVA_FW_VERSION,
             'adminUrl' => admin_url(),
             'config'   => array_merge([
@@ -253,7 +265,7 @@ class Admin
                 'brand'    => $current['brand'] ?: $current['menu_title'],
                 'title'    => $current['menu_title'],
                 'subtitle' => $current['subtitle'],
-            ], \Eva::page_payload($current), \Eva::runtime()),
+            ], $payload, \Eva::runtime()),
         ]);
 
         // 自定义图标集 + 主题自己的后台资源（对应 CSF 的 csf_enqueue）；参数是当前设置页的配置。

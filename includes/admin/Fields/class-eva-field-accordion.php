@@ -14,6 +14,23 @@ if (! defined('ABSPATH')) {
  */
 class Accordion
 {
+    /** 补齐子字段默认值，保证条件显示、校验与实际存值一致。 */
+    public static function values_with_defaults($field, $value)
+    {
+        $values = is_array($value) ? $value : [];
+        foreach (isset($field['sections']) ? $field['sections'] : [] as $index => $section) {
+            $id = isset($section['id']) && $section['id'] !== '' ? (string) $section['id'] : (isset($section['key']) ? (string) $section['key'] : (string) $index);
+            $children = isset($values[$id]) && is_array($values[$id]) ? $values[$id] : [];
+            foreach (isset($section['fields']) ? $section['fields'] : [] as $child) {
+                if (isset($child['id']) && ! array_key_exists($child['id'], $children)) {
+                    $children[$child['id']] = array_key_exists('default', $child) ? $child['default'] : '';
+                }
+            }
+            $values[$id] = $children;
+        }
+        return $values;
+    }
+
     /**
      * 功能：按 accordion 每个 section 的 fields 子 schema 递归清洗保存值。
      *
@@ -23,7 +40,7 @@ class Accordion
      */
     public static function sanitize($field, $value)
     {
-        $raw = is_array($value) ? $value : [];
+        $raw = self::values_with_defaults($field, $value);
         $clean = [];
         $sections = isset($field['sections']) && is_array($field['sections']) ? $field['sections'] : [];
         $valid_order = [];
@@ -31,7 +48,7 @@ class Accordion
         foreach ($sections as $index => $section) {
             $section_id = isset($section['id']) && $section['id'] !== ''
                 ? (string) $section['id']
-                : (string) $index;
+                : (isset($section['key']) ? (string) $section['key'] : (string) $index);
             $valid_order[] = $section_id;
 
             $section_raw = isset($raw[$section_id]) && is_array($raw[$section_id])

@@ -42,6 +42,7 @@ return [
     'floating'               => 'Admin floating panel',
     'theme_color'            => 'Accent color',
     'interface_font'         => 'Interface font',
+    'panel_opacity'          => 'Panel opacity',
     'font_default'           => 'Default',
     'font_jingnan'           => 'Jingnan Maiyuan',
     'search_ph'              => 'Search settings…',

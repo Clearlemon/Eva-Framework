@@ -42,6 +42,7 @@ return [
     'floating'               => '管理フローティング',
     'theme_color'            => 'テーマカラー',
     'interface_font'         => 'インターフェースフォント',
+    'panel_opacity'          => 'パネルの透明度',
     'font_default'           => 'デフォルト',
     'font_jingnan'           => '荆南麦円体',
     'search_ph'              => '設定を検索…',

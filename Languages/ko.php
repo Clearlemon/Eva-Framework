@@ -41,6 +41,7 @@ return [
     'floating'               => '관리 플로팅 창',
     'theme_color'            => '테마 색상',
     'interface_font'         => '인터페이스 글꼴',
+    'panel_opacity'          => '패널 투명도',
     'font_default'           => '기본 글꼴',
     'font_jingnan'           => '징난 마이위안체',
     'search_ph'              => '설정 검색…',

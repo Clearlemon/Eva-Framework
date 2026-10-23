@@ -16,6 +16,7 @@
   window.EvaModules = window.EvaModules || {};
 
   var UID_SEED = 0;
+  var MENU_ADD_SEED = 0;
   var cfg = (window.EvaFW && window.EvaFW.config) || {};
   var gsapPromise = null;
 
@@ -25,7 +26,7 @@
     if (gsapPromise) { return gsapPromise; }
     gsapPromise = new Promise(function (resolve, reject) {
       var script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js';
+      script.src = cfg.gsapUrl || 'https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js';
       script.async = true;
       script.onload = function () { resolve(window.gsap); };
       script.onerror = function () { reject(new Error('GSAP load failed')); };
@@ -51,6 +52,37 @@
     return obj && Object.prototype.hasOwnProperty.call(obj, key);
   }
 
+  // 功能：判断 Builder 模块字段的 CSF/Eva dependency 是否成立。
+  function dependencyRuleMatches(rule, values) {
+    if (!Array.isArray(rule) || !rule.length) { return true; }
+    var source = String(rule[0] || '');
+    var operator = String(rule[1] || '==').toLowerCase();
+    var expected = rule.length > 2 ? rule[2] : '';
+    var actual = hasOwn(values, source) ? values[source] : '';
+    var actualList = Array.isArray(actual) ? actual.map(String) : [String(actual === null || actual === undefined ? '' : actual)];
+    var expectedList = Array.isArray(expected) ? expected.map(String) : [String(expected === null || expected === undefined ? '' : expected)];
+    var intersects = expectedList.some(function (value) { return actualList.indexOf(value) !== -1; });
+
+    if (operator === '!=' || operator === '!==' || operator === 'not' || operator === 'neq' || operator === 'not-any' || operator === 'not_in') {
+      return !intersects;
+    }
+    if (operator === 'empty') {
+      return actualList.length === 0 || (actualList.length === 1 && actualList[0] === '');
+    }
+    if (operator === 'not-empty' || operator === 'not_empty') {
+      return actualList.length > 0 && !(actualList.length === 1 && actualList[0] === '');
+    }
+    return intersects;
+  }
+
+  // 功能：支持单条依赖和多条依赖；多条规则默认全部成立才显示。
+  function dependencyVisible(field, values) {
+    var dependency = field && field.dependency;
+    if (!Array.isArray(dependency) || !dependency.length) { return true; }
+    var rules = Array.isArray(dependency[0]) ? dependency : [dependency];
+    return rules.every(function (rule) { return dependencyRuleMatches(rule, values || {}); });
+  }
+
   // 功能：转义预览中的文本，避免模块预览直接拼接用户输入。
   function esc(value) {
     return String(value === null || value === undefined ? '' : value)
@@ -69,12 +101,42 @@
     window.EvaModules[key] = Object.assign({}, runtimeModules[key], existing);
   });
 
+  function storedPanelOpacity() {
+    var value = 88;
+    try {
+      var stored = parseInt(window.localStorage.getItem('eva_fw_panel_opacity'), 10);
+      if (!isNaN(stored)) value = stored;
+    } catch (e) {}
+    return Math.max(40, Math.min(100, value));
+  }
+
+  function previewRoleOptions() {
+    var roles = Array.isArray(cfg.builderPreviewRoles) ? cfg.builderPreviewRoles : [];
+    return roles.length ? roles : [
+      { value: 'current', label: '当前用户' },
+      { value: 'guest', label: '游客' }
+    ];
+  }
+
+  function storedPreviewRole() {
+    var roles = previewRoleOptions();
+    var value = cfg.builderPreviewRole || 'current';
+    try {
+      var stored = window.localStorage.getItem('eva_fw_builder_preview_role') || '';
+      if (roles.some(function (role) { return String(role.value) === String(stored); })) {
+        value = stored;
+      }
+    } catch (e) {}
+    return roles.some(function (role) { return String(role.value) === String(value); }) ? String(value) : 'current';
+  }
+
   window.EvaFields.builder = {
     props: ['field', 'modelValue'],
     emits: ['update:modelValue'],
     data: function () {
       return {
         selectedUid: '',
+        selectedStructureId: '',
         leftTab: 'components',
         rightTab: 'page',
         device: 'desktop',
@@ -83,13 +145,80 @@
         activePage: '',
         pageMenuOpen: false,
         draggingModule: '',
+        draggingMenuLocation: '',
         previewTimer: null,
         previewReady: false,
         previewSeq: 0,
         leftCollapsed: false,
         rightCollapsed: false,
-        leftWidth: 260,
-        rightWidth: 300,
+        pageBlocksCollapsed: true,
+        panelOpacity: storedPanelOpacity(),
+        panelOpacityOptions: [
+          { value: 40, label: '40%' },
+          { value: 50, label: '50%' },
+          { value: 60, label: '60%' },
+          { value: 70, label: '70%' },
+          { value: 80, label: '80%' },
+          { value: 88, label: '88%' },
+          { value: 90, label: '90%' },
+          { value: 100, label: '100%' }
+        ],
+        moduleTab: 'components',
+        widgetAreas: [],
+        availableWidgets: [],
+        widgetArea: '',
+        widgetsEditorUrl: '',
+        widgetsLoading: false,
+        widgetsLoaded: false,
+        widgetsError: '',
+        widgetsSaving: false,
+        widgetsStatus: '',
+        draggingWidget: null,
+        draggingWidgetArea: '',
+        menuLocation: '',
+        menuLocationDataOverride: null,
+        menuEditor: null,
+        menuEditorLoading: false,
+        menuEditorError: '',
+        menuEditorStatus: '',
+        menuCreateName: '',
+        menuCreateError: '',
+        menuCreating: false,
+        menuEditorSaving: false,
+        menuEditorSaveQueued: false,
+        menuEditorSaveTimer: null,
+        menuEditorSaveSeq: 0,
+        menuEditorLoadSeq: 0,
+        menuEditorSelectedItem: '',
+        menuEditorScopeKey: '',
+        menuSubmenuOpen: false,
+        menuSubmenuPath: [],
+        menuSubmenuAnchorKey: '',
+        menuSubmenuQuery: '',
+        menuSubmenuPosition: { left: 0, top: 0, width: 260, height: 480, arrow: 72, gap: 24, side: 'right', ready: false },
+        menuEditorRemovedIds: [],
+        menuEditorDraggingKey: '',
+        menuEditorDropKey: '',
+        menuEditorDropSide: '',
+        menuAddOpen: false,
+        menuAddParentKey: '',
+        menuAddId: 'eva-menu-add-' + (++MENU_ADD_SEED),
+        menuAddType: 'custom',
+        menuAddTypeSearch: '',
+        menuAddPosition: { left: 0, top: 0, width: 427, height: 373, arrow: 72, gap: 24, side: 'right', ready: false },
+        menuAddSearch: '',
+        menuAddQueries: {},
+        menuAddExpanded: { custom: true },
+        menuAddItems: {},
+        menuAddSelected: {},
+        menuAddLoading: {},
+        menuAddErrors: {},
+        menuAddCustom: { url: '', text: '', target: '_self', rel: '' },
+        containerTab: '',
+        previewRole: storedPreviewRole(),
+        previewRoleOptions: previewRoleOptions(),
+        leftWidth: 320,
+        rightWidth: 360,
         resizingPanel: '',
         resizeSource: '',
         resizeMoved: false,
@@ -99,23 +228,68 @@
         collapsedGroups: {}
       };
     },
+    computed: {
+      menuEditorScopeParent: function () { return this.menuEditorFind(this.menuEditorScopeKey); },
+      menuEditorVisibleItems: function () {
+        var parent = this.menuEditorFind(this.menuEditorScopeKey), parentId = parent ? Number(parent.id) : 0;
+        return this.menuEditorChildren(parentId);
+      },
+      menuSubmenuParent: function () { return this.menuEditorFind(this.menuSubmenuPath[this.menuSubmenuPath.length - 1]); },
+      menuSubmenuItems: function () {
+        var parent = this.menuSubmenuParent, query = this.menuSubmenuQuery.trim().toLowerCase();
+        return parent ? this.menuEditorChildren(parent.id).filter(function (item) { return !query || String(item.title || '').toLowerCase().indexOf(query) !== -1; }) : [];
+      },
+      menuAddParent: function () { return this.menuEditorFind(this.menuAddParentKey); },
+      menuAddActiveGroup: function () {
+        var groups = this.menuAddGroups();
+        return groups.find(function (group) { return group.id === this.menuAddType; }.bind(this)) || groups[0];
+      },
+      menuAddFilteredGroups: function () {
+        var query = this.menuAddTypeSearch.trim().toLowerCase();
+        return this.menuAddGroups().filter(function (group) { return !query || (group.label + ' ' + group.id).toLowerCase().indexOf(query) !== -1; });
+      },
+      menuEditorActiveItem: function () {
+        var items = this.menuEditor && Array.isArray(this.menuEditor.items) ? this.menuEditor.items : [];
+        for (var i = 0; i < items.length; i += 1) {
+          if (this.menuEditorItemKey(items[i], i) === this.menuEditorSelectedItem && !this.menuEditorItemIsRemoved(items[i])) {
+            return items[i];
+          }
+        }
+        return null;
+      }
+    },
     mounted: function () {
       this._resizeMoveHandler = this.onPanelResizeMove.bind(this);
       this._resizeEndHandler = this.stopPanelResize.bind(this);
+      this._menuDragMoveHandler = this.onMenuEditorPointerMove.bind(this);
+      this._menuDragEndHandler = this.onMenuEditorPointerUp.bind(this);
+      this._menuDragCancelHandler = this.cancelMenuEditorDrag.bind(this);
       document.addEventListener('fullscreenchange', this.syncFullscreenState);
       document.addEventListener('pointermove', this._resizeMoveHandler);
       document.addEventListener('pointerup', this._resizeEndHandler);
       document.addEventListener('pointercancel', this._resizeEndHandler);
+      document.addEventListener('pointermove', this._menuDragMoveHandler);
+      document.addEventListener('pointerup', this._menuDragEndHandler);
+      document.addEventListener('pointercancel', this._menuDragCancelHandler);
       document.addEventListener('mousemove', this._resizeMoveHandler);
       document.addEventListener('mouseup', this._resizeEndHandler);
       window.addEventListener('message', this.handlePreviewMessage);
       this.queuePreview();
     },
     beforeUnmount: function () {
+      this._widgetsDisposed = true;
+      this.stopMenuAddTracking();
+      this.cancelMenuEditorDrag();
       document.removeEventListener('fullscreenchange', this.syncFullscreenState);
       document.removeEventListener('pointermove', this._resizeMoveHandler || this.onPanelResizeMove);
       document.removeEventListener('pointerup', this._resizeEndHandler || this.stopPanelResize);
       document.removeEventListener('pointercancel', this._resizeEndHandler || this.stopPanelResize);
+      document.removeEventListener('pointermove', this._menuDragMoveHandler);
+      document.removeEventListener('pointerup', this._menuDragEndHandler);
+      document.removeEventListener('pointercancel', this._menuDragCancelHandler);
+      this.stopMenuAddRequests();
+      if (this._menuEditorReadController) { this._menuEditorReadController.abort(); }
+      this.menuEditorLoadSeq += 1;
       document.removeEventListener('mousemove', this._resizeMoveHandler || this.onPanelResizeMove);
       document.removeEventListener('mouseup', this._resizeEndHandler || this.stopPanelResize);
       window.removeEventListener('message', this.handlePreviewMessage);
@@ -123,14 +297,27 @@
       if (this.previewTimer) {
         clearTimeout(this.previewTimer);
       }
+      if (this._previewController) { this._previewController.abort(); }
+      if (this._widgetsController) { this._widgetsController.abort(); }
+      this.previewSeq += 1;
+      if (this.menuEditorSaveTimer) {
+        clearTimeout(this.menuEditorSaveTimer);
+      }
     },
     watch: {
+      moduleTab: function () { this.closeMenuAddPanel(false); this.closeMenuSubmenu(false); this.cancelMenuEditorDrag(); this.sendPreviewMenuState(); this.sendPreviewWidgetState(); if (this.moduleTab === 'widgets' && !this.widgetsLoaded) { this.loadWidgets(); } },
+      widgetArea: function () { this.sendPreviewWidgetState(); },
+      menuLocation: function () { this.sendPreviewMenuState(); },
+      leftCollapsed: function (value) { if (value) { this.closeMenuAddPanel(false); this.closeMenuSubmenu(false); } },
+      menuSubmenuParent: function (parent) { if (this.menuSubmenuOpen) { if (!parent) { this.closeMenuSubmenu(false); } else { this.queueMenuAddPosition(); } } },
+      menuSubmenuItems: function () { if (this.menuSubmenuOpen) { this.queueMenuAddPosition(); } },
       modelValue: {
         deep: true,
         handler: function () {
           this.queuePreview();
         }
       },
+      'field.structure_values': { deep: true, handler: function () { this.queuePreview(); } },
       activeSlot: function () {
         this.queuePreview();
       },
@@ -146,6 +333,23 @@
       // 功能：取词条。外壳文案走 Languages/*.php 的 pb_* 键。
       t: function (key) {
         return window.EvaI18n && window.EvaI18n.t ? window.EvaI18n.t(key) : key;
+      },
+      // 功能：更新构建器两侧浮动面板透明度。
+      setPanelOpacity: function (value) {
+        var next = Math.max(40, Math.min(100, parseInt(value, 10) || 88));
+        this.panelOpacity = next;
+        document.documentElement.style.setProperty('--eva-pb-panel-opacity', String(next) + '%');
+        try { window.localStorage.setItem('eva_fw_panel_opacity', String(next)); } catch (e) {}
+      },
+      // 功能：切换构建器 iframe 的临时预览身份，不改变真实登录状态。
+      setPreviewRole: function (value) {
+        var next = String(value || 'current');
+        if (!this.previewRoleOptions.some(function (role) { return String(role.value) === next; })) {
+          next = 'current';
+        }
+        this.previewRole = next;
+        try { window.localStorage.setItem('eva_fw_builder_preview_role', next); } catch (e) {}
+        this.queuePreview(0);
       },
       // 功能：顶栏品牌名。字段可用 brand 指定，让构建器显示宿主主题/插件的名字，
       // 不传才回落到框架自己的标识。
@@ -165,8 +369,14 @@
       // 没指定时回落到全局的首页预览地址。
       previewUrl: function () {
         var page = this.currentPage();
-        if (page && page.preview_url) { return page.preview_url; }
-        return (this.field && this.field.preview_url) || cfg.builderPreviewUrl || '/';
+        var base = (page && page.preview_url) || (this.field && this.field.preview_url) || cfg.builderPreviewUrl || '/';
+        try {
+          var url = new URL(base, window.location.origin);
+          url.searchParams.set('eva_preview_role', this.previewRole || 'current');
+          return url.toString();
+        } catch (e) {
+          return base;
+        }
       },
       // 功能：预览目标的显示名，字段可用 preview_label 指定。
       previewLabel: function () {
@@ -177,16 +387,45 @@
       // 功能：监听 iframe 准备完成消息。
       handlePreviewMessage: function (event) {
         if (event.origin !== window.location.origin || !event.data) { return; }
+        var frame = this.$refs.previewFrame;
+        if (!frame || event.source !== frame.contentWindow) { return; }
         if (event.data.type === 'eva-builder-preview-ready') {
           this.previewReady = true;
           this.queuePreview(0);
+          this.sendPreviewMenuState();
+          this.sendPreviewWidgetState();
+          this.sendPreviewDragState(!!this.draggingModule);
+          return;
+        }
+        if (event.data.type === 'eva-builder-structure-select') {
+          this.selectStructure(event.data.id);
+          return;
+        }
+        if (event.data.type === 'eva-builder-widget-area-select') {
+          if (this.widgetAreas.some(function (area) { return area.id === event.data.area; })) {
+            this.moduleTab = 'widgets';
+            this.widgetArea = event.data.area;
+          }
+          return;
+        }
+        if (event.data.type === 'eva-builder-menu-location-select') {
+          this.selectPreviewMenuLocation(event.data.location);
           return;
         }
         if (event.data.type !== 'eva-builder-module-action') { return; }
         var uid = event.data.uid || '';
         var action = event.data.action || 'select';
         if (!uid) { return; }
+        if (this.usesSlots()) {
+          var value = this.builderValue();
+          var owner = this.slots().find(function (slot) {
+            return (value.slots[slot.id] || []).some(function (item) { return item.uid === uid; });
+          });
+          if (!owner) { return; }
+          this.activeSlot = owner.id;
+        }
         this.selectedUid = uid;
+        this.selectedStructureId = '';
         this.rightTab = 'component';
         if (action === 'up') {
           this.moveItem(uid, -1);
@@ -203,10 +442,13 @@
       // 功能：合并连续变更，延迟刷新 iframe。
       queuePreview: function (delay) {
         if (!this.usesSlots()) { return; }
+        this.previewSeq += 1;
+        if (this._previewController) { this._previewController.abort(); }
         if (this.previewTimer) {
           clearTimeout(this.previewTimer);
         }
-        var wait = typeof delay === 'number' ? delay : 0;
+        if (this.previewReady) { this.postPreviewHtml(this.optimisticSlots()); }
+        var wait = typeof delay === 'number' ? delay : 180;
         this.previewTimer = setTimeout(this.renderPreview, wait);
       },
       // 功能：生成预览工具条 HTML，先用于本地乐观预览，随后由 PHP 真实渲染替换。
@@ -215,7 +457,7 @@
           + '<button type="button" data-eva-builder-action="up">' + this.t('pb_move_up') + '</button>'
           + '<button type="button" data-eva-builder-action="down">' + this.t('pb_move_down') + '</button>'
           + '<button type="button" data-eva-builder-action="duplicate">' + this.t('pb_duplicate') + '</button>'
-          + '<button type="button" data-eva-builder-action="remove">{{ t(\'pb_delete\') }}</button>'
+          + '<button type="button" data-eva-builder-action="remove">' + this.t('pb_delete') + '</button>'
           + '</div>';
       },
       // 功能：用模块的前端 render 或 preview 模板生成即时真实预览。
@@ -262,14 +504,16 @@
         return slots;
       },
       // 功能：向 iframe 发送 HTML 更新。
-      postPreviewHtml: function (slots) {
+      postPreviewHtml: function (slots, structures) {
         var frame = this.$refs.previewFrame;
         if (!frame || !frame.contentWindow) { return; }
         frame.contentWindow.postMessage({
           type: 'eva-builder-preview-html',
           slots: slots || {},
+          structures: structures || {},
           activeSlot: this.currentSlotId(),
-          selectedUid: this.selectedUid || ''
+          selectedUid: this.selectedUid || '',
+          selectedStructure: this.selectedStructureId || ''
         }, window.location.origin);
       },
       // 功能：通知 iframe 当前是否处于拖拽投放状态。
@@ -278,39 +522,1127 @@
         if (!frame || !frame.contentWindow) { return; }
         frame.contentWindow.postMessage({
           type: 'eva-builder-drag-state',
-          active: !!active
+          active: !!active || !!this.draggingWidget,
+          moduleType: this.draggingModule || '',
+          menuLocation: this.draggingMenuLocation || '',
+          widgetDragging: !!this.draggingWidget,
+          widgetArea: this.draggingWidgetArea || ''
         }, window.location.origin);
+      },
+      // 功能：菜单面板与 iframe 中的真实菜单位置同步高亮。
+      sendPreviewMenuState: function () {
+        var frame = this.$refs.previewFrame;
+        if (!frame || !frame.contentWindow) { return; }
+        frame.contentWindow.postMessage({
+          type: 'eva-builder-menu-state',
+          active: this.moduleTab === 'menu',
+          location: this.menuLocation || ''
+        }, window.location.origin);
+      },
+      selectPreviewMenuLocation: function (location) {
+        var id = String(location || '');
+        if (!this.menuLocationData().some(function (item) { return String(item.id) === id; })) { return; }
+        this.moduleTab = 'menu';
+        this.setMenuLocation(id);
+        this.sendPreviewMenuState();
+      },
+      // 功能：拖拽遮罩接收坐标，再映射回 iframe 真实菜单节点，兼容画布缩放。
+      previewMenuLocationAt: function (event) {
+        var frame = this.$refs.previewFrame;
+        if (!frame || !event) { return ''; }
+        try {
+          var rect = frame.getBoundingClientRect();
+          if (!rect.width || !rect.height || event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) { return ''; }
+          var x = (event.clientX - rect.left) * frame.clientWidth / rect.width;
+          var y = (event.clientY - rect.top) * frame.clientHeight / rect.height;
+          var doc = frame.contentDocument;
+          var element = doc && doc.elementFromPoint(x, y);
+          var target = element && element.closest('[data-eva-menu-location]');
+          var location = target ? target.getAttribute('data-eva-menu-location') : '';
+          return this.menuLocationData().some(function (item) { return String(item.id) === location; }) ? location : '';
+        } catch (error) { return ''; }
+      },
+      // 拖放以鼠标所在的真实区域为准，并按模块中线确定插入位置，兼容 iframe 缩放。
+      previewModuleTargetAt: function (event) {
+        var frame = this.$refs.previewFrame;
+        if (!frame || !event) { return null; }
+        try {
+          var rect = frame.getBoundingClientRect();
+          if (!rect.width || !rect.height || event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) { return null; }
+          var x = (event.clientX - rect.left) * frame.clientWidth / rect.width;
+          var y = (event.clientY - rect.top) * frame.clientHeight / rect.height;
+          var doc = frame.contentDocument;
+          var node = doc && doc.elementFromPoint(x, y);
+          var target = node && node.closest('[data-eva-builder-slot]');
+          var slot = target ? target.getAttribute('data-eva-builder-slot') : '';
+          if (!this.slots().some(function (entry) { return entry.id === slot; })) { return null; }
+          var items = this.builderValue().slots[slot] || [];
+          var modules = Array.from(target.querySelectorAll('[data-eva-builder-module]')).filter(function (module) {
+            return module.closest('[data-eva-builder-slot]') === target;
+          });
+          var index = items.length;
+          for (var i = 0; i < modules.length; i += 1) {
+            var uid = modules[i].getAttribute('data-eva-builder-module');
+            var at = items.findIndex(function (item) { return item.uid === uid; });
+            var bounds = modules[i].getBoundingClientRect();
+            if (at >= 0 && bounds.height && y < bounds.top + bounds.height / 2) {
+              index = at;
+              break;
+            }
+          }
+          return { slot: slot, index: index };
+        } catch (error) { return null; }
       },
       // 功能：请求 PHP 渲染未保存内容，再 postMessage 给 iframe。
       renderPreview: function () {
-        if (!this.usesSlots() || !cfg.ajaxUrl) { return; }
+        if (!this.usesSlots() || !cfg.ajaxUrl || !this.previewReady) { return; }
         var frame = this.$refs.previewFrame;
         if (!frame || !frame.contentWindow) { return; }
 
         var seq = ++this.previewSeq;
-        this.postPreviewHtml(this.optimisticSlots());
+        var current = this.builderValue();
+        var slots = {};
+        this.slots().forEach(function (slot) { slots[slot.id] = current.slots[slot.id] || []; });
+        var serialized = JSON.stringify({ slots: slots });
+        var structureValues = this.structureValues();
+        var key = (this.previewRole || 'current') + '|' + (this.activePage || '') + '|' + serialized + '|' + JSON.stringify(structureValues);
+        this._previewCache = this._previewCache || new Map();
+        if (this._previewCache.has(key)) {
+          var cached = this._previewCache.get(key);
+          this.postPreviewHtml(cached.slots, cached.structures);
+          return;
+        }
+        if (this._previewController) { this._previewController.abort(); }
+        var controller = typeof AbortController === 'function' ? new AbortController() : null;
+        this._previewController = controller;
 
         var fd = new FormData();
         fd.append('action', 'eva_fw_render_builder_preview');
         fd.append('nonce', cfg.nonce || '');
-        fd.append('value', JSON.stringify(this.builderValue()));
+        fd.append('preview_role', this.previewRole || 'current');
+        fd.append('value', serialized);
+        fd.append('option_id', this.field.fixed_option_id || '');
+        fd.append('field_id', this.field.id || '');
+        fd.append('page_id', this.currentPage() ? this.currentPage().id : '');
+        fd.append('structure_values', JSON.stringify(structureValues));
 
         fetch(cfg.ajaxUrl, {
           method: 'POST',
           credentials: 'same-origin',
-          body: fd
+          body: fd,
+          signal: controller ? controller.signal : undefined
         }).then(function (res) {
+          if (!res.ok) { throw new Error('Preview request failed'); }
           return res.json();
         }).then(function (json) {
           if (seq !== this.previewSeq) { return; }
           if (!json || !json.success || !json.data) { return; }
-          this.postPreviewHtml(json.data.slots || {});
-        }.bind(this)).catch(function () {});
+          this._previewCache.set(key, { slots: json.data.slots || {}, structures: json.data.structures || {} });
+          if (this._previewCache.size > 20) { this._previewCache.delete(this._previewCache.keys().next().value); }
+          this.postPreviewHtml(json.data.slots || {}, json.data.structures || {});
+        }.bind(this)).catch(function () {}).finally(function () {
+          if (this._previewController === controller) { this._previewController = null; }
+        }.bind(this));
       },
       // 功能：构建器模块分组。
+      moduleTabs: function () {
+        return [
+          { id: 'components', label: '组件', icon: 'ri-layout-grid-line' },
+          { id: 'menu', label: '菜单', icon: 'ri-menu-line' },
+          { id: 'widgets', label: '小工具', icon: 'ri-layout-grid-line' },
+          { id: 'container', label: '容器设置', icon: 'ri-settings-3-line' }
+        ];
+      },
+      modulesForTab: function () {
+        if (this.moduleTab !== 'components') { return []; }
+        return this.moduleList().filter(function (item) {
+          return item.type !== 'wp_menu' && item.type !== 'wp_widgets';
+        });
+      },
+      // 小工具页签只管理实际区域与内容，不提供原生区域的插入卡片。
+      widgetAreaOptions: function () {
+        return this.widgetAreas.map(function (area) { return { value: area.id, label: area.name }; });
+      },
+      selectedWidgetArea: function () {
+        return this.widgetAreas.find(function (area) { return area.id === this.widgetArea; }.bind(this)) || null;
+      },
+      sendPreviewWidgetState: function () {
+        var frame = this.$refs.previewFrame;
+        if (!frame || !frame.contentWindow) { return; }
+        frame.contentWindow.postMessage({ type: 'eva-builder-widget-state', active: this.moduleTab === 'widgets', area: this.widgetArea || '' }, window.location.origin);
+      },
+      onWidgetDragStart: function (event, operation, id) {
+        if (this.widgetsSaving || this.widgetsLoading || !this.widgetAreas.length) { event.preventDefault(); return; }
+        this.draggingModule = '';
+        this.draggingWidget = { operation: operation, id: id };
+        this.draggingWidgetArea = '';
+        if (event.dataTransfer) {
+          event.dataTransfer.effectAllowed = operation === 'add' ? 'copy' : 'move';
+          event.dataTransfer.setData('application/x-eva-widget', JSON.stringify(this.draggingWidget));
+          event.dataTransfer.setData('text/plain', id);
+        }
+        this.sendPreviewDragState(true);
+      },
+      onWidgetDragEnd: function () {
+        this.draggingWidget = null;
+        this.draggingWidgetArea = '';
+        this.sendPreviewDragState(false);
+      },
+      previewWidgetAreaAt: function (event) {
+        var frame = this.$refs.previewFrame;
+        if (!frame || !event) { return ''; }
+        try {
+          var rect = frame.getBoundingClientRect();
+          if (!rect.width || !rect.height || event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) { return ''; }
+          var node = frame.contentDocument.elementFromPoint((event.clientX - rect.left) * frame.clientWidth / rect.width, (event.clientY - rect.top) * frame.clientHeight / rect.height);
+          var target = node && node.closest('[data-eva-widget-area]');
+          var id = target ? target.getAttribute('data-eva-widget-area') : '';
+          return this.widgetAreas.some(function (area) { return area.id === id; }) ? id : '';
+        } catch (error) { return ''; }
+      },
+      dropWidget: function (area, before) {
+        var dragged = this.draggingWidget;
+        this.onWidgetDragEnd();
+        if (dragged && area) { return this.changeWidget(dragged.operation, dragged.id, area, before || ''); }
+      },
+      moveWidget: function (item, direction) {
+        var area = this.selectedWidgetArea();
+        if (!area) { return; }
+        var at = area.items.findIndex(function (entry) { return entry.id === item.id; });
+        if (at < 0 || at + direction < 0 || at + direction >= area.items.length) { return; }
+        var before = direction < 0 ? area.items[at - 1].id : ((area.items[at + 2] || {}).id || '');
+        return this.changeWidget('move', item.id, area.id, before);
+      },
+      changeWidget: function (operation, id, area, before) {
+        if (this.widgetsSaving || this.widgetsLoading || !cfg.ajaxUrl || !this.widgetAreas.some(function (entry) { return entry.id === area; })) { return Promise.resolve(); }
+        this.widgetsSaving = true;
+        this.widgetsError = '';
+        this.widgetsStatus = '正在保存…';
+        var fd = new FormData();
+        fd.append('action', 'eva_fw_builder_widget_change');
+        fd.append('nonce', cfg.nonce || '');
+        fd.append('operation', operation);
+        fd.append('widget', id);
+        fd.append('area', area);
+        fd.append('before', before || '');
+        return fetch(cfg.ajaxUrl, { method: 'POST', credentials: 'same-origin', body: fd }).then(function (res) { return res.json(); }).then(function (json) {
+          if (this._widgetsDisposed) { return; }
+          if (!json || !json.success || !json.data) { throw new Error((json && json.data && json.data.message) || '小工具保存失败'); }
+          this.widgetAreas = Array.isArray(json.data.areas) ? json.data.areas : [];
+          this.availableWidgets = Array.isArray(json.data.available) ? json.data.available : [];
+          this.widgetArea = json.data.area_id || area;
+          this.widgetsStatus = operation === 'add' ? '已添加。需要填写内容的小工具，请在小工具编辑器中配置。' : (operation === 'remove' ? '已从区域删除，配置保留在未启用的小工具中。' : '位置已保存。');
+          var frame = this.$refs.previewFrame;
+          if (frame && frame.contentWindow) {
+            this.previewReady = false;
+            frame.contentWindow.location.reload();
+          }
+        }.bind(this)).catch(function (error) {
+          if (!this._widgetsDisposed) { this.widgetsError = error.message || '小工具保存失败，请重试。'; this.widgetsStatus = ''; }
+        }.bind(this)).finally(function () { if (!this._widgetsDisposed) { this.widgetsSaving = false; } }.bind(this));
+      },
+      loadWidgets: function () {
+        if (this.widgetsLoading || this.widgetsSaving) { return; }
+        if (!cfg.ajaxUrl) { this.widgetsError = '小工具读取接口不可用。'; return; }
+        var controller = new AbortController();
+        this._widgetsController = controller;
+        this.widgetsLoading = true;
+        this.widgetsError = '';
+        var fd = new FormData();
+        fd.append('action', 'eva_fw_builder_widgets_get');
+        fd.append('nonce', cfg.nonce || '');
+        fetch(cfg.ajaxUrl, { method: 'POST', credentials: 'same-origin', body: fd, signal: controller.signal }).then(function (res) {
+          if (!res.ok) { throw new Error('读取失败'); }
+          return res.json();
+        }).then(function (json) {
+          if (!json || !json.success || !json.data) { throw new Error((json && json.data && json.data.message) || '小工具读取失败'); }
+          this.widgetAreas = Array.isArray(json.data.areas) ? json.data.areas : [];
+          this.availableWidgets = Array.isArray(json.data.available) ? json.data.available : [];
+          this.widgetsEditorUrl = json.data.editor_url || '';
+          if (!this.selectedWidgetArea()) { this.widgetArea = this.widgetAreas.length ? this.widgetAreas[0].id : ''; }
+          this.widgetsLoaded = true;
+          this.sendPreviewWidgetState();
+        }.bind(this)).catch(function (error) {
+          if (error.name !== 'AbortError') { this.widgetsError = error.message || '小工具读取失败，请重试。'; }
+        }.bind(this)).finally(function () {
+          this.widgetsLoading = false;
+          this._widgetsController = null;
+        }.bind(this));
+      },
+      menuLocationData: function () {
+        var data = Array.isArray(this.menuLocationDataOverride) ? this.menuLocationDataOverride : (this.field && this.field.menu_location_data);
+        return Array.isArray(data) ? data : [];
+      },
+      menuLocationCount: function () {
+        return this.menuLocationData().length;
+      },
+      menuLocationAssignedCount: function () {
+        return this.menuLocationData().filter(function (location) {
+          return Number(location.menu_id || 0) > 0;
+        }).length;
+      },
+      menuLocationOptions: function () {
+        return this.menuLocationData().map(function (location) {
+          var label = location.label || location.id;
+          return {
+            value: String(location.id),
+            label: location.menu_name ? label + ' —— ' + location.menu_name : label
+          };
+        });
+      },
+      setMenuLocation: function (value) {
+        this.closeMenuAddPanel(false);
+        this.closeMenuSubmenu(false);
+        this.cancelMenuEditorDrag();
+        this.menuLocation = String(value || '');
+        this.menuEditor = null;
+        this.menuEditorError = '';
+        this.menuEditorStatus = '';
+        this.menuCreateName = '';
+        this.menuCreateError = '';
+        this.menuEditorSelectedItem = '';
+        this.menuEditorScopeKey = '';
+        this.menuAddParentKey = '';
+        this.menuEditorRemovedIds = [];
+        this.menuEditorLoadSeq += 1;
+        this.menuEditorLoading = false;
+        if (this._menuEditorReadController) { this._menuEditorReadController.abort(); }
+        if (this.menuEditorSaveTimer) { clearTimeout(this.menuEditorSaveTimer); this.menuEditorSaveTimer = null; }
+        if (this.menuLocation) { this.loadMenuEditor(); }
+      },
+      loadMenuEditor: function () {
+        if (!cfg.ajaxUrl || !this.menuLocation) { return; }
+        if (this._menuEditorReadController) { this._menuEditorReadController.abort(); }
+        var seq = ++this.menuEditorLoadSeq;
+        var location = this.menuLocation;
+        this._menuEditorCache = this._menuEditorCache || {};
+        var cached = this._menuEditorCache[location];
+        if (cached && Date.now() - cached.time < 10000) {
+          this.applyMenuEditorData(clone(cached.data));
+          this.menuEditorLoading = false;
+          return;
+        }
+        var controller = new AbortController();
+        this._menuEditorReadController = controller;
+        this.menuEditorLoading = true;
+        this.menuEditorError = '';
+        var fd = new FormData();
+        fd.append('action', 'eva_fw_builder_menu_get');
+        fd.append('nonce', cfg.nonce || '');
+        fd.append('location_id', this.menuLocation);
+        if (this.menuAddGroups().some(function (group) { return group.id !== 'custom' && !this.menuAddCached(group.id, ''); }.bind(this))) {
+          fd.append('include_resources', '1');
+        }
+        fetch(cfg.ajaxUrl, { method: 'POST', credentials: 'same-origin', body: fd, signal: controller.signal }).then(function (res) {
+          return res.json();
+        }).then(function (json) {
+          if (seq !== this.menuEditorLoadSeq) { return; }
+          if (!json || !json.success || !json.data) {
+            this.menuEditorError = (json && json.data && json.data.message) || '菜单读取失败';
+            return;
+          }
+          this.applyMenuEditorData(json.data);
+          this._menuEditorCache[location] = { time: Date.now(), data: clone(this.menuEditor) };
+        }.bind(this)).catch(function (error) {
+          if (error && error.name === 'AbortError') { return; }
+          if (seq === this.menuEditorLoadSeq) { this.menuEditorError = '菜单读取失败，请稍后重试'; }
+        }.bind(this)).finally(function () {
+          if (seq === this.menuEditorLoadSeq) { this.menuEditorLoading = false; this._menuEditorReadController = null; }
+        }.bind(this));
+      },
+      applyMenuEditorData: function (data) {
+        if (data.resources) {
+          Object.keys(data.resources).forEach(function (type) { this.cacheMenuAddItems(type, '', data.resources[type]); }.bind(this));
+          delete data.resources;
+        }
+        data.items = (data.items || []).map(function (item) {
+          item.client_key = item.client_key || ('item-' + String(item.id));
+          return item;
+        });
+        this.menuEditor = data;
+        if (!Number(data.menu_id || 0)) { this.menuCreateName = data.location_label || ''; }
+        this.menuEditorRemovedIds = [];
+        if (Array.isArray(data.menu_location_data)) { this.menuLocationDataOverride = data.menu_location_data; }
+      },
+      createMenu: function () {
+        if (this.menuCreating || !this.menuEditor || Number(this.menuEditor.menu_id || 0)) { return; }
+        var name = String(this.menuCreateName || '').trim();
+        this.menuCreateError = '';
+        if (!name) { this.menuCreateError = '请输入菜单名称。'; return; }
+        if (!cfg.ajaxUrl) { this.menuCreateError = '菜单创建接口不可用。'; return; }
+        var location = this.menuLocation;
+        var fd = new FormData();
+        fd.append('action', 'eva_fw_builder_menu_create');
+        fd.append('nonce', cfg.nonce || '');
+        fd.append('location_id', location);
+        fd.append('menu_name', name);
+        this.menuCreating = true;
+        fetch(cfg.ajaxUrl, { method: 'POST', credentials: 'same-origin', body: fd }).then(function (res) {
+          return res.json();
+        }).then(function (json) {
+          if (!json || !json.success || !json.data) { throw new Error((json && json.data && json.data.message) || '菜单创建失败，请重试。'); }
+          this._menuEditorCache = {};
+          if (Array.isArray(json.data.menu_location_data)) { this.menuLocationDataOverride = json.data.menu_location_data; }
+          if (this.menuLocation === location) {
+            this.applyMenuEditorData(json.data);
+            this.menuEditorStatus = '菜单已创建，可添加菜单项';
+          }
+          this.refreshMenuPreview();
+        }.bind(this)).catch(function (error) {
+          if (this.menuLocation === location) { this.menuCreateError = error.message || '菜单创建失败，请重试。'; }
+        }.bind(this)).finally(function () {
+          this.menuCreating = false;
+        }.bind(this));
+      },
+      menuEditorItemKey: function (item, index) {
+        return item && item.client_key ? item.client_key : (item && item.id ? 'item-' + item.id : 'new-' + index);
+      },
+      menuEditorItemType: function (item) {
+        if (!item) { return '菜单项'; }
+        if (item.type === 'custom') { return '自定义链接'; }
+        if (item.type === 'post_type') { return item.object === 'page' ? '页面' : '文章'; }
+        if (item.type === 'taxonomy') { return item.object === 'post_tag' ? '标签' : (item.object === 'post_format' ? '格式' : '分类目录'); }
+        if (item.type === 'post_type_archive') { return '内容归档'; }
+        return '菜单项';
+      },
+      menuEditorLinkField: function () {
+        return { id: 'menu_item_link', type: 'link', title: '链接', placeholder: 'https://example.com', internal_picker: true, picker_portal: true, internal_types: { post: '文章', page: '页面', category: '分类', post_tag: '标签' }, show_url: true, show_text: true, show_target: true, show_title: false, show_rel: true, show_page: false, preview: false };
+      },
+      menuEditorIcon: function (item) {
+        if (item && item.icon) { return item.icon; }
+        if (item && item.object === 'page') { return 'ri-file-list-2-line'; }
+        if (item && item.object === 'post_tag') { return 'ri-price-tag-3-line'; }
+        if (item && item.type === 'taxonomy') { return 'ri-folder-line'; }
+        return item && item.type === 'post_type' ? 'ri-article-line' : 'ri-link';
+      },
+      menuEditorIconSymbol: function (item) {
+        var icon = this.menuEditorIcon(item);
+        if (icon.charAt(0) === '#') { return icon; }
+        var symbol = document.getElementById(icon);
+        return symbol && String(symbol.tagName).toLowerCase() === 'symbol' ? '#' + icon : '';
+      },
+      menuEditorIconField: function () {
+        return { id: 'menu_item_icon', type: 'icon', library: 'remix', placeholder: '选择菜单图标', picker_portal: true };
+      },
+      setMenuEditorIcon: function (item, icon) {
+        item.icon = String(icon || '');
+        this.scheduleMenuEditorSave();
+      },
+      menuEditorIsDescendant: function (item, parentId) {
+        if (!Number(parentId)) { return false; }
+        var items = this.menuEditor.items || [], id = Number(item.parent || 0), seen = {};
+        while (id && !seen[id]) {
+          if (id === Number(parentId)) { return true; }
+          seen[id] = true;
+          var parent = items.find(function (entry) { return Number(entry.id || 0) === id; });
+          id = parent ? Number(parent.parent || 0) : 0;
+        }
+        return false;
+      },
+      menuEditorParentOptions: function (item) {
+        var options = [{ value: '0', label: '顶级菜单项' }];
+        (this.menuEditor.items || []).forEach(function (entry) {
+          if (entry !== item && Number(entry.id) > 0 && !this.menuEditorItemIsRemoved(entry) && !this.menuEditorIsDescendant(entry, item.id)) {
+            options.push({ value: String(entry.id), label: entry.title || '未命名菜单项' });
+          }
+        }.bind(this));
+        return options;
+      },
+      setMenuEditorParent: function (item, value) {
+        var parent = Number(value) > 0 ? (this.menuEditor.items || []).find(function (entry) { return Number(entry.id) === Number(value); }) : null;
+        if (parent) {
+          this.moveMenuEditorBlock(this.menuEditorItemKey(item), this.menuEditorItemKey(parent), 'inside');
+        } else if (!Number(value) && Number(item.parent)) {
+          var items = this.menuEditor.items, block = items.filter(function (entry) { return entry === item || this.menuEditorIsDescendant(entry, item.id); }.bind(this));
+          item.parent = 0;
+          this.menuEditor.items = items.filter(function (entry) { return block.indexOf(entry) === -1; }).concat(block);
+          this.scheduleMenuEditorSave();
+        }
+      },
+      moveMenuEditorBlock: function (sourceKey, targetKey, side) {
+        var items = this.menuEditor && this.menuEditor.items || [];
+        var source = items.find(function (item, i) { return this.menuEditorItemKey(item, i) === sourceKey; }.bind(this));
+        var target = items.find(function (item, i) { return this.menuEditorItemKey(item, i) === targetKey; }.bind(this));
+        if (!source || !target || source === target || this.menuEditorIsDescendant(target, source.id) || this.menuEditorItemIsRemoved(target)) { return; }
+        if (side === 'inside' && !Number(target.id)) { return; }
+        var block = [source].concat(items.filter(function (item) { return item !== source && this.menuEditorIsDescendant(item, source.id); }.bind(this)));
+        var remaining = items.filter(function (item) { return block.indexOf(item) === -1; });
+        var at = remaining.indexOf(target);
+        if (side !== 'before') {
+          remaining.forEach(function (item, i) { if (item === target || this.menuEditorIsDescendant(item, target.id)) { at = i + 1; } }.bind(this));
+        }
+        source.parent = side === 'inside' ? Number(target.id) : Number(target.parent || 0);
+        remaining.splice.apply(remaining, [at, 0].concat(block));
+        this.menuEditor.items = remaining;
+        this.scheduleMenuEditorSave();
+      },
+      startMenuEditorDrag: function (event, item, index) {
+        if (this.menuEditorSaving || (event.button !== undefined && event.button !== 0)) { return; }
+        this._menuDrag = { key: this.menuEditorItemKey(item, index), pointerId: event.pointerId, x: event.clientX, y: event.clientY, handle: event.currentTarget };
+        event.preventDefault();
+        event.currentTarget.focus({ preventScroll: true });
+        if (event.currentTarget.setPointerCapture) { event.currentTarget.setPointerCapture(event.pointerId); }
+      },
+      onMenuEditorPointerMove: function (event) {
+        var drag = this._menuDrag;
+        if (!drag || event.pointerId !== drag.pointerId) { return; }
+        if (!this.menuEditorDraggingKey && Math.abs(event.clientX - drag.x) + Math.abs(event.clientY - drag.y) < 5) { return; }
+        event.preventDefault();
+        this.menuEditorDraggingKey = drag.key;
+        if (this.menuAddOpen) { this.closeMenuAddPanel(false); }
+        if (this.menuSubmenuOpen) { this.closeMenuSubmenu(false); }
+        document.body.classList.add('eva-menu-dragging');
+        var list = this.$refs.menuEditorList, hit = document.elementFromPoint(event.clientX, event.clientY);
+        var row = hit && hit.closest('.eva-pb-menu-editor-item');
+        this.menuEditorDropKey = '';
+        if (row && list && list.contains(row)) {
+          var key = row.getAttribute('data-menu-key'), rect = row.getBoundingClientRect();
+          var items = this.menuEditor.items || [];
+          var target = items.find(function (item, i) { return this.menuEditorItemKey(item, i) === key; }.bind(this));
+          var source = items.find(function (item, i) { return this.menuEditorItemKey(item, i) === drag.key; }.bind(this));
+          if (target && source && target !== source && !this.menuEditorIsDescendant(target, source.id)) {
+            this.menuEditorDropKey = key;
+            this.menuEditorDropSide = event.clientX - drag.x > 28 && Number(target.id) ? 'inside' : (event.clientY < rect.top + rect.height / 2 ? 'before' : 'after');
+          }
+        }
+        var scroller = list && list.closest('.eva-pb-left');
+        if (scroller) {
+          var bounds = scroller.getBoundingClientRect();
+          if (event.clientY < bounds.top + 36) { scroller.scrollTop -= 14; }
+          if (event.clientY > bounds.bottom - 36) { scroller.scrollTop += 14; }
+        }
+      },
+      onMenuEditorPointerUp: function (event) {
+        if (!this._menuDrag || event.pointerId !== this._menuDrag.pointerId) { return; }
+        if (this.menuEditorDraggingKey && this.menuEditorDropKey) { this.moveMenuEditorBlock(this.menuEditorDraggingKey, this.menuEditorDropKey, this.menuEditorDropSide); }
+        this.cancelMenuEditorDrag();
+      },
+      cancelMenuEditorDrag: function () {
+        var drag = this._menuDrag;
+        if (drag && drag.handle && drag.handle.hasPointerCapture && drag.handle.hasPointerCapture(drag.pointerId)) { drag.handle.releasePointerCapture(drag.pointerId); }
+        this._menuDrag = null;
+        this.menuEditorDraggingKey = '';
+        this.menuEditorDropKey = '';
+        this.menuEditorDropSide = '';
+        document.body.classList.remove('eva-menu-dragging');
+      },
+      keyboardMenuEditorMove: function (item, delta) {
+        var siblings = (this.menuEditor.items || []).filter(function (entry) { return Number(entry.parent || 0) === Number(item.parent || 0) && !this.menuEditorItemIsRemoved(entry); }.bind(this));
+        var target = siblings[siblings.indexOf(item) + delta];
+        if (target) { this.moveMenuEditorBlock(this.menuEditorItemKey(item), this.menuEditorItemKey(target), delta < 0 ? 'before' : 'after'); }
+      },
+      menuAddGroups: function () {
+        return [
+          { id: 'custom', label: '自定义链接', icon: 'ri-link' },
+          { id: 'page', label: '页面', icon: 'ri-file-list-2-line' },
+          { id: 'post', label: '文章', icon: 'ri-article-line' },
+          { id: 'category', label: '分类目录', icon: 'ri-folder-line' },
+          { id: 'post_tag', label: '标签', icon: 'ri-price-tag-3-line' }
+        ];
+      },
+      openMenuAddPanel: function (parent) {
+        if (!this.menuEditor || !Number(this.menuEditor.menu_id)) { return; }
+        parent = parent && Number(parent.id) > 0 ? parent : this.menuEditorFind(this.menuEditorScopeKey);
+        this.menuAddParentKey = parent ? this.menuEditorItemKey(parent) : '';
+        this.closeMenuSubmenu(false);
+        this.menuAddOpen = true;
+        this.menuAddPosition.ready = false;
+        this.menuAddExpanded = {};
+        this.menuAddExpanded[this.menuAddType] = true;
+        if (this.menuAddType !== 'custom') { this.loadMenuAddItems(this.menuAddType); }
+        this.$nextTick(function () {
+          this.positionMenuAddPanel();
+          if (!this.menuAddOpen) { return; }
+          this.startMenuAddTracking();
+          var panel = this.$refs.menuAddPanel;
+          var input = panel && panel.querySelector(this.menuAddType === 'custom' ? 'input[type="url"]' : '.eva-pb-menu-add-editor .eva-pb-menu-add-search input');
+          input = input || this.$refs.menuAddSearch;
+          if (input) { input.focus({ preventScroll: true }); }
+        }.bind(this));
+      },
+      toggleMenuAddPanel: function () {
+        if (this.menuAddOpen) { this.closeMenuAddPanel(); } else { this.openMenuAddPanel(); }
+      },
+      closeMenuAddPanel: function (restoreFocus) {
+        this.menuAddOpen = false;
+        this.menuAddPosition.ready = false;
+        this.stopMenuAddTracking();
+        this.pauseMenuAddRequests();
+        if (restoreFocus !== false) { this.$nextTick(function () { if (this.$refs.menuAddTrigger) { this.$refs.menuAddTrigger.focus({ preventScroll: true }); } }.bind(this)); }
+      },
+      toggleMenuAddGroup: function (type) {
+        this.selectMenuAddType(type);
+      },
+      selectMenuAddType: function (type) {
+        if (!this.menuAddGroups().some(function (group) { return group.id === type; })) { return; }
+        this.menuAddType = type;
+        this.menuAddExpanded = {};
+        this.menuAddExpanded[type] = true;
+        if (type !== 'custom') { this.loadMenuAddItems(type); }
+      },
+      moveMenuAddType: function (delta) {
+        var groups = this.menuAddFilteredGroups;
+        if (!groups.length) { return; }
+        var at = groups.findIndex(function (group) { return group.id === this.menuAddType; }.bind(this));
+        var next = groups[(at + delta + groups.length) % groups.length];
+        this.selectMenuAddType(next.id);
+        this.$nextTick(function () {
+          var panel = this.$refs.menuAddPanel, button = panel && panel.querySelector('[data-menu-type="' + next.id + '"]');
+          if (button) { button.focus(); }
+        }.bind(this));
+      },
+      menuAddTabIndex: function (type) {
+        var groups = this.menuAddFilteredGroups;
+        if (type === this.menuAddType) { return 0; }
+        if (groups.some(function (group) { return group.id === this.menuAddType; }.bind(this))) { return -1; }
+        return groups.length && groups[0].id === type ? 0 : -1;
+      },
+      menuAddDescription: function (type) {
+        return type === 'custom' ? '添加任意站内或站外链接' : '选择' + this.menuAddGroups().find(function (group) { return group.id === type; }).label + '，添加到左侧菜单';
+      },
+      menuAddPanelStyle: function () {
+        var p = this.menuAddPosition;
+        return { left: p.left + 'px', top: p.top + 'px', width: p.width + 'px', height: p.height + 'px', visibility: p.ready ? 'visible' : 'hidden', '--eva-menu-anchor-y': p.arrow + 'px', '--eva-menu-anchor-gap': p.gap + 'px' };
+      },
+      menuFloatingPosition: function (trigger, desiredWidth, desiredHeight, minimumWidth) {
+        var body = this.$el && this.$el.querySelector('.eva-pb-body');
+        if (!trigger || !body) { return null; }
+        var bounds = body.getBoundingClientRect(), anchor = trigger.getBoundingClientRect();
+        var leftEdge = Math.max(0, bounds.left) + 16, rightEdge = Math.min(window.innerWidth, bounds.right) - 16;
+        var topEdge = Math.max(0, bounds.top) + 16, bottomEdge = Math.min(window.innerHeight, bounds.bottom) - 16;
+        if (anchor.bottom < topEdge || anchor.top > bottomEdge || rightEdge <= leftEdge || bottomEdge - topEdge < 160) { return null; }
+        var sidebar = trigger.closest('.eva-pb-left'), rightStart = Math.max(anchor.right, sidebar ? sidebar.getBoundingClientRect().right : anchor.right) + 24;
+        var availableRight = rightEdge - rightStart, availableLeft = anchor.left - 24 - leftEdge;
+        var side = availableRight >= minimumWidth ? 'right' : (availableLeft >= minimumWidth ? 'left' : 'overlay');
+        var width = Math.min(desiredWidth, side === 'right' ? availableRight : (side === 'left' ? availableLeft : rightEdge - leftEdge));
+        var height = Math.min(desiredHeight, bottomEdge - topEdge);
+        var left = side === 'right' ? rightStart : (side === 'left' ? anchor.left - 24 - width : leftEdge + (rightEdge - leftEdge - width) / 2);
+        var center = anchor.top + anchor.height / 2;
+        var top = Math.max(topEdge, Math.min(center - 72, bottomEdge - height));
+        return { left: left - bounds.left, top: top - bounds.top, width: width, height: height, arrow: Math.max(18, Math.min(center - top, height - 18)), gap: Math.max(8, side === 'right' ? left - anchor.right - 8 : anchor.left - left - width - 8), side: side, ready: true };
+      },
+      positionMenuAddPanel: function () {
+        if (!this.menuAddOpen || !this.$refs.menuAddPanel || !this.$refs.menuAddTrigger) { return; }
+        var position = this.menuFloatingPosition(this.$refs.menuAddTrigger, 427, 373, 280);
+        if (position) { this.menuAddPosition = position; } else { this.closeMenuAddPanel(false); }
+      },
+      queueMenuAddPosition: function () {
+        if ((!this.menuAddOpen && !this.menuSubmenuOpen) || this._menuAddPositionFrame) { return; }
+        this._menuAddPositionFrame = window.requestAnimationFrame(function () { this._menuAddPositionFrame = 0; this.positionMenuAddPanel(); this.positionMenuSubmenuPanel(); }.bind(this));
+      },
+      onMenuAddOutside: function (event) {
+        if (!this.menuAddOpen && !this.menuSubmenuOpen) { return; }
+        var panel = this.menuSubmenuOpen ? this.$refs.menuSubmenuPanel : this.$refs.menuAddPanel, trigger = this.menuSubmenuOpen ? this._menuSubmenuAnchor : this.$refs.menuAddTrigger;
+        if ((panel && panel.contains(event.target)) || (trigger && trigger.contains(event.target))) { return; }
+        this.closeMenuAddPanel(false);
+        this.closeMenuSubmenu(false);
+      },
+      onMenuAddKeyDown: function (event) {
+        if ((this.menuAddOpen || this.menuSubmenuOpen) && event.key === 'Escape' && !event.defaultPrevented) {
+          event.preventDefault();
+          if (this.menuSubmenuOpen) { this.closeMenuSubmenu(); } else { this.closeMenuAddPanel(); }
+        }
+      },
+      onMenuAddWindowBlur: function () {
+        if (this._menuAddBlurTimer) { clearTimeout(this._menuAddBlurTimer); }
+        this._menuAddBlurTimer = setTimeout(function () {
+          var active = document.activeElement;
+          if ((this.menuAddOpen || this.menuSubmenuOpen) && active && active.tagName === 'IFRAME') {
+            var panel = this.menuSubmenuOpen ? this.$refs.menuSubmenuPanel : this.$refs.menuAddPanel;
+            if (panel && !panel.contains(active)) { this.closeMenuAddPanel(false); this.closeMenuSubmenu(false); }
+          }
+        }.bind(this), 0);
+      },
+      startMenuAddTracking: function () {
+        if (!this.$el || this._menuAddTracking || (!this.menuAddOpen && !this.menuSubmenuOpen)) { return; }
+        this._menuAddTracking = true;
+        this._menuAddOutsideHandler = this.onMenuAddOutside.bind(this);
+        this._menuAddKeyHandler = this.onMenuAddKeyDown.bind(this);
+        this._menuAddLayoutHandler = this.queueMenuAddPosition.bind(this);
+        this._menuAddBlurHandler = this.onMenuAddWindowBlur.bind(this);
+        document.addEventListener('pointerdown', this._menuAddOutsideHandler, true);
+        document.addEventListener('keydown', this._menuAddKeyHandler);
+        document.addEventListener('scroll', this._menuAddLayoutHandler, true);
+        window.addEventListener('resize', this._menuAddLayoutHandler);
+        window.addEventListener('blur', this._menuAddBlurHandler);
+        if (typeof ResizeObserver !== 'undefined') {
+          this._menuAddResizeObserver = new ResizeObserver(this._menuAddLayoutHandler);
+          var body = this.$el.querySelector('.eva-pb-body'), card = this.$refs.menuAddTrigger && this.$refs.menuAddTrigger.closest('.eva-pb-menu-location-card');
+          if (body) { this._menuAddResizeObserver.observe(body); }
+          if (card) { this._menuAddResizeObserver.observe(card); }
+        }
+      },
+      stopMenuAddTracking: function () {
+        if (this._menuAddTracking) {
+          document.removeEventListener('pointerdown', this._menuAddOutsideHandler, true);
+          document.removeEventListener('keydown', this._menuAddKeyHandler);
+          document.removeEventListener('scroll', this._menuAddLayoutHandler, true);
+          window.removeEventListener('resize', this._menuAddLayoutHandler);
+          window.removeEventListener('blur', this._menuAddBlurHandler);
+        }
+        this._menuAddTracking = false;
+        if (this._menuAddResizeObserver) { this._menuAddResizeObserver.disconnect(); this._menuAddResizeObserver = null; }
+        if (this._menuAddPositionFrame) { window.cancelAnimationFrame(this._menuAddPositionFrame); this._menuAddPositionFrame = 0; }
+        if (this._menuAddBlurTimer) { clearTimeout(this._menuAddBlurTimer); this._menuAddBlurTimer = null; }
+      },
+      queueMenuAddSearch: function (type) {
+        var state = this.menuAddRequestState(), timerKey = type || 'all';
+        if (!type) { this.menuAddQueries = {}; }
+        var types = type ? [type] : this.menuAddGroups().filter(function (group) { return group.id !== 'custom'; }).map(function (group) { return group.id; });
+        types.forEach(function (id) {
+          state.keys[id] = null;
+          if (state.queued[id]) { delete state.pending[state.queued[id].key]; delete state.queued[id]; }
+          if (state.searchTimers[id]) { clearTimeout(state.searchTimers[id]); delete state.searchTimers[id]; }
+          this.menuAddLoading[id] = true;
+        }.bind(this));
+        this.abortUnusedMenuAddBatches();
+        if (state.searchTimers[timerKey]) { clearTimeout(state.searchTimers[timerKey]); }
+        state.searchTimers[timerKey] = setTimeout(function () {
+          delete state.searchTimers[timerKey];
+          if (type) { this.loadMenuAddItems(type); return; }
+          this.menuAddGroups().forEach(function (group) {
+            if (group.id === 'custom') { return; }
+            if (this.menuAddSearch.trim()) { this.menuAddExpanded[group.id] = true; }
+            if (this.menuAddExpanded[group.id]) { this.loadMenuAddItems(group.id); }
+          }.bind(this));
+        }.bind(this), 180);
+      },
+      menuAddRequestState: function () {
+        if (!this._menuAddState) { this._menuAddState = { cache: {}, pending: {}, queued: {}, keys: {}, batches: [], searchTimers: {}, timer: null, disposed: false }; }
+        return this._menuAddState;
+      },
+      menuAddCacheKey: function (type, query) { return JSON.stringify([type, String(query || '').trim()]); },
+      menuAddCached: function (type, query) {
+        var state = this.menuAddRequestState(), key = this.menuAddCacheKey(type, query), entry = state.cache[key];
+        if (entry && Date.now() - entry.time < 30000) { return entry; }
+        delete state.cache[key];
+        return null;
+      },
+      cacheMenuAddItems: function (type, query, items) {
+        var state = this.menuAddRequestState();
+        state.cache[this.menuAddCacheKey(type, query)] = { time: Date.now(), items: items };
+        var keys = Object.keys(state.cache);
+        if (keys.length > 60) {
+          keys.sort(function (a, b) { return state.cache[a].time - state.cache[b].time; });
+          keys.slice(0, keys.length - 60).forEach(function (key) { delete state.cache[key]; });
+        }
+      },
+      abortUnusedMenuAddBatches: function () {
+        var state = this.menuAddRequestState();
+        state.batches.forEach(function (batch) {
+          if (batch.entries.some(function (entry) { return state.keys[entry.type] === entry.key; })) { return; }
+          batch.controller.abort();
+          batch.entries.forEach(function (entry) { if (state.pending[entry.key] === batch) { delete state.pending[entry.key]; } });
+        });
+      },
+      pauseMenuAddRequests: function () {
+        var state = this._menuAddState;
+        if (!state) { return; }
+        if (state.timer) { clearTimeout(state.timer); }
+        Object.keys(state.searchTimers).forEach(function (key) { clearTimeout(state.searchTimers[key]); });
+        state.timer = null;
+        state.searchTimers = {};
+        state.keys = {};
+        state.queued = {};
+        state.pending = {};
+        state.batches.forEach(function (batch) { batch.controller.abort(); });
+        this.menuAddLoading = {};
+      },
+      stopMenuAddRequests: function () {
+        this.pauseMenuAddRequests();
+        if (this._menuAddState) { this._menuAddState.disposed = true; }
+      },
+      loadMenuAddItems: function (type) {
+        if (!cfg.ajaxUrl) { this.menuAddErrors[type] = '资源接口不可用'; return; }
+        var query = String(this.menuAddQueries[type] || this.menuAddSearch || '').trim();
+        var state = this.menuAddRequestState(), key = this.menuAddCacheKey(type, query), cached = this.menuAddCached(type, query);
+        if (state.disposed) { return; }
+        state.keys[type] = key;
+        this.abortUnusedMenuAddBatches();
+        var previous = state.queued[type];
+        if (previous && previous.key !== key) { delete state.pending[previous.key]; delete state.queued[type]; }
+        this.menuAddErrors[type] = '';
+        if (cached) { this.menuAddItems[type] = cached.items; this.menuAddLoading[type] = false; return; }
+        this.menuAddLoading[type] = true;
+        if (state.pending[key]) { return; }
+        var entry = { type: type, query: query, key: key };
+        state.queued[type] = entry;
+        state.pending[key] = entry;
+        if (!state.timer) { state.timer = setTimeout(this.fetchMenuAddBatch, 0); }
+      },
+      fetchMenuAddBatch: function () {
+        var state = this.menuAddRequestState();
+        state.timer = null;
+        var entries = Object.keys(state.queued).map(function (type) { return state.queued[type]; });
+        state.queued = {};
+        if (state.disposed || !entries.length) { return; }
+        var queries = {};
+        entries.forEach(function (entry) { queries[entry.type] = entry.query; });
+        var batch = { entries: entries, controller: new AbortController() };
+        state.batches.push(batch);
+        entries.forEach(function (entry) { state.pending[entry.key] = batch; });
+        var fd = new FormData();
+        fd.append('action', 'eva_fw_builder_menu_resources');
+        fd.append('nonce', cfg.nonce || '');
+        fd.append('queries', JSON.stringify(queries));
+        fetch(cfg.ajaxUrl, { method: 'POST', credentials: 'same-origin', body: fd, signal: batch.controller.signal }).then(function (response) { return response.json(); }).then(function (json) {
+          if (state.disposed || batch.controller.signal.aborted) { return; }
+          if (!json || !json.success || !json.data || !json.data.resources) { throw new Error('菜单项读取失败'); }
+          entries.forEach(function (entry) {
+            var items = json.data.resources[entry.type];
+            if (!Array.isArray(items)) { throw new Error('菜单项读取失败'); }
+            this.cacheMenuAddItems(entry.type, entry.query, items);
+            if (state.keys[entry.type] === entry.key) { this.menuAddItems[entry.type] = items; }
+          }.bind(this));
+        }.bind(this)).catch(function () {
+          if (state.disposed || batch.controller.signal.aborted) { return; }
+          entries.forEach(function (entry) { if (state.keys[entry.type] === entry.key) { this.menuAddErrors[entry.type] = '读取失败，请重新展开重试'; } }.bind(this));
+        }.bind(this)).finally(function () {
+          state.batches = state.batches.filter(function (entry) { return entry !== batch; });
+          entries.forEach(function (entry) {
+            if (state.pending[entry.key] === batch) {
+              delete state.pending[entry.key];
+              if (!state.disposed && state.keys[entry.type] === entry.key) { this.menuAddLoading[entry.type] = false; }
+            }
+          }.bind(this));
+        }.bind(this));
+      },
+      menuAddIsSelected: function (type, item) {
+        return (this.menuAddSelected[type] || []).some(function (entry) { return String(entry.value) === String(item.value); });
+      },
+      menuAddResourceMeta: function (resource) {
+        var statuses = { publish: '已发布', draft: '草稿', private: '私密', pending: '待审核', future: '定时发布' };
+        return statuses[resource.meta] || resource.meta || '';
+      },
+      toggleMenuAddSelected: function (type, item, checked) {
+        var selected = (this.menuAddSelected[type] || []).filter(function (entry) { return String(entry.value) !== String(item.value); });
+        if (checked) { selected.push(item); }
+        this.menuAddSelected[type] = selected;
+      },
+      menuAddAllSelected: function (type) {
+        var items = this.menuAddItems[type] || [];
+        return items.length > 0 && items.every(function (item) { return this.menuAddIsSelected(type, item); }.bind(this));
+      },
+      toggleMenuAddAll: function (type, checked) {
+        (this.menuAddItems[type] || []).forEach(function (item) { this.toggleMenuAddSelected(type, item, checked); }.bind(this));
+      },
+      menuAddCustomField: function () {
+        return { id: 'new_menu_link', type: 'link', internal_picker: false, show_url: true, show_text: true, show_target: true, show_rel: false, show_title: false, show_page: false, preview: false, placeholder: 'https://' };
+      },
+      addMenuEditorItems: function (items) {
+        if (!this.menuEditor || !items.length) { return false; }
+        var parent = this.menuEditorFind(this.menuAddParentKey), parentId = parent ? Number(parent.id) : 0;
+        if (this.menuAddParentKey && !parentId) { this.menuAddErrors[this.menuAddType] = '父菜单项已移除，请重新选择'; return false; }
+        if (this.menuEditor.items.length + items.length > 500) { this.menuEditorStatus = '菜单最多支持 500 个项目'; return false; }
+        var added = items.map(function (item) {
+          var key = 'new-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 9);
+          return Object.assign({ id: 0, title: '', url: '', icon: '', type: 'custom', object: 'custom', object_id: 0, resource_type: '', resource_id: 0, status: 'publish', classes: '', target: '_self', rel: '', attr_title: '', client_key: key }, item, { parent: parentId });
+        }.bind(this));
+        var at = this.menuEditor.items.length;
+        if (parent) {
+          at = this.menuEditor.items.indexOf(parent) + 1;
+          this.menuEditor.items.forEach(function (item, index) { if (this.menuEditorIsDescendant(item, parentId)) { at = index + 1; } }.bind(this));
+        }
+        this.menuEditor.items.splice.apply(this.menuEditor.items, [at, 0].concat(added));
+        this.scheduleMenuEditorSave();
+        return true;
+      },
+      addMenuCustomLink: function () {
+        var value = this.menuAddCustom, url = String(value.url || '').trim(), title = String(value.text || '').trim();
+        if (!title || !url || !/^(https?:|mailto:|tel:|#)/i.test(url)) { this.menuAddErrors.custom = '请填写链接文字和有效的链接地址'; return; }
+        if (this.addMenuEditorItems([{ title: title, url: url, target: value.target || '_self' }])) {
+          this.menuAddCustom = { url: '', text: '', target: '_self', rel: '' };
+          this.menuAddErrors.custom = '';
+        }
+      },
+      addMenuResources: function (type) {
+        var selected = this.menuAddSelected[type] || [];
+        var isTerm = ['category', 'post_tag', 'post_format'].indexOf(type) !== -1;
+        var items = selected.map(function (resource) { return { title: resource.label, url: resource.url, type: isTerm ? 'taxonomy' : 'post_type', object: type, object_id: Number(resource.value), resource_type: type, resource_id: Number(resource.value) }; });
+        if (this.addMenuEditorItems(items)) { this.menuAddSelected[type] = []; }
+      },
+      menuEditorLinkValue: function (item) {
+        var resourceType = item.resource_type || '';
+        var resourceId = Number(item.resource_id || 0);
+        if (!resourceType && ((item.type === 'post_type' && ['post', 'page'].indexOf(item.object) !== -1) || (item.type === 'taxonomy' && ['category', 'post_tag'].indexOf(item.object) !== -1))) {
+          resourceType = item.object || '';
+          resourceId = Number(item.object_id || 0);
+        }
+        return { url: item.url || '', text: item.title || '', target: item.target || '_self', rel: item.rel || '', title: item.attr_title || '', page: resourceType === 'page' ? resourceId : 0, resource_type: resourceType, resource_id: resourceId };
+      },
+      setMenuEditorLink: function (item, value) {
+        if (!item || !value) { return; }
+        item.url = String(value.url || '');
+        item.title = String(value.text || '');
+        item.target = String(value.target || '_self');
+        item.rel = String(value.rel || '');
+        item.attr_title = String(value.title || '');
+        item.resource_type = String(value.resource_type || '');
+        item.resource_id = Number(value.resource_id || 0);
+        this.scheduleMenuEditorSave();
+      },
+      menuEditorItemDepth: function (item) {
+        var items = this.menuEditor && Array.isArray(this.menuEditor.items) ? this.menuEditor.items : [];
+        var parentId = Number(item && item.parent || 0);
+        var seen = {};
+        var depth = 0;
+        while (parentId > 0 && depth < 8 && !seen[parentId]) {
+          seen[parentId] = true;
+          var parentItem = null;
+          for (var i = 0; i < items.length; i += 1) {
+            if (Number(items[i].id || 0) === parentId) { parentItem = items[i]; break; }
+          }
+          if (!parentItem) { break; }
+          depth += 1;
+          parentId = Number(parentItem.parent || 0);
+        }
+        return depth;
+      },
+      menuEditorIndent: function (item) {
+        var depth = this.menuEditorItemDepth(item);
+        return Math.max(0, depth - 1) * 10 + 'px';
+      },
+      menuEditorFind: function (key) {
+        if (!key || !this.menuEditor) { return null; }
+        return (this.menuEditor.items || []).find(function (item, index) { return this.menuEditorItemKey(item, index) === key && !this.menuEditorItemIsRemoved(item); }.bind(this)) || null;
+      },
+      menuEditorChildren: function (parentId) {
+        return (this.menuEditor && this.menuEditor.items || []).filter(function (item) { return Number(item.parent || 0) === Number(parentId || 0) && !this.menuEditorItemIsRemoved(item); }.bind(this));
+      },
+      menuEditorItemChildCount: function (item) {
+        if (!item || !Number(item.id || 0) || !this.menuEditor || !Array.isArray(this.menuEditor.items)) { return 0; }
+        return this.menuEditorChildren(item.id).length;
+      },
+      menuEditorItemHasChildren: function (item) {
+        return this.menuEditorItemChildCount(item) > 0;
+      },
+      openMenuSubmenu: function (item, event) {
+        if (!item || !Number(item.id) || this.menuEditorItemIsRemoved(item)) { return; }
+        var key = this.menuEditorItemKey(item);
+        if (this.menuSubmenuOpen && this.menuSubmenuAnchorKey === key) { this.closeMenuSubmenu(); return; }
+        this.closeMenuAddPanel(false);
+        this.menuSubmenuAnchorKey = key;
+        this.menuSubmenuPath = [key];
+        this.menuSubmenuQuery = '';
+        this._menuSubmenuAnchor = event && event.currentTarget;
+        this.menuSubmenuOpen = true;
+        this.menuSubmenuPosition.ready = false;
+        this.$nextTick(function () {
+          this.positionMenuSubmenuPanel();
+          if (!this.menuSubmenuOpen) { return; }
+          this.startMenuAddTracking();
+          if (this.$refs.menuSubmenuSearch) { this.$refs.menuSubmenuSearch.focus({ preventScroll: true }); }
+        }.bind(this));
+      },
+      enterMenuSubmenu: function (item) {
+        if (!item || !Number(item.id) || this.menuEditorItemIsRemoved(item)) { return; }
+        var key = this.menuEditorItemKey(item);
+        if (this.menuSubmenuPath.indexOf(key) !== -1) { return; }
+        this.menuSubmenuPath = this.menuSubmenuPath.concat(key);
+        this.menuSubmenuQuery = '';
+      },
+      backMenuSubmenu: function () {
+        if (this.menuSubmenuPath.length > 1) { this.menuSubmenuPath = this.menuSubmenuPath.slice(0, -1); this.menuSubmenuQuery = ''; }
+      },
+      closeMenuSubmenu: function (restoreFocus) {
+        var anchor = this._menuSubmenuAnchor;
+        this.menuSubmenuOpen = false;
+        this.menuSubmenuPath = [];
+        this.menuSubmenuAnchorKey = '';
+        this.menuSubmenuQuery = '';
+        this._menuSubmenuAnchor = null;
+        if (!this.menuAddOpen) { this.stopMenuAddTracking(); }
+        if (restoreFocus !== false && anchor) { this.$nextTick(function () { if (anchor.isConnected) { anchor.focus({ preventScroll: true }); } }); }
+      },
+      positionMenuSubmenuPanel: function () {
+        if (!this.menuSubmenuOpen || !this.$refs.menuSubmenuPanel || !this._menuSubmenuAnchor) { return; }
+        var parent = this.menuEditorFind(this.menuSubmenuPath[this.menuSubmenuPath.length - 1]);
+        if (!parent || !this._menuSubmenuAnchor.isConnected) { this.closeMenuSubmenu(false); return; }
+        var count = this.menuEditorChildren(parent.id).length;
+        var anchor = this._menuSubmenuAnchor.closest('.eva-pb-menu-editor-item') || this._menuSubmenuAnchor;
+        var position = this.menuFloatingPosition(anchor, 260, Math.min(600, Math.max(270, 180 + count * 34)), 240);
+        if (position) { this.menuSubmenuPosition = position; } else { this.closeMenuSubmenu(false); }
+      },
+      menuSubmenuPanelStyle: function () {
+        var p = this.menuSubmenuPosition;
+        return { left: p.left + 'px', top: p.top + 'px', width: p.width + 'px', height: p.height + 'px', visibility: p.ready ? 'visible' : 'hidden', '--eva-menu-anchor-y': p.arrow + 'px', '--eva-menu-anchor-gap': p.gap + 'px' };
+      },
+      manageMenuSubmenu: function () {
+        var parent = this.menuEditorFind(this.menuSubmenuPath[this.menuSubmenuPath.length - 1]);
+        if (!parent) { return; }
+        this.menuEditorScopeKey = this.menuEditorItemKey(parent);
+        this.menuEditorSelectedItem = '';
+        this.closeMenuSubmenu(false);
+      },
+      leaveMenuEditorScope: function () {
+        var current = this.menuEditorFind(this.menuEditorScopeKey);
+        var parent = current && Number(current.parent) > 0 ? (this.menuEditor.items || []).find(function (item) { return Number(item.id) === Number(current.parent); }) : null;
+        this.menuEditorScopeKey = parent ? this.menuEditorItemKey(parent) : '';
+        this.menuEditorSelectedItem = '';
+        this.closeMenuSubmenu(false);
+      },
+      editMenuSubmenuItem: function (item) {
+        if (this.menuEditorItemHasChildren(item)) { this.enterMenuSubmenu(item); return; }
+        this.closeMenuSubmenu(false);
+        this.selectMenuEditorItem(item, this.menuEditor.items.indexOf(item));
+      },
+      menuEditorItemHidden: function (item) {
+        var parent = this.menuEditorFind(this.menuEditorScopeKey);
+        return !item || Number(item.parent || 0) !== Number(parent ? parent.id : 0) || this.menuEditorItemIsRemoved(item);
+      },
+      selectMenuEditorItem: function (item, index) {
+        this.menuEditorSelectedItem = this.menuEditorItemKey(item, index);
+        this.$nextTick(function () {
+          var panel = this.$refs.menuItemEditor;
+          if (panel) { panel.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
+        }.bind(this));
+      },
+      moveMenuEditorItem: function (index, delta) {
+        if (!this.menuEditor || !Array.isArray(this.menuEditor.items)) { return; }
+        var next = index + delta;
+        if (next < 0 || next >= this.menuEditor.items.length) { return; }
+        var items = this.menuEditor.items.slice();
+        var moved = items.splice(index, 1)[0];
+        items.splice(next, 0, moved);
+        this.menuEditor.items = items;
+        this.scheduleMenuEditorSave();
+      },
+      addCustomMenuItem: function () {
+        if (!this.menuEditor || !Number(this.menuEditor.menu_id || 0)) { return; }
+        var key = 'new-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7);
+        this.menuEditor.items.push({ id: 0, parent: 0, title: '', url: '', type: 'custom', object: 'custom', object_id: 0, resource_type: '', resource_id: 0, status: 'publish', classes: '', target: '_self', rel: '', attr_title: '', client_key: key });
+        this.selectMenuEditorItem(this.menuEditor.items[this.menuEditor.items.length - 1], this.menuEditor.items.length - 1);
+        this.menuEditorStatus = '填写名称和链接后自动保存';
+      },
+      menuEditorItemIsRemoved: function (item) {
+        var id = Number(item && item.id || 0);
+        return id > 0 && this.menuEditorRemovedIds.indexOf(id) !== -1;
+      },
+      removeMenuEditorItem: function (index) {
+        if (!this.menuEditor || !Array.isArray(this.menuEditor.items)) { return; }
+        var item = this.menuEditor.items[index];
+        if (!item) { return; }
+        var itemId = Number(item.id || 0);
+        if (itemId > 0 && !window.confirm('将“' + (item.title || '菜单项') + '”移入回收站并从菜单中移除？之后可以恢复。')) { return; }
+        if (this.menuEditorSelectedItem === this.menuEditorItemKey(item, index)) { this.menuEditorSelectedItem = ''; }
+        if (itemId > 0) {
+          if (this.menuEditorRemovedIds.indexOf(itemId) === -1) { this.menuEditorRemovedIds.push(itemId); }
+        } else {
+          this.menuEditor.items.splice(index, 1);
+        }
+        this.scheduleMenuEditorSave();
+      },
+      scheduleMenuEditorSave: function (delay) {
+        if (!this.menuEditor || !Number(this.menuEditor.menu_id || 0)) { return; }
+        this.menuEditorSaveSeq += 1;
+        this.menuEditorStatus = '有未保存的修改';
+        if (this.menuEditorSaveTimer) { clearTimeout(this.menuEditorSaveTimer); }
+        if (this.menuEditorSaving) {
+          this.menuEditorSaveQueued = true;
+          return;
+        }
+        this.menuEditorSaveTimer = setTimeout(this.saveMenuEditor, typeof delay === 'number' ? delay : 850);
+      },
+      saveMenuEditor: function () {
+        if (!this.menuEditor || !Number(this.menuEditor.menu_id || 0) || !cfg.ajaxUrl) { return; }
+        if (this.menuEditorSaving) { this.menuEditorSaveQueued = true; return; }
+        this._menuEditorCache = {};
+        if (this.menuEditorSaveTimer) { clearTimeout(this.menuEditorSaveTimer); this.menuEditorSaveTimer = null; }
+        var version = this.menuEditorSaveSeq;
+        var local = clone(this.menuEditor) || {};
+        var removedIds = (this.menuEditorRemovedIds || []).slice();
+        var items = (local.items || []).filter(function (item) {
+          var id = Number(item.id || 0);
+          if (id > 0) { return removedIds.indexOf(id) === -1; }
+          return String(item.title || '').trim() !== '' && String(item.url || '').trim() !== '';
+        }).map(function (item) {
+          return {
+            id: Number(item.id || 0), parent: Number(item.parent || 0), title: item.title || '', url: item.url || '', icon: item.icon || '',
+            type: item.type || 'custom', object: item.object || 'custom', object_id: Number(item.object_id || 0),
+            resource_type: item.resource_type || '', resource_id: Number(item.resource_id || 0),
+            status: item.status || 'publish', classes: item.classes || '', target: item.target || '',
+            attr_title: item.attr_title || '', rel: item.rel || '', description: item.description || '', client_key: item.client_key || ''
+          };
+        });
+        var fd = new FormData();
+        fd.append('action', 'eva_fw_builder_menu_save');
+        fd.append('nonce', cfg.nonce || '');
+        fd.append('location_id', String(local.location_id || this.menuLocation));
+        fd.append('menu_id', String(local.menu_id));
+        fd.append('menu_name', String(local.menu_name || ''));
+        fd.append('items', JSON.stringify(items));
+        fd.append('removed_ids', JSON.stringify(removedIds));
+        fd.append('assigned_locations', JSON.stringify((local.locations || []).filter(function (location) { return !!location.checked; }).map(function (location) { return location.id; })));
+        this.menuEditorSaving = true;
+        this.menuEditorError = '';
+        this.menuEditorStatus = '正在保存…';
+        fetch(cfg.ajaxUrl, { method: 'POST', credentials: 'same-origin', body: fd }).then(function (res) {
+          return res.json();
+        }).then(function (json) {
+          if (!json || !json.success || !json.data) {
+            throw new Error((json && json.data && json.data.message) || '菜单保存失败');
+          }
+          var saved = json.data;
+          this._menuEditorCache = {};
+          if (String(saved.location_id || '') !== String(this.menuLocation || '')) {
+            this.refreshMenuPreview();
+            return;
+          }
+          saved.items = (saved.items || []).map(function (item) {
+            item.client_key = item.client_key || ('item-' + String(item.id));
+            return item;
+          });
+          var current = this.menuEditor;
+          var currentItems = current && Array.isArray(current.items) ? current.items : [];
+          var incompleteDrafts = currentItems.filter(function (item) {
+            return !Number(item.id || 0) && (String(item.title || '').trim() === '' || String(item.url || '').trim() === '');
+          });
+          if (version === this.menuEditorSaveSeq) {
+            saved.items = saved.items.concat(incompleteDrafts);
+            this.menuEditor = saved;
+            this.menuEditorRemovedIds = [];
+            this.menuEditorStatus = incompleteDrafts.length ? '填写名称和链接后会添加新菜单项' : '已保存，中间预览已更新';
+          } else if (current) {
+            this.menuEditorRemovedIds = this.menuEditorRemovedIds.filter(function (id) { return removedIds.indexOf(Number(id)) === -1; });
+            var savedByKey = {};
+            saved.items.forEach(function (item) { savedByKey[item.client_key] = item; });
+            current.items = currentItems.filter(function (item) { return !Number(item.id || 0) || removedIds.indexOf(Number(item.id)) === -1; }).map(function (item) {
+              var serverItem = savedByKey[item.client_key];
+              return serverItem ? Object.assign({}, serverItem, item, { id: serverItem.id }) : item;
+            });
+            current.menu_id = saved.menu_id;
+            this.menuEditorStatus = '正在保存最新修改…';
+          }
+          if (Array.isArray(saved.menu_location_data)) { this.menuLocationDataOverride = saved.menu_location_data; }
+          this.refreshMenuPreview();
+        }.bind(this)).catch(function (error) {
+          this.menuEditorRemovedIds = this.menuEditorRemovedIds.filter(function (id) { return removedIds.indexOf(Number(id)) === -1; });
+          this.menuEditorError = error && error.message ? error.message : '菜单保存失败';
+          this.menuEditorStatus = '保存失败';
+        }.bind(this)).finally(function () {
+          this.menuEditorSaving = false;
+          if (this.menuEditorSaveQueued || version !== this.menuEditorSaveSeq) {
+            this.menuEditorSaveQueued = false;
+            if (this.menuEditorSaveTimer) { clearTimeout(this.menuEditorSaveTimer); }
+            this.menuEditorSaveTimer = setTimeout(this.saveMenuEditor, 180);
+          }
+        }.bind(this));
+      },
+      refreshMenuPreview: function () {
+        if (!this.usesSlots()) { return; }
+        this._previewCache = new Map();
+        var frame = this.$refs.previewFrame;
+        if (!frame) { return; }
+        this.previewReady = false;
+        try {
+          frame.contentWindow.location.reload();
+        } catch (e) {
+          frame.src = this.previewUrl();
+        }
+      },
       moduleGroups: function () {
         var groups = {};
-        this.moduleList().forEach(function (item) {
+        this.modulesForTab().forEach(function (item) {
           if (!groups[item.group]) {
             groups[item.group] = {
               id: item.group,
@@ -346,9 +1678,11 @@
       },
       // 功能：切换页面，同时把 slot 与选中项复位。
       switchPage: function (id) {
+        this.previewReady = false;
         this.activePage = id;
         this.activeSlot = '';
         this.selectedUid = '';
+        this.selectedStructureId = '';
         this.pageMenuOpen = false;
         this.queuePreview(0);
       },
@@ -395,7 +1729,22 @@
       // 功能：左侧模块清单。
       moduleList: function () {
         var reg = this.registry();
-        return Object.keys(reg).map(function (key) {
+        var allowed = this.field && Array.isArray(this.field.module_types)
+          ? this.field.module_types.map(String)
+          : null;
+        var excludedGroups = this.field && Array.isArray(this.field.module_exclude_groups)
+          ? this.field.module_exclude_groups.map(String)
+          : [];
+        return Object.keys(reg).filter(function (key) {
+          var group = reg[key].group || 'default';
+          var groupNames = typeof group === 'object'
+            ? [group.id, group.key, group.label, group.title]
+            : [group];
+          var excluded = groupNames.some(function (name) {
+            return name !== undefined && name !== null && excludedGroups.indexOf(String(name)) !== -1;
+          });
+          return !excluded && (allowed === null || allowed.indexOf(key) !== -1);
+        }).map(function (key) {
           var group = reg[key].group || 'default';
           var groupId = typeof group === 'object' ? (group.id || group.key || 'default') : group;
           return {
@@ -410,7 +1759,7 @@
       },
       // 功能：取指定分组下的模块。
       modulesByGroup: function (group) {
-        return this.moduleList().filter(function (item) { return item.group === group; });
+        return this.modulesForTab().filter(function (item) { return item.group === group; });
       },
       // 功能：判断组件分组是否展开。
       isGroupOpen: function (group) {
@@ -514,7 +1863,11 @@
       // 功能：按模块定义生成默认值。
       defaultsFor: function (type) {
         var reg = this.registry();
-        var fields = (reg[type] && Array.isArray(reg[type].fields)) ? reg[type].fields : [];
+        var module = reg[type] || {};
+        var fields = Array.isArray(module.fields) ? module.fields.slice() : [];
+        (Array.isArray(module.tabs) ? module.tabs : []).forEach(function (tab) {
+          if (tab && Array.isArray(tab.fields)) { fields = fields.concat(tab.fields); }
+        });
         var values = {};
         fields.forEach(function (f) {
           if (!f || !f.id) { return; }
@@ -524,6 +1877,7 @@
       },
       // 功能：从左侧加入一个模块实例。
       addModule: function (type) {
+        this.selectedStructureId = '';
         var next = clone(this.items());
         var uid = genUid();
         next.push({ uid: uid, type: type, values: this.defaultsFor(type) });
@@ -532,6 +1886,7 @@
       },
       // 功能：按指定位置插入模块实例。
       addModuleAt: function (type, index) {
+        this.selectedStructureId = '';
         var next = clone(this.items());
         var uid = genUid();
         var at = Math.max(0, Math.min(index, next.length));
@@ -541,6 +1896,7 @@
       },
       // 功能：开始从左侧模块库拖拽模块。
       onModuleDragStart: function (event, type) {
+        this.draggingMenuLocation = '';
         this.draggingModule = type;
         if (event.dataTransfer) {
           event.dataTransfer.effectAllowed = 'copy';
@@ -550,12 +1906,25 @@
       },
       // 功能：拖拽结束后清理拖拽状态。
       onModuleDragEnd: function () {
+        this.draggingMenuLocation = '';
         this.draggingModule = '';
+        this.sendPreviewDragState(false);
       },
       // 功能：拖入画布时标记为复制操作。
       onCanvasDragOver: function (event) {
+        if (this.draggingWidget) {
+          if (event.dataTransfer) { event.dataTransfer.dropEffect = this.draggingWidget.operation === 'add' ? 'copy' : 'move'; }
+          var area = this.previewWidgetAreaAt(event);
+          if (area !== this.draggingWidgetArea) { this.draggingWidgetArea = area; this.sendPreviewDragState(true); }
+          return;
+        }
         if (event.dataTransfer) {
           event.dataTransfer.dropEffect = 'copy';
+        }
+        var location = this.draggingModule === 'wp_menu' ? this.previewMenuLocationAt(event) : '';
+        if (location !== this.draggingMenuLocation) {
+          this.draggingMenuLocation = location;
+          this.sendPreviewDragState(!!this.draggingModule);
         }
       },
       // 功能：读取拖拽中的模块类型。
@@ -565,19 +1934,35 @@
         }
         return this.draggingModule;
       },
-      // 功能：把左侧模块拖入画布末尾。
+      // 功能：拖入实际命中的区域；无 iframe 的画布仍加入当前列表。
       onCanvasDrop: function (event) {
+        if (this.draggingWidget) { this.dropWidget(this.previewWidgetAreaAt(event)); return; }
         var type = this.draggedModuleType(event);
         if (!type) { return; }
-        this.addModule(type);
-        this.draggingModule = '';
+        var location = type === 'wp_menu' ? this.previewMenuLocationAt(event) : '';
+        if (location) {
+          this.selectPreviewMenuLocation(location);
+          this.onModuleDragEnd();
+          return;
+        }
+        if (this.usesSlots()) {
+          var target = this.previewModuleTargetAt(event);
+          if (target) {
+            this.activeSlot = target.slot;
+            this.addModuleAt(type, target.index);
+          }
+        } else {
+          this.addModule(type);
+        }
+        this.onModuleDragEnd();
       },
       // 功能：把左侧模块拖到指定插入点。
       onInsertDrop: function (event, index) {
+        if (this.draggingWidget) { this.onWidgetDragEnd(); return; }
         var type = this.draggedModuleType(event);
         if (!type) { return; }
         this.addModuleAt(type, index);
-        this.draggingModule = '';
+        this.onModuleDragEnd();
       },
       // 功能：开始拖拽左右面板的尺寸分隔线或折叠图标。
       beginPanelResize: function (event, side, source) {
@@ -610,7 +1995,7 @@
         if (Math.abs(delta) < 5) { return; }
         this.resizeMoved = true;
         if (this.resizingPanel === 'left') {
-          var leftTarget = Math.max(0, Math.min(420, this.resizeStartWidth + delta));
+          var leftTarget = Math.max(0, Math.min(820, this.resizeStartWidth + delta));
           // 拖到边缘时吸附为完全折叠；保留 leftWidth，之后可点击或反向拖出恢复。
           if (leftTarget <= 48) {
             this.leftCollapsed = true;
@@ -623,7 +2008,7 @@
           }
           this.leftWidth = Math.max(64, leftTarget);
         } else {
-          var rightTarget = Math.max(0, Math.min(440, this.resizeStartWidth - delta));
+          var rightTarget = Math.max(0, Math.min(860, this.resizeStartWidth - delta));
           // 拖到边缘时吸附为完全折叠；保留 rightWidth，之后可点击或反向拖出恢复。
           if (rightTarget <= 48) {
             this.rightCollapsed = true;
@@ -664,8 +2049,44 @@
       },
       // 功能：选中某实例。
       select: function (uid) {
+        this.selectedStructureId = '';
         this.selectedUid = uid;
         this.queuePreview(0);
+      },
+      // 固定结构来自字段配置，不是模块实例；只允许选中和修改设置。
+      fixedStructures: function () {
+        var page = this.currentPage();
+        var nodes = Array.isArray(this.field.fixed_structure) ? this.field.fixed_structure : [];
+        return nodes.filter(function (node) { return node && node.id && (!node.page || (page && page.id === node.page)); });
+      },
+      selectedStructure: function () {
+        return this.fixedStructures().filter(function (node) { return node.id === this.selectedStructureId; }, this)[0] || null;
+      },
+      selectStructure: function (id) {
+        if (!this.fixedStructures().some(function (node) { return node.id === id; })) { return; }
+        this.selectedUid = '';
+        this.selectedStructureId = id;
+        this.rightTab = 'component';
+        this.postPreviewHtml({});
+      },
+      structureFields: function () {
+        var node = this.selectedStructure();
+        return node && Array.isArray(node.fields) ? this.visibleFields(node.fields, this.field.structure_values || {}) : [];
+      },
+      structureValue: function (field) {
+        var values = this.field.structure_values || {};
+        return Object.prototype.hasOwnProperty.call(values, field.id) ? values[field.id] : (field.default !== undefined ? field.default : '');
+      },
+      structureValues: function () {
+        var values = {};
+        this.fixedStructures().forEach(function (node) {
+          (node.fields || []).forEach(function (field) { if (field.id) { values[field.id] = this.structureValue(field); } }, this);
+        }, this);
+        return values;
+      },
+      updateStructure: function (field, value) {
+        if (!this.structureFields().some(function (entry) { return entry.id === field.id; })) { return; }
+        this.updateGlobal(field, value);
       },
       // 功能：选中实例对象。
       selectedItem: function () {
@@ -688,7 +2109,95 @@
         var it = this.selectedItem();
         if (!it) { return []; }
         var reg = this.registry();
-        return (reg[it.type] && Array.isArray(reg[it.type].fields)) ? reg[it.type].fields : [];
+        var fields = (reg[it.type] && Array.isArray(reg[it.type].fields)) ? reg[it.type].fields : [];
+        return this.visibleFields(fields, it.values || {});
+      },
+      // 功能：读取当前模块声明的扩展 Tab。
+      selectedModuleTabs: function () {
+        var it = this.selectedItem();
+        if (!it) { return []; }
+        var reg = this.registry();
+        var tabs = reg[it.type] && Array.isArray(reg[it.type].tabs) ? reg[it.type].tabs : [];
+        return tabs.filter(function (tab) { return tab && tab.id && Array.isArray(tab.fields); });
+      },
+      // 功能：将自定义 Tab 映射成不会和前两个固定 Tab 冲突的 key。
+      customTabKey: function (tab) {
+        return 'custom:' + String(tab && tab.id ? tab.id : '');
+      },
+      selectedCustomTab: function () {
+        var key = String(this.rightTab || '');
+        if (key.indexOf('custom:') !== 0) { return null; }
+        var id = key.slice(7);
+        return this.selectedModuleTabs().filter(function (tab) { return String(tab.id) === id; })[0] || null;
+      },
+      customTabFields: function () {
+        var tab = this.selectedCustomTab();
+        var it = this.selectedItem();
+        return tab && it ? this.visibleFields(tab.fields, it.values || {}) : [];
+      },
+      globalFields: function () {
+        return Array.isArray(this.field && this.field.global_fields) ? this.field.global_fields : [];
+      },
+      globalValue: function (field) {
+        var values = this.field && this.field.global_values;
+        if (values && Object.prototype.hasOwnProperty.call(values, field.id)) { return values[field.id]; }
+        return field && field.default !== undefined ? field.default : '';
+      },
+      updateGlobal: function (field, value) {
+        if (!field || !field.id) { return; }
+        this.$emit('update:global', { id: field.id, value: value });
+      },
+      containerFields: function () {
+        return Array.isArray(this.field && this.field.container_fields) ? this.field.container_fields : [];
+      },
+      containerTabs: function () {
+        var tabs = Array.isArray(this.field && this.field.container_tabs) ? this.field.container_tabs : [];
+        if (!tabs.length && this.containerFields().length) {
+          tabs = [{ id: 'default', label: this.field.container_label || '容器设置', fields: this.containerFields() }];
+        }
+        return tabs.filter(function (tab) { return tab && tab.id && Array.isArray(tab.fields); });
+      },
+      containerTabFields: function () {
+        var tabs = this.containerTabs();
+        var active = this.containerTab || (tabs[0] && tabs[0].id) || '';
+        var tab = tabs.filter(function (item) { return String(item.id) === String(active); })[0] || tabs[0];
+        return tab && Array.isArray(tab.fields) ? tab.fields : [];
+      },
+      containerTabLabel: function () {
+        var tabs = this.containerTabs();
+        var active = this.containerTab || (tabs[0] && tabs[0].id) || '';
+        var tab = tabs.filter(function (item) { return String(item.id) === String(active); })[0] || tabs[0];
+        return tab ? (tab.label || tab.title || tab.id) : '容器设置';
+      },
+      containerTabActive: function (tab) {
+        var tabs = this.containerTabs();
+        var active = this.containerTab || (tabs[0] && tabs[0].id) || '';
+        return tab && String(tab.id) === String(active);
+      },
+      containerValues: function () {
+        return this.field && this.field.container_values ? this.field.container_values : {};
+      },
+      containerValue: function (field) {
+        var values = this.containerValues();
+        if (field && field.id && Object.prototype.hasOwnProperty.call(values, field.id)) {
+          return values[field.id];
+        }
+        return field && field.default !== undefined ? field.default : '';
+      },
+      containerVisibleFields: function () {
+        var device = this.device === 'mobile' ? 'mobile' : 'desktop';
+        return this.visibleFields(this.containerTabFields(), this.containerValues()).filter(function (field) {
+          return !field.container_device || field.container_device === device;
+        });
+      },
+      updateContainer: function (field, value) {
+        if (!field || !field.id) { return; }
+        this.$emit('update:container', { id: field.id, value: value });
+      },
+      visibleFields: function (fields, values) {
+        return (Array.isArray(fields) ? fields : []).filter(function (field) {
+          return dependencyVisible(field, values || {});
+        });
       },
       // 功能：取选中实例某字段值。
       childValue: function (f) {
@@ -713,7 +2222,10 @@
       removeItem: function (uid) {
         var next = this.items().filter(function (it) { return it.uid !== uid; });
         this.emitItems(clone(next));
-        if (this.selectedUid === uid) { this.selectedUid = ''; }
+        if (this.selectedUid === uid) {
+          this.selectedUid = '';
+          this.rightTab = 'page';
+        }
       },
       // 功能：上移 / 下移实例（dir = -1 / 1）。
       moveItem: function (uid, dir) {
@@ -786,11 +2298,21 @@
       '        </div>',
       '      </div>',
       '      <span v-else class="eva-pb-page-select"><i class="ri-file-list-3-line"></i><span>{{ tv(previewLabel()) }}</span></span>',
+      '      <div v-if="previewRoleOptions.length" class="eva-pb-role-picker" role="group" aria-label="预览身份">',
+      '        <i class="ri-user-settings-line" aria-hidden="true"></i>',
+      '        <span class="eva-pb-sr-only">预览身份</span>',
+      '        <eva-select class="eva-pb-role-select" :options="previewRoleOptions" :searchable="false" :model-value="previewRole" @update:model-value="setPreviewRole"></eva-select>',
+      '      </div>',
       '      <span class="eva-pb-divider"></span>',
       '      <div class="eva-pb-devices">',
       '        <button type="button" :class="{ \'is-active\': device === \'desktop\' }" @click="device = \'desktop\'"><i class="ri-computer-line"></i></button>',
       '        <button type="button" :class="{ \'is-active\': device === \'tablet\' }" @click="device = \'tablet\'"><i class="ri-tablet-line"></i></button>',
       '        <button type="button" :class="{ \'is-active\': device === \'mobile\' }" @click="device = \'mobile\'"><i class="ri-smartphone-line"></i></button>',
+      '      </div>',
+      '      <div class="eva-pb-opacity" role="group" :aria-label="t(\'panel_opacity\')" :title="t(\'panel_opacity\')">',
+      '        <i class="ri-contrast-drop-line" aria-hidden="true"></i>',
+      '        <span class="eva-pb-sr-only">{{ t(\'panel_opacity\') }}</span>',
+      '        <eva-select class="eva-pb-opacity-select" :options="panelOpacityOptions" :searchable="false" :model-value="panelOpacity" @update:model-value="setPanelOpacity"></eva-select>',
       '      </div>',
       '    </div>',
       '    <div class="eva-pb-actions"><button type="button" :title="fullScreen ? t(\'pb_exit_fullscreen\') : t(\'pb_fullscreen\')" :aria-label="fullScreen ? t(\'pb_exit_fullscreen\') : t(\'pb_fullscreen\')" @click="toggleFullscreen"><i :class="fullScreen ? \'ri-fullscreen-exit-line\' : \'ri-fullscreen-line\'"></i></button></div>',
@@ -801,25 +2323,162 @@
       '    <div v-show="!leftCollapsed" class="eva-pb-resize-handle eva-pb-resize-handle--left" role="separator" :aria-label="t(\'pb_resize_left\')" @pointerdown.prevent="startPanelResize($event, \'left\')"></div>',
       '    <div v-show="!rightCollapsed" class="eva-pb-resize-handle eva-pb-resize-handle--right" role="separator" :aria-label="t(\'pb_resize_right\')" @pointerdown.prevent="startPanelResize($event, \'right\')"></div>',
       '    <aside class="eva-pb-left">',
-      '      <div class="eva-pb-search"><i class="ri-search-line"></i><input type="search" :placeholder="t(\'pb_search_modules\')"><kbd>⌘K</kbd></div>',
-      '      <div class="eva-pb-modules">',
-      '        <section class="eva-pb-mod-group" v-for="group in moduleGroups()" :key="group.id">',
-      '          <h4 @click="toggleGroup(group.id)"><span>{{ group.label }}</span><i :class="isGroupOpen(group.id) ? \'ri-arrow-down-s-line\' : \'ri-arrow-right-s-line\'"></i></h4>',
-      '          <transition :css="false" @before-enter="beforeGroupEnter" @enter="enterGroup" @leave="leaveGroup" @after-enter="afterGroupAnimation" @after-leave="afterGroupAnimation">',
-      '            <div v-show="isGroupOpen(group.id)" class="eva-pb-mod-grid">',
-      '              <button type="button" class="eva-pb-mod" v-for="m in modulesByGroup(group.id)" :key="m.type" draggable="true" @dragstart="onModuleDragStart($event, m.type)" @dragend="onModuleDragEnd" @click="addModule(m.type)">',
-      '                <i :class="m.icon"></i><span>{{ tv(m.label) }}</span>',
-      '              </button>',
-      '            </div>',
-      '          </transition>',
-      '        </section>',
-      '        <p v-if="!moduleList().length" class="eva-pb-empty-sm">{{ t(\'pb_no_modules\') }}</p>',
+      '      <div class="eva-pb-module-tabs" role="tablist" aria-label="模块类型">',
+      '        <button v-for="tab in moduleTabs()" :key="tab.id" type="button" role="tab" class="eva-pb-module-tab" :class="{ \'is-active\': moduleTab === tab.id }" :aria-selected="moduleTab === tab.id ? \'true\' : \'false\'" @click="moduleTab = tab.id; collapsedGroups = {}"><i :class="tab.icon"></i><span>{{ tv(tab.label) }}</span></button>',
       '      </div>',
+      '      <div v-if="moduleTab === \'menu\'" class="eva-pb-menu-location-card">',
+      '        <div class="eva-pb-menu-location-head"><i class="ri-menu-4-line"></i><div><strong>菜单管理</strong><span>拖拽排序，添加和编辑菜单项。</span></div></div>',
+      '        <div class="eva-pb-menu-location-select-wrap"><eva-select class="eva-pb-menu-location-select" :options="menuLocationOptions()" :model-value="menuLocation" @update:model-value="setMenuLocation"></eva-select></div>',
+      '        <p class="eva-pb-menu-location-subtitle">您的主题可在 {{ menuLocationCount() }} 个位置显示菜单，当前已应用 {{ menuLocationAssignedCount() }} 个。</p>',
+      '        <div v-if="menuLocation" class="eva-pb-menu-editor">',
+      '          <div v-if="menuEditorLoading" class="eva-pb-menu-editor-hint">正在读取菜单…</div>',
+      '          <div v-else-if="menuEditorError" class="eva-pb-menu-editor-error">{{ menuEditorError }}</div>',
+      '          <template v-else-if="menuEditor && menuEditor.menu_id">',
+      '            <div class="eva-pb-menu-editor-status"><span>{{ menuEditorStatus || "编辑后自动保存并刷新预览" }}</span><button type="button" :disabled="menuEditorSaving" @click="saveMenuEditor">保存</button></div>',
+      '            <label class="eva-pb-menu-editor-field">菜单名称<input type="text" v-model="menuEditor.menu_name" @input="scheduleMenuEditorSave"></label>',
+      '            <div class="eva-pb-menu-editor-list-head"><div class="eva-pb-menu-scope-heading"><button v-if="menuEditorScopeParent" type="button" @click="leaveMenuEditorScope" aria-label="返回上一级菜单"><i class="ri-arrow-left-s-line"></i></button><strong :title="menuEditorScopeParent ? menuEditorScopeParent.title : \'菜单项配置\'">{{ menuEditorScopeParent ? menuEditorScopeParent.title + \' / 子菜单\' : \'菜单项配置\' }}</strong></div><button ref="menuAddTrigger" type="button" class="eva-pb-menu-editor-add" :aria-expanded="menuAddOpen" @click="toggleMenuAddPanel"><i class="ri-add-line"></i>{{ menuEditorScopeParent ? \'添加子菜单\' : \'添加项目\' }}</button></div>',
+      '            <div ref="menuEditorList" class="eva-pb-menu-editor-list">',
+      '              <div v-for="(item, index) in menuEditorVisibleItems" :key="menuEditorItemKey(item, index)" :data-menu-key="menuEditorItemKey(item, index)" class="eva-pb-menu-editor-item" :class="{ \'is-active\': menuEditorSelectedItem === menuEditorItemKey(item, index), \'is-submenu-open\': menuSubmenuOpen && menuSubmenuAnchorKey === menuEditorItemKey(item, index), \'is-dragging\': menuEditorDraggingKey === menuEditorItemKey(item, index), \'is-drop-before\': menuEditorDropKey === menuEditorItemKey(item, index) && menuEditorDropSide === \'before\', \'is-drop-after\': menuEditorDropKey === menuEditorItemKey(item, index) && menuEditorDropSide === \'after\', \'is-drop-inside\': menuEditorDropKey === menuEditorItemKey(item, index) && menuEditorDropSide === \'inside\' }">',
+      '                <div class="eva-pb-menu-editor-row">',
+      '                  <button type="button" class="eva-pb-menu-editor-grip" :disabled="menuEditorSaving" :aria-label="\'拖拽排序：\' + item.title" title="拖动排序；向右拖动设为子菜单；方向键调整顺序" @pointerdown="startMenuEditorDrag($event, item, index)" @keydown.up.prevent="keyboardMenuEditorMove(item, -1)" @keydown.down.prevent="keyboardMenuEditorMove(item, 1)"><i class="ri-draggable"></i></button>',
+      '                  <svg v-if="menuEditorIconSymbol(item)" class="eva-pb-menu-editor-icon" aria-hidden="true"><use :href="menuEditorIconSymbol(item)"></use></svg><i v-else class="eva-pb-menu-editor-icon" :class="menuEditorIcon(item)" aria-hidden="true"></i>',
+      '                  <span class="eva-pb-menu-editor-item-title" :title="item.title">{{ item.title || "未命名菜单项" }}</span><small>{{ menuEditorItemType(item) }}</small>',
+      '                  <button v-if="Number(item.id || 0) > 0" type="button" class="eva-pb-menu-editor-collapse" @click="openMenuSubmenu(item, $event)" :aria-expanded="menuSubmenuOpen && menuSubmenuAnchorKey === menuEditorItemKey(item, index)" aria-haspopup="dialog" :aria-label="\'查看\' + item.title + \'的子菜单\'" title="查看子菜单"><i class="ri-arrow-right-s-line"></i></button>',
+      '                  <button type="button" class="eva-pb-menu-editor-toggle" :aria-pressed="menuEditorSelectedItem === menuEditorItemKey(item, index)" @click="selectMenuEditorItem(item, index)" :aria-label="\'编辑：\' + item.title" title="编辑菜单项"><i class="ri-pencil-line"></i></button>',
+      '                  <button type="button" class="eva-pb-menu-editor-delete" @click="removeMenuEditorItem(menuEditor.items.indexOf(item))" :aria-label="\'移入回收站：\' + item.title" title="移入回收站"><i class="ri-delete-bin-line"></i></button>',
+      '                </div>',
+      '              </div>',
+      '              <div v-if="!menuEditorVisibleItems.length" class="eva-pb-menu-editor-empty">{{ menuEditorScopeParent ? \'还没有子菜单。\' : \'此菜单还没有菜单项。\' }}</div>',
+      '            </div>',
+      '            <section v-if="menuEditorActiveItem" ref="menuItemEditor" :key="menuEditorSelectedItem" class="eva-pb-menu-editor-details" aria-label="菜单项编辑">',
+      '              <div class="eva-pb-menu-editor-details-head"><strong>编辑：{{ menuEditorActiveItem.title || "新菜单项" }}</strong><button type="button" class="eva-pb-menu-editor-close" @click="menuEditorSelectedItem = \'\'">关闭</button></div>',
+      '              <label class="eva-pb-menu-editor-field">菜单图标<eva-field :field="menuEditorIconField()" :model-value="menuEditorActiveItem.icon || \'\'" @update:model-value="setMenuEditorIcon(menuEditorActiveItem, $event)"></eva-field></label>',
+      '              <label class="eva-pb-menu-editor-field">父级菜单项<eva-select :options="menuEditorParentOptions(menuEditorActiveItem)" :model-value="String(menuEditorActiveItem.parent || 0)" @update:model-value="setMenuEditorParent(menuEditorActiveItem, $event)"></eva-select></label>',
+      '              <div class="eva-pb-menu-editor-link-field"><eva-field :field="menuEditorLinkField()" :model-value="menuEditorLinkValue(menuEditorActiveItem)" @update:model-value="setMenuEditorLink(menuEditorActiveItem, $event)"></eva-field></div>',
+      '            </section>',
+      '            <div class="eva-pb-menu-editor-locations"><strong>菜单位置</strong><label v-for="location in menuEditor.locations" :key="location.id" class="eva-pb-menu-editor-location"><input type="checkbox" v-model="location.checked" @change="scheduleMenuEditorSave"><span>{{ location.label }}</span><small v-if="location.assigned_menu_id && location.assigned_menu_id !== menuEditor.menu_id">（当前：{{ location.assigned_menu_name }}）</small></label></div>',
+      '          </template>',
+      '          <form v-else-if="menuEditor" class="eva-pb-menu-create" @submit.prevent="createMenu">',
+      '            <p class="eva-pb-menu-editor-unassigned">这个位置还没有分配菜单，可在这里创建。</p>',
+      '            <label class="eva-pb-menu-editor-field">新菜单名称<input type="text" v-model="menuCreateName" :disabled="menuCreating" autocomplete="off" placeholder="例如：顶部导航"></label>',
+      '            <p v-if="menuCreateError" class="eva-pb-menu-editor-error" role="alert">{{ menuCreateError }}</p>',
+      '            <button type="submit" class="eva-pb-menu-editor-add" :disabled="menuCreating">{{ menuCreating ? "正在创建…" : "创建菜单并绑定当前位置" }}</button>',
+      '          </form>',
+      '        </div>',
+      '      </div>',
+      '      <section v-else-if="moduleTab === \'widgets\'" class="eva-pb-widgets-panel" aria-label="小工具管理">',
+      '        <div class="eva-pb-menu-location-head"><i class="ri-layout-grid-line"></i><div><strong>小工具管理</strong><span>拖入右侧预览区域，或选择区域后添加。</span></div></div>',
+      '        <div class="eva-pb-widgets-actions"><button type="button" :disabled="widgetsLoading || widgetsSaving" @click="loadWidgets">刷新内容</button><a v-if="widgetAreas.length && widgetsEditorUrl" :href="widgetsEditorUrl" target="_blank" rel="noopener">编辑小工具内容 ↗</a></div>',
+      '        <p v-if="widgetsStatus" role="status">{{ widgetsStatus }}</p>',
+      '        <p v-if="widgetsLoading" role="status">正在读取小工具…</p>',
+      '        <p v-else-if="widgetsError" role="alert">{{ widgetsError }}</p>',
+      '        <template v-else-if="widgetsLoaded">',
+      '          <p>当前主题有 {{ widgetAreas.length }} 个小工具区域。</p>',
+      '          <eva-select v-if="widgetAreas.length" :options="widgetAreaOptions()" :model-value="widgetArea" @update:model-value="widgetArea = $event"></eva-select>',
+      '          <section v-if="selectedWidgetArea()" class="eva-pb-widget-area" aria-label="区域内容" @dragover.prevent @drop.stop.prevent="dropWidget(widgetArea)">',
+      '            <p v-if="selectedWidgetArea().description">{{ selectedWidgetArea().description }}</p>',
+      '            <h4>已添加的小工具（{{ selectedWidgetArea().items.length }}）</h4>',
+      '            <ul v-if="selectedWidgetArea().items.length" class="eva-pb-widget-items"><li v-for="(item, index) in selectedWidgetArea().items" :key="item.id" :draggable="!widgetsSaving" @dragstart="onWidgetDragStart($event, \'move\', item.id)" @dragend="onWidgetDragEnd" @dragover.prevent @drop.stop.prevent="dropWidget(widgetArea, item.id)"><div><strong>{{ item.title || item.name }}</strong><small>{{ item.name }}</small></div><div class="eva-pb-widget-item-tools"><button type="button" aria-label="上移小工具" :disabled="widgetsSaving || widgetsLoading || index === 0" @click="moveWidget(item, -1)"><i class="ri-arrow-up-line"></i></button><button type="button" aria-label="下移小工具" :disabled="widgetsSaving || widgetsLoading || index === selectedWidgetArea().items.length - 1" @click="moveWidget(item, 1)"><i class="ri-arrow-down-line"></i></button><button type="button" class="eva-pb-widget-remove" aria-label="删除小工具" title="从当前区域删除小工具" :disabled="widgetsSaving || widgetsLoading" @click.stop="changeWidget(\'remove\', item.id, widgetArea)"><i class="ri-delete-bin-line" aria-hidden="true"></i>删除</button></div></li></ul>',
+      '            <p v-else>这个区域还没有添加小工具。</p>',
+      '          </section>',
+      '          <p v-else class="eva-pb-widgets-empty">当前主题尚未注册小工具区域。注册区域后，可在这里查看其中的内容。</p>',
+      '          <h4>可用小工具（{{ availableWidgets.length }}）</h4>',
+      '          <ul class="eva-pb-widget-types"><li v-for="widget in availableWidgets" :key="widget.id"><button type="button" :disabled="widgetsSaving || !widgetAreas.length" :draggable="!widgetsSaving && !!widgetAreas.length" @dragstart="onWidgetDragStart($event, \'add\', widget.id)" @dragend="onWidgetDragEnd" @click="changeWidget(\'add\', widget.id, widgetArea)"><i class="ri-drag-move-2-line" aria-hidden="true"></i>{{ widget.name }}</button></li></ul>',
+      '          <p v-if="!availableWidgets.length">暂无已注册的小工具。</p>',
+      '        </template>',
+      '      </section>',
+      '      <div v-else-if="moduleTab === \'container\'" class="eva-pb-container-settings">',
+      '        <div class="eva-pb-container-tabs" role="tablist" aria-label="容器设置分类">',
+      '          <button v-for="tab in containerTabs()" :key="tab.id" type="button" role="tab" :class="{ \'is-active\': containerTabActive(tab) }" :aria-selected="containerTabActive(tab) ? \'true\' : \'false\'" @click="containerTab = tab.id"><i v-if="tab.icon" :class="tab.icon"></i><span>{{ tv(tab.label || tab.title || tab.id) }}</span></button>',
+      '        </div>',
+      '        <div class="eva-pb-container-head"><i class="ri-layout-masonry-line"></i><strong>{{ tv(containerTabLabel()) }}</strong><span>自定义设置</span></div>',
+      '        <div class="eva-pb-fields eva-pb-fields--container">',
+      '          <div class="eva-pb-field" v-for="(f, fi) in containerVisibleFields()" :key="f.id || (\'container-\' + fi)">',
+      '            <label v-if="(f.title || f.id) && !f.hide_label" class="eva-pb-field-label">{{ tv(f.title || f.id) }}</label>',
+      '            <eva-field :field="f" :model-value="containerValue(f)" @update:model-value="updateContainer(f, $event)"></eva-field>',
+      '          </div>',
+      '        </div>',
+      '      </div>',
+      '      <div v-if="moduleTab === \'components\'" class="eva-pb-modules">',
+      '        <div v-for="group in moduleGroups()" :key="group.id" class="eva-pb-mod-group">',
+      '          <h4 @click="toggleGroup(group.id)"><span>{{ tv(group.label) }}</span><i :class="isGroupOpen(group.id) ? \'ri-arrow-up-s-line\' : \'ri-arrow-down-s-line\'"></i></h4>',
+      '          <div v-show="isGroupOpen(group.id)" class="eva-pb-mod-grid">',
+      '            <button v-for="module in modulesByGroup(group.id)" :key="module.type" type="button" class="eva-pb-mod" draggable="true" @click="addModule(module.type)" @dragstart="onModuleDragStart($event, module.type)" @dragend="onModuleDragEnd"><i :class="module.icon"></i><span>{{ tv(module.label) }}</span></button>',
+      '          </div>',
+      '        </div>',
+      '      </div>',
+      '    </aside>',
+      "    <aside v-if=\"moduleTab === 'menu' && menuSubmenuOpen && menuSubmenuParent && !leftCollapsed\" ref=\"menuSubmenuPanel\" class=\"eva-pb-menu-add-panel eva-pb-menu-submenu-panel\" :class=\"{ 'is-anchored': menuSubmenuPosition.side !== 'overlay', 'is-left': menuSubmenuPosition.side === 'left' }\" :style=\"menuSubmenuPanelStyle()\" role=\"dialog\" :aria-labelledby=\"menuAddId + '-submenu-title'\">",
+      "      <header class=\"eva-pb-menu-add-head\">",
+      "        <button v-if=\"menuSubmenuPath.length > 1\" type=\"button\" class=\"eva-pb-menu-submenu-back\" @click=\"backMenuSubmenu\" aria-label=\"返回上一级子菜单\"><i class=\"ri-arrow-left-s-line\"></i></button>",
+      "        <span v-else class=\"eva-pb-menu-add-head-icon\"><i class=\"ri-folder-add-line\" aria-hidden=\"true\"></i></span>",
+      "        <div class=\"eva-pb-menu-add-heading\"><strong :id=\"menuAddId + '-submenu-title'\" :title=\"menuSubmenuParent.title\">{{ menuSubmenuParent.title }} / 子菜单</strong><p :title=\"'管理「' + menuSubmenuParent.title + '」的下级菜单项'\">管理「{{ menuSubmenuParent.title }}」的下级菜单项</p></div>",
+      "        <button type=\"button\" @click=\"closeMenuSubmenu\" aria-label=\"关闭子菜单面板\"><i class=\"ri-close-line\"></i></button>",
+      "      </header>",
+      "      <div class=\"eva-pb-menu-submenu-body\">",
+      "        <label class=\"eva-pb-menu-add-search\"><i class=\"ri-search-line\" aria-hidden=\"true\"></i><input ref=\"menuSubmenuSearch\" v-model=\"menuSubmenuQuery\" placeholder=\"搜索子菜单…\" aria-label=\"搜索当前层级子菜单\"></label>",
+      "        <div class=\"eva-pb-menu-submenu-list\" role=\"list\">",
+      "          <div v-for=\"child in menuSubmenuItems\" :key=\"menuEditorItemKey(child)\" class=\"eva-pb-menu-submenu-row\" :data-submenu-key=\"menuEditorItemKey(child)\" role=\"listitem\">",
+      "            <svg v-if=\"menuEditorIconSymbol(child)\" class=\"eva-pb-menu-editor-icon\" aria-hidden=\"true\"><use :href=\"menuEditorIconSymbol(child)\"></use></svg><i v-else class=\"eva-pb-menu-editor-icon\" :class=\"menuEditorIcon(child)\" aria-hidden=\"true\"></i>",
+      "            <button type=\"button\" class=\"eva-pb-menu-submenu-label\" :title=\"child.title\" @click=\"editMenuSubmenuItem(child)\">{{ child.title || '未命名菜单项' }}</button>",
+      "            <button v-if=\"Number(child.id || 0) > 0\" type=\"button\" class=\"eva-pb-menu-submenu-next\" @click=\"enterMenuSubmenu(child)\" :aria-label=\"'查看' + child.title + '的子菜单'\" title=\"进入下一级\"><i class=\"ri-arrow-right-s-line\"></i></button>",
+      "          </div>",
+      "          <p v-if=\"!menuSubmenuItems.length\" class=\"eva-pb-menu-submenu-empty\">{{ menuSubmenuQuery.trim() ? '没有匹配的子菜单。' : '还没有子菜单，可在下方添加。' }}</p>",
+      "        </div>",
+      "      </div>",
+      "      <footer class=\"eva-pb-menu-submenu-footer\"><button type=\"button\" @click=\"manageMenuSubmenu\"><i class=\"ri-settings-3-line\"></i>管理子菜单</button><button type=\"button\" class=\"is-primary\" @click=\"openMenuAddPanel(menuSubmenuParent)\"><i class=\"ri-add-line\"></i>添加子菜单</button></footer>",
+      "    </aside>",
+      '    <aside v-if="moduleTab === \'menu\' && menuAddOpen && !leftCollapsed" ref="menuAddPanel" class="eva-pb-menu-add-panel" :class="{ \'is-compact\': menuAddPosition.width < 520, \'is-anchored\': menuAddPosition.side !== \'overlay\', \'is-left\': menuAddPosition.side === \'left\' }" :style="menuAddPanelStyle()" role="dialog" :aria-labelledby="menuAddId + \'-title\'">',
+      '      <header class="eva-pb-menu-add-head">',
+      '        <span class="eva-pb-menu-add-head-icon"><i class="ri-folder-add-line" aria-hidden="true"></i></span>',
+      '        <div class="eva-pb-menu-add-heading"><strong :id="menuAddId + \'-title\'">{{ menuAddParent ? \'添加子菜单\' : \'添加菜单项目\' }}</strong><p>{{ menuAddParent ? \'添加到「\' + menuAddParent.title + \'」的子菜单\' : \'选择类型并配置，添加到左侧菜单\' }}</p></div>',
+      '        <span class="eva-pb-menu-add-mode">悬浮编辑</span>',
+      '        <button type="button" @click="closeMenuAddPanel" aria-label="关闭添加面板"><i class="ri-close-line"></i></button>',
+      '      </header>',
+      '      <div class="eva-pb-menu-add-layout">',
+      '        <nav class="eva-pb-menu-add-nav" aria-label="菜单项目类型">',
+      '          <label class="eva-pb-menu-add-search"><i class="ri-search-line" aria-hidden="true"></i><input ref="menuAddSearch" v-model="menuAddTypeSearch" placeholder="搜索添加类型…" aria-label="搜索添加类型"></label>',
+      '          <p class="eva-pb-menu-add-caption">菜单项目类型 · {{ menuAddGroups().length }}</p>',
+      '          <div class="eva-pb-menu-add-types" role="tablist" aria-orientation="vertical">',
+      '            <button v-for="group in menuAddFilteredGroups" :key="group.id" type="button" class="eva-pb-menu-add-type" :class="[ \'is-\' + group.id, { \'is-active\': menuAddType === group.id } ]" :id="menuAddId + \'-tab-\' + group.id" :data-menu-type="group.id" role="tab" :aria-selected="menuAddType === group.id" :aria-controls="menuAddId + \'-content\'" :tabindex="menuAddTabIndex(group.id)" @click="selectMenuAddType(group.id)" @keydown.down.prevent="moveMenuAddType(1)" @keydown.up.prevent="moveMenuAddType(-1)" @keydown.right.prevent="moveMenuAddType(1)" @keydown.left.prevent="moveMenuAddType(-1)">',
+      '              <span class="eva-pb-menu-add-type-icon"><i :class="group.icon" aria-hidden="true"></i></span><strong>{{ group.label }}</strong><i class="ri-arrow-right-s-line eva-pb-menu-add-type-arrow" aria-hidden="true"></i>',
+      '            </button>',
+      '          </div>',
+      '          <p v-if="!menuAddFilteredGroups.length" class="eva-pb-menu-editor-hint">没有匹配的类型。</p>',
+      '          <small class="eva-pb-menu-add-nav-note">点击类型即可切换编辑内容</small>',
+      '        </nav>',
+      '        <main class="eva-pb-menu-add-editor" :id="menuAddId + \'-content\'" role="tabpanel" :aria-labelledby="menuAddId + \'-content-title\'">',
+      '          <div class="eva-pb-menu-add-group-title">',
+      '            <span class="eva-pb-menu-add-type-icon" :class="\'is-\' + menuAddType"><i :class="menuAddActiveGroup.icon" aria-hidden="true"></i></span>',
+      '            <div><h3 :id="menuAddId + \'-content-title\'">{{ menuAddActiveGroup.label }}</h3><p>{{ menuAddDescription(menuAddType) }}</p></div>',
+      '            <small class="eva-pb-menu-add-availability"><span></span>{{ menuAddType === \'custom\' ? \'可添加\' : ((menuAddSelected[menuAddType] || []).length ? \'已选 \' + menuAddSelected[menuAddType].length + \' 项\' : \'可选择\') }}</small>',
+      '          </div>',
+      '          <div class="eva-pb-menu-add-group-body">',
+      '            <template v-if="menuAddType === \'custom\'">',
+      '              <div class="eva-pb-menu-editor-link-field"><eva-field :field="menuAddCustomField()" :model-value="menuAddCustom" @update:model-value="menuAddCustom = $event"></eva-field></div>',
+      '              <p v-if="menuAddErrors.custom" class="eva-pb-menu-editor-error" role="alert">{{ menuAddErrors.custom }}</p>',
+      '              <p class="eva-pb-menu-add-tip"><span></span>菜单项添加后，可以直接在左侧拖拽排序</p>',
+      '              <button type="button" class="eva-pb-menu-add-submit" @click="addMenuCustomLink"><i class="ri-add-line"></i>添加到菜单</button>',
+      '            </template>',
+      '            <template v-else>',
+      '              <label class="eva-pb-menu-add-search"><i class="ri-search-line" aria-hidden="true"></i><input v-model="menuAddQueries[menuAddType]" :placeholder="\'搜索\' + menuAddActiveGroup.label + \'…\'" :aria-label="\'搜索\' + menuAddActiveGroup.label" @input="queueMenuAddSearch(menuAddType)"></label>',
+      '              <p v-if="menuAddLoading[menuAddType]" class="eva-pb-menu-editor-hint" role="status">正在读取…</p><p v-else-if="menuAddErrors[menuAddType]" class="eva-pb-menu-editor-error" role="alert">{{ menuAddErrors[menuAddType] }}</p>',
+      '              <template v-else>',
+      '                <label v-if="(menuAddItems[menuAddType] || []).length" class="eva-pb-menu-add-resource is-all"><input type="checkbox" :checked="menuAddAllSelected(menuAddType)" @change="toggleMenuAddAll(menuAddType, $event.target.checked)"><span>全选</span></label>',
+      '                <div class="eva-pb-menu-add-resource-list"><label v-for="resource in menuAddItems[menuAddType] || []" :key="resource.value" class="eva-pb-menu-add-resource"><input type="checkbox" :checked="menuAddIsSelected(menuAddType, resource)" @change="toggleMenuAddSelected(menuAddType, resource, $event.target.checked)"><span :title="resource.label">{{ resource.label }}</span><small>{{ menuAddResourceMeta(resource) }}</small></label></div>',
+      '                <p v-if="!(menuAddItems[menuAddType] || []).length" class="eva-pb-menu-editor-hint">没有匹配的{{ menuAddActiveGroup.label }}。</p>',
+      '              </template>',
+      '              <button type="button" class="eva-pb-menu-add-submit" :disabled="!(menuAddSelected[menuAddType] || []).length" @click="addMenuResources(menuAddType)"><i class="ri-add-line"></i>添加选中的{{ menuAddActiveGroup.label }}<small v-if="(menuAddSelected[menuAddType] || []).length">{{ menuAddSelected[menuAddType].length }}</small></button>',
+      '            </template>',
+      '          </div>',
+      '        </main>',
+      '      </div>',
+      '      <footer class="eva-pb-menu-add-footer"><span><i class="ri-information-line" aria-hidden="true"></i>添加后自动保存到当前菜单</span><span><kbd>Esc</kbd>关闭<b>·</b>点击外部收起</span></footer>',
       '    </aside>',
       '    <main class="eva-pb-stage">',
       '      <div class="eva-pb-pagebar"><div class="eva-pb-slot-tabs"><button v-for="slot in slots()" :key="slot.id" type="button" :class="{ \'is-active\': currentSlotId() === slot.id }" @click="activeSlot = slot.id; selectedUid = \'\'">{{ tv(slot.label) }}</button></div></div>',
       '      <section class="eva-pb-canvas" :class="[\'is-\' + device, { \'is-preview\': usesSlots() }]" @click.self="selectedUid = \'\'" @dragover.prevent="onCanvasDragOver" @drop.prevent="onCanvasDrop">',
-      '        <div v-if="usesSlots()" class="eva-pb-iframe-shell" :class="{ \'is-dragging\': draggingModule }">',
+      '        <div v-if="usesSlots()" class="eva-pb-iframe-shell" :class="{ \'is-dragging\': draggingModule || draggingWidget }">',
       '          <iframe ref="previewFrame" class="eva-pb-iframe" :src="previewUrl()" @load="queuePreview(0)"></iframe>',
       '        </div>',
       '        <template v-else>',
@@ -842,22 +2501,53 @@
       '      </section>',
       '    </main>',
       '    <aside class="eva-pb-right">',
-      '      <div class="eva-pb-right-tabs"><button type="button" :class="{ \'is-active\': rightTab === \'page\' }" @click="rightTab = \'page\'">{{ t(\'pb_structure\') }}</button><button type="button" :class="{ \'is-active\': rightTab === \'component\' }" @click="rightTab = \'component\'">{{ t(\'pb_component_settings\') }}</button></div>',
+      '      <div class="eva-pb-right-tabs"><button type="button" :class="{ \'is-active\': rightTab === \'page\' }" @click="rightTab = \'page\'">{{ t(\'pb_structure\') }}</button><button type="button" :class="{ \'is-active\': rightTab === \'component\' }" @click="rightTab = \'component\'">{{ selectedStructure() ? \'结构设置\' : t(\'pb_component_settings\') }}</button><button v-if="globalFields().length" type="button" :class="{ \'is-active\': rightTab === \'global\' }" @click="rightTab = \'global\'">{{ tv(field.global_label || \'布局设置\') }}</button><template v-if="selectedItem()"><button v-for="tab in selectedModuleTabs()" :key="customTabKey(tab)" type="button" :class="{ \'is-active\': rightTab === customTabKey(tab) }" @click="rightTab = customTabKey(tab)"><i v-if="tab.icon" :class="tab.icon"></i>{{ tv(tab.label || tab.id) }}</button></template></div>',
       '      <template v-if="rightTab === \'page\'">',
+      '        <div v-if="fixedStructures().length" class="eva-pb-panel"><h4>固定结构</h4><div class="eva-pb-tree"><button v-for="node in fixedStructures()" :key="node.id" type="button" class="eva-pb-tree-row eva-pb-fixed-row" :class="{ \'is-active\': node.id === selectedStructureId }" @click="selectStructure(node.id)"><i :class="node.icon || \'ri-layout-line\'"></i><span>{{ tv(node.label || node.id) }}</span><i class="ri-lock-line" aria-label="固定结构"></i></button></div></div>',
       '        <div class="eva-pb-panel"><h4>{{ t(\'pb_slot_structure\') }}</h4><div class="eva-pb-tree"><div v-for="item in items()" :key="item.uid" class="eva-pb-tree-row" :class="{ \'is-active\': item.uid === selectedUid }" @click="select(item.uid)"><i :class="moduleIcon(item.type)"></i><span>{{ tv(moduleLabel(item.type)) }}</span></div><p v-if="!items().length" class="eva-pb-empty-sm">{{ t(\'pb_slot_empty\') }}</p></div></div>',
       '      </template>',
+      '      <template v-else-if="rightTab === \'global\'">',
+      '        <div class="eva-pb-fields eva-pb-fields--global">',
+      '          <div class="eva-pb-field" v-for="f in globalFields()" :key="f.id">',
+      '            <label v-if="f.title || f.id" class="eva-pb-field-label">{{ tv(f.title || f.id) }}</label>',
+      '            <eva-field :field="f" :model-value="globalValue(f)" @update:model-value="updateGlobal(f, $event)"></eva-field>',
+      '          </div>',
+      '        </div>',
+      '      </template>',
+      '      <template v-else-if="selectedStructure()">',
+      '        <div class="eva-pb-right-head"><i :class="selectedStructure().icon || \'ri-layout-line\'"></i><span>{{ tv(selectedStructure().label || selectedStructure().id) }}</span><i class="ri-lock-line" aria-label="固定结构"></i></div>',
+      '        <div class="eva-pb-fields"><div class="eva-pb-field" v-for="f in structureFields()" :key="f.id"><label v-if="f.title || f.id" class="eva-pb-field-label">{{ tv(f.title || f.id) }}</label><eva-field :field="f" :model-value="structureValue(f)" @update:model-value="updateStructure(f, $event)"></eva-field></div></div>',
+      '      </template>',
       '      <template v-else>',
-      '        <div class="eva-pb-panel eva-pb-panel--blocks"><h4>{{ t(\'pb_page_blocks\') }}</h4><div class="eva-pb-tree"><template v-for="group in slotGroups()" :key="group.id"><div class="eva-pb-tree-slot">{{ tv(group.label) }}</div><div v-for="item in group.items" :key="group.id + \'-\' + item.uid" class="eva-pb-tree-row" :class="{ \'is-active\': item.uid === selectedUid }" @click="activeSlot = group.id; select(item.uid)"><i :class="moduleIcon(item.type)"></i><span>{{ tv(moduleLabel(item.type)) }}</span></div><p v-if="!group.items.length" class="eva-pb-empty-sm">{{ t(\'pb_no_blocks\') }}</p></template></div></div>',
+      '        <div class="eva-pb-panel eva-pb-panel--blocks" :class="{ \'is-collapsed\': pageBlocksCollapsed }">',
+      '          <button type="button" class="eva-pb-panel-toggle" :class="{ \'is-expanded\': !pageBlocksCollapsed }" :aria-expanded="pageBlocksCollapsed ? \'false\' : \'true\'" @click="pageBlocksCollapsed = !pageBlocksCollapsed">',
+      '            <span>{{ t(\'pb_page_blocks\') }}</span><i class="ri-arrow-down-s-line" aria-hidden="true"></i>',
+      '          </button>',
+      '          <transition :css="false" @before-enter="beforeGroupEnter" @enter="enterGroup" @leave="leaveGroup" @after-enter="afterGroupAnimation" @after-leave="afterGroupAnimation">',
+      '            <div v-show="!pageBlocksCollapsed" class="eva-pb-tree"><template v-for="group in slotGroups()" :key="group.id"><div class="eva-pb-tree-slot">{{ tv(group.label) }}</div><div v-for="item in group.items" :key="group.id + \'-\' + item.uid" class="eva-pb-tree-row" :class="{ \'is-active\': item.uid === selectedUid }" @click="activeSlot = group.id; select(item.uid)"><i :class="moduleIcon(item.type)"></i><span>{{ tv(moduleLabel(item.type)) }}</span></div><p v-if="!group.items.length" class="eva-pb-empty-sm">{{ t(\'pb_no_blocks\') }}</p></template></div>',
+      '          </transition>',
+      '        </div>',
       '        <div class="eva-pb-right-sep"></div>',
       '        <template v-if="selectedItem()">',
       '          <div class="eva-pb-right-head"><i :class="moduleIcon(selectedItem().type)"></i><span>{{ tv(moduleLabel(selectedItem().type)) }}</span></div>',
-      '          <div class="eva-pb-fields">',
-      '            <div class="eva-pb-field" v-for="f in selectedFields()" :key="f.id">',
-      '              <label class="eva-pb-field-label">{{ tv(f.title || f.id) }}</label>',
-      '              <eva-field :field="f" :model-value="childValue(f)" @update:model-value="updateChild(f, $event)"></eva-field>',
+      '          <template v-if="rightTab === \'component\'">',
+      '            <div class="eva-pb-fields">',
+      '              <div :class="[\'eva-pb-field\', f.class || \'\']" v-for="f in selectedFields()" :key="f.id">',
+      '                <label v-if="f.title || f.id" class="eva-pb-field-label">{{ tv(f.title || f.id) }}</label>',
+      '                <eva-field :field="f" :model-value="childValue(f)" @update:model-value="updateChild(f, $event)"></eva-field>',
+      '              </div>',
+      '              <p v-if="!selectedFields().length" class="eva-pb-empty-sm">{{ t(\'pb_no_fields\') }}</p>',
       '            </div>',
-      '            <p v-if="!selectedFields().length" class="eva-pb-empty-sm">{{ t(\'pb_no_fields\') }}</p>',
-      '          </div>',
+      '          </template>',
+      '          <template v-else>',
+      '            <div class="eva-pb-fields">',
+      '              <div :class="[\'eva-pb-field\', f.class || \'\']" v-for="f in customTabFields()" :key="f.id">',
+      '                <label v-if="f.title || f.id" class="eva-pb-field-label">{{ tv(f.title || f.id) }}</label>',
+      '                <eva-field :field="f" :model-value="childValue(f)" @update:model-value="updateChild(f, $event)"></eva-field>',
+      '              </div>',
+      '              <p v-if="!customTabFields().length" class="eva-pb-empty-sm">{{ t(\'pb_no_fields\') }}</p>',
+      '            </div>',
+      '          </template>',
       '        </template>',
       '        <div v-else class="eva-pb-empty-sm"><i class="ri-cursor-line"></i> {{ t(\'pb_select_hint\') }}</div>',
       '      </template>',

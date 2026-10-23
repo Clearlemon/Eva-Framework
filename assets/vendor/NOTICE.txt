@@ -1,0 +1,3 @@
+Bundled existing runtime dependencies for local loading.
+Vue 3.4.38 (MIT); GSAP 3.12.5 (license URL retained in JS header); Remix Icon 4.5.0; flag-icons 7.6.0 (MIT).
+Downloaded from the corresponding pinned npm packages via cdn.jsdelivr.net. License files and upstream source headers are retained.

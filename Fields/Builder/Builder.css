@@ -221,6 +221,8 @@
   font-weight: 700;
 }
 
+
+
 .eva-pb-empty-sm {
   color: var(--eva-text-mute);
   text-align: center;
@@ -245,10 +247,182 @@
   gap: 7px;
 }
 
+/* 文章数量设置：宽屏三列并排，窄面板自动恢复单列。 */
+.eva-pb-fields:has(> .eva-pb-field--post-count) {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(160px, 260px));
+  align-content: start;
+  column-gap: 12px;
+  row-gap: 14px;
+  justify-content: center;
+}
+
+.eva-pb-fields:has(> .eva-pb-field--post-count)>.eva-pb-field {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
+.eva-pb-fields:has(> .eva-pb-field--post-count)>.eva-pb-field--post-count {
+  grid-column: auto;
+}
+
+.eva-pb-right {
+  container-type: inline-size;
+}
+
+/* 短字段按配置并排，列表等其他字段仍占整行。 */
+.eva-pb-fields:has(> .eva-pb-field--compact-half, > .eva-pb-field--compact-third) {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  align-content: start;
+  gap: 12px;
+}
+
+.eva-pb-fields:has(> .eva-pb-field--compact-half, > .eva-pb-field--compact-third) > .eva-pb-field {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
+.eva-pb-fields > .eva-pb-field.eva-pb-field--compact-half {
+  grid-column: span 3;
+}
+
+.eva-pb-fields > .eva-pb-field.eva-pb-field--compact-third {
+  grid-column: span 2;
+}
+
+.eva-pb-field--compact-half .eva-spinner {
+  width: 100%;
+  min-width: 0;
+  grid-template-columns: 24px minmax(0, 1fr) 24px;
+}
+
+.eva-pb-field--compact-half .eva-spin-value {
+  min-width: 0;
+}
+
+@container (max-width: 300px) {
+  .eva-pb-fields > .eva-pb-field.eva-pb-field--compact-third {
+    grid-column: span 3;
+  }
+}
+
+@container (max-width: 820px) {
+  .eva-pb-fields:has(> .eva-pb-field--post-count) {
+    grid-template-columns: 1fr;
+  }
+
+  .eva-pb-fields:has(> .eva-pb-field--post-count)>.eva-pb-field--post-count {
+    grid-column: 1;
+  }
+}
+
+/* 构建器右侧设置控件统一采用无边框外观，保留背景层次与焦点反馈。 */
+.eva-pb-right .eva-pb-fields .eva-spinner,
+.eva-pb-right .eva-pb-fields .eva-button-set,
+.eva-pb-right .eva-pb-fields .eva-text-input-wrap,
+.eva-pb-right .eva-pb-fields .eva-common-input,
+.eva-pb-right .eva-pb-fields .eva-f-input,
+.eva-pb-right .eva-pb-fields .eva-f-textarea,
+.eva-pb-right .eva-pb-fields .eva-select-trigger,
+.eva-pb-right .eva-pb-fields .eva-ajax-trigger,
+.eva-pb-right .eva-pb-fields .eva-resource-trigger {
+  border: 0;
+  box-shadow: none;
+}
+
+.eva-pb-right .eva-pb-fields .eva-spinner {
+  background: var(--eva-soft);
+}
+
+.eva-pb-right .eva-pb-fields .eva-spinner>button,
+.eva-pb-right .eva-pb-fields .eva-spin-value,
+.eva-pb-right .eva-pb-fields .eva-button-set button {
+  border: 0;
+}
+
+.eva-pb-right .eva-pb-fields .eva-spinner>button {
+  background: transparent;
+}
+
+.eva-pb-right .eva-pb-fields .eva-button-set {
+  background: var(--eva-soft);
+}
+
+.eva-pb-right .eva-pb-fields .eva-select-trigger,
+.eva-pb-right .eva-pb-fields .eva-ajax-trigger,
+.eva-pb-right .eva-pb-fields .eva-resource-trigger,
+.eva-pb-right .eva-pb-fields .eva-text-input-wrap {
+  background: var(--eva-soft);
+}
+
+.eva-pb-right .eva-pb-fields .eva-sorter-zone,
+.eva-pb-right .eva-pb-fields .eva-sorter-item,
+.eva-pb-right .eva-pb-fields .eva-sorter-zone-search input,
+.eva-pb-right .eva-pb-fields .eva-sorter-undo,
+.eva-pb-right .eva-pb-fields .eva-sorter-batch,
+.eva-pb-right .eva-pb-fields .eva-sorter-select {
+  border: 0;
+}
+
+.eva-pb-right .eva-pb-fields .eva-sorter-zone>header {
+  border-bottom: 0;
+}
+
+.eva-pb-right .eva-pb-fields .eva-sorter-item {
+  background: var(--eva-surface);
+}
+
+.eva-pb-right .eva-pb-fields .eva-sorter-zone-search input {
+  background: var(--eva-soft);
+}
+
+.eva-pb-right .eva-pb-fields .eva-spinner :focus-visible,
+.eva-pb-right .eva-pb-fields .eva-select-trigger:focus-visible,
+.eva-pb-right .eva-pb-fields .eva-ajax-trigger:focus-visible,
+.eva-pb-right .eva-pb-fields .eva-resource-trigger:focus-visible,
+.eva-pb-right .eva-pb-fields .eva-f-input:focus,
+.eva-pb-right .eva-pb-fields .eva-f-textarea:focus {
+  outline: 2px solid var(--eva-primary);
+  outline-offset: 2px;
+}
+
 .eva-pb-field-label {
   color: var(--eva-text);
   font-size: 12px;
   font-weight: 650;
+}
+
+.eva-admin .eva-builder-global-source {
+  display: none;
+}
+
+.eva-admin .eva-builder-container-source {
+  display: none;
+}
+
+/* 右侧设置分组标题：与字段标题拉开层级，避免出现两个标题挤在一起的感觉。 */
+.eva-pb-fields .eva-pb-field:has(.eva-subheading) {
+  gap: 0;
+}
+
+.eva-pb-fields .eva-subheading {
+  padding: 9px 12px;
+  border: 0;
+  border-radius: var(--eva-radius);
+  background: color-mix(in srgb, var(--eva-primary) 9%, var(--eva-soft));
+  color: var(--eva-primary-600);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.eva-pb-fields .eva-pb-field-label {
+  color: var(--eva-text-sub);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.45;
 }
 
 @media (max-width: 1180px) {
@@ -398,6 +572,73 @@
   transition: border-color var(--eva-ease), background var(--eva-ease), color var(--eva-ease), box-shadow var(--eva-ease), transform var(--eva-ease);
 }
 
+.eva-pb-role-picker {
+  display: inline-flex;
+  width: 180px;
+  height: 30px;
+  align-items: center;
+  gap: 4px;
+  padding: 0 4px 0 8px;
+  border: 1px solid var(--eva-border);
+  border-radius: var(--eva-radius);
+  background: var(--eva-surface);
+  color: var(--eva-text-sub);
+}
+
+.eva-pb-role-picker>i {
+  flex: none;
+  font-size: 15px;
+}
+
+.eva-pb-role-picker .eva-pb-role-select {
+  min-width: 0;
+  flex: 1;
+}
+
+.eva-pb-role-picker .eva-select-trigger {
+  min-height: 28px;
+  padding: 2px 4px;
+  border: 0;
+  border-radius: var(--eva-radius);
+  background: transparent;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.eva-pb-role-picker .eva-select-trigger:hover,
+.eva-pb-role-picker .eva-select.is-open .eva-select-trigger,
+.eva-pb-role-picker .eva-select-trigger:focus-visible {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--eva-primary) 18%, transparent);
+}
+
+.eva-pb-role-picker .eva-select-value {
+  text-align: center;
+  white-space: nowrap;
+}
+
+.eva-pb-role-picker .eva-select-panel {
+  right: auto;
+  left: -29px;
+  min-width: 180px;
+}
+
+.eva-pb-role-picker .eva-select-option span {
+  white-space: nowrap;
+}
+
+@media (max-width: 782px) {
+  .eva-pb-role-picker {
+    width: 160px;
+  }
+
+  .eva-pb-role-picker .eva-select-panel {
+    min-width: 160px;
+  }
+}
+
 
 .eva-pb-divider {
   width: 1px;
@@ -436,6 +677,90 @@
   border-color: color-mix(in srgb, var(--eva-primary) 55%, var(--eva-surface));
   background: var(--eva-surface);
   color: var(--eva-primary-600);
+}
+
+.eva-pb-opacity {
+  display: inline-flex;
+  height: 32px;
+  align-items: center;
+  gap: 4px;
+  width: 108px;
+  padding: 0 4px 0 8px;
+  border: 1px solid var(--eva-border);
+  border-radius: 5px;
+  background: var(--eva-surface);
+  color: var(--eva-text-sub);
+  transition: border-color var(--eva-ease), box-shadow var(--eva-ease), color var(--eva-ease);
+}
+
+.eva-pb-opacity:focus-within {
+  border-color: var(--eva-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--eva-primary) 18%, transparent);
+  color: var(--eva-primary-600);
+}
+
+.eva-pb-opacity>i {
+  flex: none;
+  font-size: 15px;
+  pointer-events: none;
+}
+
+.eva-pb-opacity .eva-pb-opacity-select {
+  flex: 1;
+  min-width: 0;
+}
+
+.eva-pb-opacity .eva-select-trigger {
+  min-height: 28px;
+  padding: 2px 4px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.eva-pb-opacity .eva-select-trigger:hover,
+.eva-pb-opacity .eva-select.is-open .eva-select-trigger,
+.eva-pb-opacity .eva-select-trigger:focus-visible {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+.eva-pb-opacity .eva-select-value {
+  text-align: center;
+}
+
+.eva-pb-opacity .eva-select-arrow {
+  font-size: 15px;
+}
+
+.eva-pb-opacity .eva-select-panel {
+  right: -5px;
+  left: -30px;
+  min-width: 108px;
+}
+
+.eva-pb-opacity .eva-select-menu {
+  max-height: 232px;
+}
+
+.eva-pb-opacity .eva-select-option {
+  padding: 6px 8px;
+  font-size: 12px;
+}
+
+.eva-pb-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .eva-pb-actions {
@@ -488,14 +813,15 @@
 }
 
 .eva-pb-body {
+  container-type: inline-size;
+  container-name: eva-builder-body;
   position: relative;
-  display: grid;
+  display: flex;
   min-height: 0;
   flex: 1;
-  --eva-pb-left-width: 260px;
-  --eva-pb-right-width: 300px;
-  grid-template-columns: var(--eva-pb-left-width) minmax(0, 1fr) var(--eva-pb-right-width);
-  transition: grid-template-columns var(--eva-ease);
+  --eva-pb-left-width: 320px;
+  --eva-pb-right-width: 360px;
+  transition: none;
 }
 
 .eva-pb-body.is-left-collapsed {
@@ -523,12 +849,13 @@
 
 .eva-pb-body.is-left-collapsed .eva-pb-left,
 .eva-pb-body.is-right-collapsed .eva-pb-right {
+  width: 0;
   overflow: hidden;
   pointer-events: none;
 }
 
-.eva-pb-body.is-left-collapsed .eva-pb-left > *,
-.eva-pb-body.is-right-collapsed .eva-pb-right > * {
+.eva-pb-body.is-left-collapsed .eva-pb-left>*,
+.eva-pb-body.is-right-collapsed .eva-pb-right>* {
   opacity: 0;
 }
 
@@ -643,7 +970,38 @@ body.eva-pb-resizing * {
 
 .eva-pb-left,
 .eva-pb-right {
-  background: var(--eva-surface);
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  min-width: 0;
+  min-height: 0;
+  z-index: 20;
+  background: color-mix(in srgb, var(--eva-surface) var(--eva-pb-panel-opacity, 88%), transparent);
+  border: 1px solid color-mix(in srgb, var(--eva-border) 82%, transparent);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--eva-text) 12%, transparent);
+  transition: width var(--eva-ease);
+}
+
+.eva-pb-left {
+  left: 0;
+  width: var(--eva-pb-left-width);
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.eva-pb-right {
+  right: 0;
+  width: var(--eva-pb-right-width);
+}
+
+.eva-pb-right {
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
 }
 
 .eva-pb-left-tabs,
@@ -656,9 +1014,15 @@ body.eva-pb-resizing * {
   border-bottom: 1px solid var(--eva-border);
 }
 
+.eva-pb-right-tabs {
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
 .eva-pb-left-tabs button,
 .eva-pb-right-tabs button {
   position: relative;
+  flex: 0 0 auto;
   height: 100%;
   padding: 0;
   border: 0;
@@ -668,6 +1032,7 @@ body.eva-pb-resizing * {
   font: inherit;
   font-size: 12px;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .eva-pb-left-tabs button.is-active,
@@ -687,12 +1052,175 @@ body.eva-pb-resizing * {
   background: var(--eva-primary);
 }
 
+/* 原生小工具在实际侧栏之间拖放，与 Builder 组件实例分开保存。 */
+.eva-pb-widgets-panel { display: flex; flex-direction: column; gap: 12px; padding: 16px; color: var(--eva-text); font-size: 12px; }
+.eva-pb-widgets-panel p, .eva-pb-widgets-panel h4 { margin: 0; }
+.eva-pb-widgets-panel p { line-height: 1.7; color: var(--eva-text-muted, #8892a4); }
+.eva-pb-widgets-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.eva-pb-widgets-actions button { padding: 5px 9px; border: 1px solid var(--eva-border, #e5e7eb); border-radius: 5px; background: transparent; color: inherit; cursor: pointer; }
+.eva-pb-widgets-actions a { color: var(--eva-primary, #28745f); text-decoration: none; }
+.eva-pb-widget-area { display: flex; flex-direction: column; gap: 10px; }
+.eva-pb-widget-items, .eva-pb-widget-types { margin: 0; padding: 0; list-style: none; }
+.eva-pb-widget-items li { display: flex; justify-content: space-between; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--eva-border, #e5e7eb); }
+.eva-pb-widget-items small { color: var(--eva-text-muted, #8892a4); }
+.eva-pb-widget-items li[draggable="true"] { cursor: grab; }
+.eva-pb-widget-items li > div:first-child { flex: 1; min-width: 0; }
+.eva-pb-widget-items strong, .eva-pb-widget-items small { display: block; overflow-wrap: anywhere; }
+.eva-pb-widget-item-tools { display: flex; align-items: center; gap: 3px; }
+.eva-pb-widget-item-tools button { padding: 3px; border: 0; background: transparent; color: var(--eva-text-sub); cursor: pointer; }
+.eva-pb-widget-item-tools button:disabled { opacity: .3; cursor: default; }
+.eva-pb-widget-item-tools .eva-pb-widget-remove { display: inline-flex; align-items: center; gap: 3px; min-height: 26px; margin-left: 4px; padding: 3px 8px; border: 1px solid currentColor; border-radius: 4px; color: var(--eva-danger, #dc2626); font: inherit; white-space: nowrap; }
+.eva-pb-widget-item-tools .eva-pb-widget-remove:hover:not(:disabled) { background: color-mix(in srgb, var(--eva-danger, #dc2626) 8%, transparent); }
+.eva-pb-widget-item-tools .eva-pb-widget-remove:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.eva-pb-widget-types { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 12px; }
+.eva-pb-widget-types button { display: flex; width: 100%; min-height: 30px; align-items: center; gap: 6px; padding: 4px 6px; border: 1px solid var(--eva-border); border-radius: 4px; background: var(--eva-surface); color: var(--eva-text); font: inherit; font-size: 12px; text-align: left; cursor: grab; }
+.eva-pb-widget-types button:hover { border-color: var(--eva-primary); color: var(--eva-primary); }
+.eva-pb-widget-types button:disabled { opacity: .5; cursor: default; }
+.eva-pb-module-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+  margin: 10px 16px 0;
+  padding: 3px;
+  border: 1px solid var(--eva-border);
+  border-radius: var(--eva-radius);
+  background: var(--eva-soft);
+}
+
+/* 固定结构没有模块操作按钮，仅提供设置入口。 */
+.eva-pb-fixed-row { width: 100%; border: 0; background: transparent; color: var(--eva-text); font: inherit; text-align: left; cursor: pointer; }
+.eva-pb-fixed-row > span { flex: 1; }
+.eva-pb-fixed-row > .ri-lock-line { margin-left: auto; color: var(--eva-text-mute); }
+
+.eva-pb-module-tab {
+  display: inline-flex;
+  min-width: 0;
+  min-height: 32px;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 4px 3px;
+  border: 1px solid transparent;
+  border-radius: var(--eva-radius);
+  background: transparent;
+  color: var(--eva-text-sub);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  transition: background var(--eva-ease), border-color var(--eva-ease), color var(--eva-ease), box-shadow var(--eva-ease);
+}
+
+.eva-pb-module-tab i {
+  flex: none;
+  font-size: 13px;
+}
+
+.eva-pb-module-tab span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.eva-pb-module-tab:hover {
+  background: var(--eva-surface);
+  color: var(--eva-text);
+}
+
+.eva-pb-module-tab.is-active {
+  border-color: color-mix(in srgb, var(--eva-primary) 34%, var(--eva-border));
+  background: var(--eva-surface);
+  color: var(--eva-primary-600);
+  box-shadow: var(--eva-shadow-soft);
+}
+
+.eva-pb-module-tab:focus-visible {
+  outline: none;
+  border-color: var(--eva-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--eva-primary) 18%, transparent);
+}
+
+.eva-pb-container-settings {
+  min-height: 0;
+  overflow: auto;
+  padding: 8px 16px 18px;
+}
+
+.eva-pb-container-tabs {
+  display: flex;
+  gap: 4px;
+  margin: 0 0 10px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.eva-pb-container-tabs button {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+  min-height: 28px;
+  padding: 4px 9px;
+  border: 1px solid transparent;
+  border-radius: var(--eva-radius);
+  background: transparent;
+  color: var(--eva-text-sub);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  transition: background var(--eva-ease), border-color var(--eva-ease), color var(--eva-ease), box-shadow var(--eva-ease);
+}
+
+.eva-pb-container-tabs button:hover {
+  background: var(--eva-soft);
+  color: var(--eva-text);
+}
+
+.eva-pb-container-tabs button.is-active {
+  border-color: color-mix(in srgb, var(--eva-primary) 35%, var(--eva-border));
+  background: var(--eva-primary-050);
+  color: var(--eva-primary-600);
+}
+
+.eva-pb-container-tabs button:focus-visible {
+  outline: none;
+  border-color: var(--eva-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--eva-primary) 18%, transparent);
+}
+
+.eva-pb-container-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 2px 0 10px;
+  color: var(--eva-text);
+  font-size: 13px;
+}
+
+.eva-pb-container-head i {
+  color: var(--eva-primary);
+  font-size: 16px;
+}
+
+.eva-pb-container-head span {
+  margin-left: auto;
+  color: var(--eva-text-mute);
+  font-size: 11px;
+}
+
+.eva-pb-container-settings .eva-pb-fields {
+  gap: 12px;
+  padding: 0;
+}
+
 .eva-pb-search {
   display: flex;
   align-items: center;
   gap: 8px;
   height: 26px;
-  margin: 10px 16px 8px;
+  margin: 8px 16px;
   padding: 0 8px;
   border: 1px solid var(--eva-border);
   border-radius: 8px;
@@ -753,7 +1281,9 @@ body.eva-pb-resizing * {
 
 .eva-pb-mod-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  /* 卡片保持固定宽度，面板变宽时只增加每行可容纳的数量。 */
+  grid-template-columns: repeat(auto-fill, 88px);
+  justify-content: start;
   gap: 8px;
 }
 
@@ -792,6 +1322,8 @@ body.eva-pb-resizing * {
 
 .eva-pb-stage {
   display: flex;
+  width: 100%;
+  flex: 1 1 auto;
   min-width: 0;
   flex-direction: column;
   background: var(--eva-surface);
@@ -884,8 +1416,10 @@ body.eva-pb-resizing * {
 
 .eva-pb-iframe-shell {
   position: relative;
+  flex: 1 1 auto;
   width: 100%;
-  min-height: 100%;
+  height: 100%;
+  min-height: 0;
   border: 0;
   border-radius: 0;
   overflow: hidden;
@@ -896,7 +1430,7 @@ body.eva-pb-resizing * {
 .eva-pb-iframe {
   display: block;
   width: 100%;
-  height: max(720px, calc(100vh - 210px));
+  height: 100%;
   border: 0;
   background: var(--eva-surface);
   pointer-events: auto;
@@ -1028,6 +1562,57 @@ body.eva-pb-resizing * {
 
 .eva-pb-panel--blocks {
   border-bottom: 0;
+}
+
+.eva-pb-panel--blocks.is-collapsed {
+  padding-bottom: 12px;
+}
+
+.eva-pb-panel-toggle {
+  display: flex;
+  width: 100%;
+  min-height: 28px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: -4px 0 8px;
+  padding: 4px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--eva-text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  text-align: left;
+  transition: background var(--eva-ease), color var(--eva-ease), box-shadow var(--eva-ease);
+}
+
+.eva-pb-panel--blocks.is-collapsed .eva-pb-panel-toggle {
+  margin-bottom: -4px;
+}
+
+.eva-pb-panel-toggle:hover {
+  background: var(--eva-soft);
+  color: var(--eva-primary-600);
+}
+
+.eva-pb-panel-toggle:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--eva-primary) 18%, transparent);
+}
+
+.eva-pb-panel-toggle i {
+  flex: none;
+  color: var(--eva-text-mute);
+  font-size: 16px;
+  transition: transform var(--eva-ease), color var(--eva-ease);
+}
+
+.eva-pb-panel-toggle.is-expanded i {
+  color: var(--eva-primary-600);
+  transform: rotate(180deg);
 }
 
 .eva-pb-right-sep {
@@ -1410,3 +1995,982 @@ body.eva-pb-resizing * {
   color: var(--eva-danger);
   font-size: 12px;
 }
+
+
+/* 菜单 tab：已用菜单 / 所有菜单 */
+
+
+.eva-pb-menu-location-card {
+  margin: 10px 16px 0;
+  overflow: hidden;
+  border: 1px solid var(--eva-border);
+  border-radius: var(--eva-radius-lg);
+  background: var(--eva-surface);
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--eva-text) 6%, transparent);
+}
+
+.eva-pb-menu-location-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 13px 13px 11px;
+  background: color-mix(in srgb, var(--eva-primary) 6%, var(--eva-surface));
+}
+
+.eva-pb-menu-location-head>i {
+  flex: none;
+  margin-top: 1px;
+  color: var(--eva-primary);
+  font-size: 17px;
+}
+
+.eva-pb-menu-location-head>div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.eva-pb-menu-location-head strong {
+  color: var(--eva-text);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.eva-pb-menu-location-head span {
+  color: var(--eva-text-sub);
+  font-size: 10.5px;
+  line-height: 1.5;
+}
+
+.eva-pb-menu-location-action {
+  display: flex;
+  width: 100%;
+  min-height: 38px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 13px;
+  border: 0;
+  border-top: 1px solid var(--eva-border);
+  background: var(--eva-surface);
+  color: var(--eva-primary-600);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: left;
+}
+
+.eva-pb-menu-location-action:hover {
+  background: var(--eva-primary-050);
+}
+
+.eva-pb-menu-location-action i {
+  font-size: 16px;
+}
+
+.eva-pb-menu-location-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 8px 13px 11px;
+  border-top: 1px solid var(--eva-border);
+  background: var(--eva-soft);
+}
+
+.eva-pb-menu-location-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--eva-text-sub);
+  font-size: 10px;
+}
+
+.eva-pb-menu-location-item small {
+  color: var(--eva-text-mute);
+  font-size: 9px;
+}
+
+.eva-pb-menu-location-list p {
+  margin: 0;
+  color: var(--eva-text-mute);
+  font-size: 10px;
+}
+
+
+/* 菜单位置卡片的紧凑尺寸 */
+.eva-pb-menu-location-card {
+  margin: 6px 12px 0;
+}
+
+.eva-pb-menu-location-head {
+  gap: 6px;
+  padding: 8px 10px 7px;
+}
+
+.eva-pb-menu-location-head>i {
+  font-size: 15px;
+}
+
+.eva-pb-menu-location-head strong {
+  font-size: 11px;
+}
+
+.eva-pb-menu-location-head span {
+  font-size: 9.5px;
+}
+
+.eva-pb-menu-location-action {
+  min-height: 30px;
+  padding: 0 10px;
+  font-size: 10px;
+}
+
+.eva-pb-menu-location-action i {
+  font-size: 14px;
+}
+
+.eva-pb-menu-location-list {
+  gap: 4px;
+  padding: 6px 10px 8px;
+}
+
+.eva-pb-menu-location-item,
+.eva-pb-menu-location-list p {
+  font-size: 9px;
+}
+
+
+.eva-pb-menu-location-card {
+  background: var(--eva-soft);
+}
+
+.eva-pb-menu-location-subtitle {
+  margin: 0;
+  padding: 6px 10px 7px;
+  border-top: 1px solid var(--eva-border);
+  background: var(--eva-surface);
+  color: var(--eva-text-sub);
+  font-size: 9.5px;
+  line-height: 1.45;
+}
+
+
+/* 菜单位置操作行：放大点击区域 */
+.eva-pb-menu-location-action {
+  min-height: 40px;
+  padding: 0 13px;
+  font-size: 11.5px;
+}
+
+.eva-pb-menu-location-action i {
+  font-size: 16px;
+}
+
+
+/* 菜单位置卡片：提高可读性与点击区域 */
+.eva-pb-menu-location-card {
+  margin: 9px 12px 0;
+}
+
+.eva-pb-menu-location-head {
+  gap: 8px;
+  padding: 12px 13px 10px;
+}
+
+.eva-pb-menu-location-head>i {
+  font-size: 17px;
+}
+
+.eva-pb-menu-location-head strong {
+  font-size: 14px;
+}
+
+.eva-pb-menu-location-head span {
+  font-size: 12px;
+}
+
+.eva-pb-menu-location-action {
+  min-height: 44px;
+  padding: 0 13px;
+  font-size: 12.5px;
+}
+
+.eva-pb-menu-location-action i {
+  font-size: 18px;
+}
+
+.eva-pb-menu-location-subtitle {
+  padding: 8px 13px 9px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.eva-pb-menu-location-list {
+  gap: 6px;
+  padding: 9px 13px 11px;
+}
+
+.eva-pb-menu-location-item,
+.eva-pb-menu-location-list p {
+  font-size: 10.5px;
+}
+
+
+.eva-pb-menu-location-select-wrap {
+  padding: 8px 13px 0;
+}
+
+.eva-pb-menu-location-select {
+  width: 100%;
+}
+
+.eva-pb-menu-location-select .eva-select-trigger {
+  min-height: 36px;
+  font-size: 13px;
+  border-color: var(--eva-border);
+  background: var(--eva-surface);
+  box-shadow: none;
+}
+
+
+/* 菜单位置：仅保留下拉框边界，标题和说明使用纯文本 */
+.eva-pb-menu-location-card {
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.eva-pb-menu-location-head {
+  padding: 6px 0 5px;
+  background: transparent;
+}
+
+.eva-pb-menu-location-select-wrap {
+  padding: 5px 0 0;
+}
+
+.eva-pb-menu-location-subtitle {
+  padding: 6px 0 2px;
+  border-top: 0;
+  background: transparent;
+}
+
+/* 菜单位置下拉项无需勾选图标，移除左侧占位。 */
+.eva-pb-menu-location-select .eva-select-check {
+  display: none;
+}
+
+.eva-pb-menu-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--eva-border);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.eva-pb-menu-editor-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--eva-text-sub);
+  font-size: 12px;
+}
+
+.eva-pb-menu-editor-status button,
+.eva-pb-menu-editor-move,
+.eva-pb-menu-editor-toggle {
+  border: 1px solid var(--eva-border);
+  border-radius: 4px;
+  background: var(--eva-surface);
+  color: var(--eva-text-sub);
+  cursor: pointer;
+  font: inherit;
+}
+
+.eva-pb-menu-editor-status button {
+  flex: none;
+  min-height: 30px;
+  padding: 5px 10px;
+  color: var(--eva-primary-600);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.eva-pb-menu-editor-status button:disabled,
+.eva-pb-menu-editor-move:disabled {
+  cursor: not-allowed;
+  opacity: .45;
+}
+
+.eva-pb-menu-editor-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--eva-text-sub);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.eva-pb-menu-editor-field input {
+  width: 100%;
+  min-width: 0;
+  min-height: 36px;
+  padding: 7px 10px;
+  border: 1px solid var(--eva-border);
+  border-radius: 4px;
+  background: var(--eva-surface);
+  color: var(--eva-text);
+  font: inherit;
+  font-weight: 400;
+}
+
+.eva-pb-menu-editor-field>input {
+  box-sizing: border-box;
+  height: 28px;
+  min-height: 28px;
+  padding: 0 10px;
+  line-height: 20px;
+}
+
+.eva-pb-menu-editor-field input:focus {
+  outline: 2px solid color-mix(in srgb, var(--eva-primary) 28%, transparent);
+  border-color: var(--eva-primary);
+}
+
+.eva-pb-menu-editor-field input[readonly] {
+  background: var(--eva-soft);
+  color: var(--eva-text-mute);
+}
+
+.eva-pb-menu-editor-locations {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--eva-border);
+  border-radius: 5px;
+  background: var(--eva-soft);
+}
+
+.eva-pb-menu-editor-locations>strong {
+  color: var(--eva-text);
+  font-size: 13px;
+}
+
+.eva-pb-menu-editor-location {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+  color: var(--eva-text-sub);
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.eva-pb-menu-editor-location input {
+  flex: none;
+  margin: 0;
+}
+
+.eva-pb-menu-editor-location span,
+.eva-pb-menu-editor-location small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.eva-pb-menu-editor-location small {
+  color: var(--eva-text-sub);
+  font-size: 12px;
+}
+
+.eva-pb-menu-editor-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid var(--eva-border);
+  border-radius: 6px;
+  background: var(--eva-surface);
+}
+
+.eva-pb-menu-editor-item {
+  position: relative;
+  overflow: hidden;
+  border: 0;
+  border-bottom: 1px solid var(--eva-border);
+  background: var(--eva-surface);
+}
+
+.eva-pb-menu-editor-item:last-child {
+  border-bottom: 0;
+}
+
+.eva-pb-menu-editor-item.is-active {
+  background: var(--eva-primary-050);
+}
+
+.eva-pb-menu-editor-item.is-active .eva-pb-menu-editor-toggle {
+  border-color: var(--eva-primary);
+  background: var(--eva-primary-050);
+  color: var(--eva-primary-600);
+}
+
+.eva-pb-menu-editor-row {
+  display: flex;
+  min-width: 0;
+  min-height: 42px;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 6px;
+}
+
+.eva-pb-menu-editor-toggle {
+  flex: none;
+  display: grid;
+  width: 28px;
+  min-width: 28px;
+  min-height: 28px;
+  place-items: center;
+  padding: 0;
+  font-size: 14px;
+}
+
+.eva-pb-menu-editor-item-title {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  color: var(--eva-text);
+  font-size: 13px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.eva-pb-menu-editor-row>small {
+  flex: none;
+  max-width: 80px;
+  overflow: hidden;
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: var(--eva-soft);
+  color: var(--eva-text-sub);
+  font-size: 12px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.eva-pb-menu-editor-move {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  font-size: 14px;
+}
+
+.eva-pb-menu-editor-details {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--eva-border);
+  border-radius: 5px;
+  background: var(--eva-soft);
+}
+
+.eva-pb-menu-editor-details-head {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.eva-pb-menu-editor-details-head strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--eva-text);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.eva-pb-menu-editor-close {
+  flex: none;
+  min-height: 28px;
+  padding: 4px 8px;
+  border: 1px solid var(--eva-border);
+  border-radius: 4px;
+  background: var(--eva-surface);
+  color: var(--eva-text-sub);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.eva-pb-menu-editor-close:hover {
+  border-color: var(--eva-primary);
+  color: var(--eva-primary-600);
+}
+
+.eva-pb-menu-editor-empty,
+.eva-pb-menu-editor-hint,
+.eva-pb-menu-editor-error,
+.eva-pb-menu-editor-unassigned {
+  color: var(--eva-text-sub);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.eva-pb-menu-editor-error {
+  color: var(--eva-danger);
+}
+
+.eva-pb-menu-create {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.eva-pb-menu-create p {
+  margin: 0;
+}
+.eva-pb-menu-create button:disabled {
+  cursor: wait;
+  opacity: .6;
+}
+
+.eva-pb-menu-editor-add {
+  display: flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 120px;
+  padding: 0 14px;
+  border: 1px solid var(--eva-primary);
+  border-radius: 5px;
+  background: var(--eva-primary);
+  color: var(--eva-on-primary);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.eva-pb-menu-editor-add:hover {
+  border-color: var(--eva-primary-600);
+  background: var(--eva-primary-600);
+}
+
+.eva-pb-menu-editor-item.is-submenu .eva-pb-menu-editor-row {
+  border-left: 1px dashed var(--eva-border);
+}
+
+.eva-pb-menu-editor-branch {
+  flex: none;
+  color: var(--eva-primary-600);
+  font-size: 15px;
+  line-height: 1;
+}
+
+.eva-pb-menu-editor-collapse {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 20px;
+  min-width: 20px;
+  height: 28px;
+  padding: 0 2px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--eva-primary-600);
+  cursor: pointer;
+}
+
+.eva-pb-menu-editor-collapse:hover {
+  background: var(--eva-soft);
+}
+
+.eva-pb-menu-editor-collapse i {
+  font-size: 14px;
+}
+
+.eva-pb-menu-editor-collapse small {
+  color: var(--eva-text-sub);
+  font-size: 12px;
+}
+
+.eva-pb-menu-editor-delete {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--eva-border);
+  border-radius: 4px;
+  background: var(--eva-surface);
+  color: var(--eva-danger);
+  cursor: pointer;
+}
+
+.eva-pb-menu-editor-delete:hover {
+  background: color-mix(in srgb, var(--eva-danger) 10%, transparent);
+}
+
+.eva-pb-menu-editor-delete i {
+  font-size: 14px;
+}
+
+.eva-pb-menu-editor-link-field {
+  min-width: 0;
+}
+
+.eva-pb-menu-editor-link-field .eva-link-field {
+  max-width: none;
+}
+
+.eva-pb-menu-editor-link-field .eva-link-grid {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+
+.eva-pb-menu-editor-link-field .eva-link-grid .is-wide {
+  grid-column: auto;
+}
+
+.eva-pb-menu-editor-details .eva-icon-control {
+  gap: 6px;
+}
+
+.eva-pb-menu-editor-details .eva-icon-input {
+  flex: 1;
+  width: 0;
+  min-width: 0;
+}
+
+.eva-pb-menu-editor-details .eva-icon-open,
+.eva-pb-menu-editor-details .eva-icon-reset {
+  flex: none;
+}
+
+.eva-pb-menu-editor-details .eva-icon-popover {
+  position: static;
+  width: 100%;
+  max-width: 100%;
+  margin-top: 8px;
+}
+
+/* Menu rows: icons, drag handles and grouped insertion controls. */
+.eva-pb-menu-editor-list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.eva-pb-menu-editor-list-head strong {
+  font-size: 13px;
+}
+
+.eva-pb-menu-editor-list-head .eva-pb-menu-editor-add {
+  flex: none;
+  min-width: 100px;
+  height: 22px;
+  min-height: 22px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 3px;
+  box-shadow: none;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.eva-pb-menu-editor-grip {
+  display: grid;
+  flex: none;
+  width: 18px;
+  height: 28px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--eva-text-sub);
+  font-size: 15px;
+  cursor: grab;
+  touch-action: none;
+}
+
+.eva-pb-menu-editor-grip:focus-visible {
+  outline: 2px solid var(--eva-primary);
+  border-radius: 4px;
+}
+
+.eva-pb-menu-editor-grip:disabled {
+  opacity: .4;
+  cursor: wait;
+}
+
+.eva-pb-menu-editor-icon {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  font-size: 18px;
+  color: var(--eva-text);
+  fill: currentColor;
+}
+
+.eva-pb-menu-editor-item.is-dragging {
+  opacity: .4;
+}
+
+.eva-pb-menu-editor-item.is-drop-before::before,
+.eva-pb-menu-editor-item.is-drop-after::after {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  right: 0;
+  left: 0;
+  height: 2px;
+  background: var(--eva-primary);
+}
+
+.eva-pb-menu-editor-item.is-drop-before::before {
+  top: 0;
+}
+
+.eva-pb-menu-editor-item.is-drop-after::after {
+  bottom: 0;
+}
+
+.eva-pb-menu-editor-item.is-drop-inside {
+  box-shadow: inset 0 0 0 2px var(--eva-primary);
+  background: var(--eva-primary-050);
+}
+
+body.eva-menu-dragging,
+body.eva-menu-dragging * {
+  cursor: grabbing !important;
+  user-select: none !important;
+}
+
+/* Anchored menu insertion popover; its position is clamped to the visible builder. */
+.eva-pb-menu-add-panel,
+.eva-pb-menu-add-panel * { box-sizing: border-box; }
+.eva-pb-menu-add-panel {
+  position: absolute;
+  z-index: 40;
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  border: 1px solid color-mix(in srgb, var(--eva-primary) 22%, var(--eva-border));
+  border-radius: 16px;
+  background: var(--eva-surface);
+  color: var(--eva-text);
+  box-shadow: 0 20px 50px color-mix(in srgb, var(--eva-text) 18%, transparent);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.eva-pb-menu-add-panel.is-anchored::before {
+  content: '';
+  position: absolute;
+  z-index: 2;
+  top: var(--eva-menu-anchor-y);
+  left: -7px;
+  width: 12px;
+  height: 12px;
+  transform: translateY(-50%) rotate(45deg);
+  border-bottom: 1px solid color-mix(in srgb, var(--eva-primary) 22%, var(--eva-border));
+  border-left: 1px solid color-mix(in srgb, var(--eva-primary) 22%, var(--eva-border));
+  background: var(--eva-surface);
+  pointer-events: none;
+}
+.eva-pb-menu-add-panel.is-anchored::after {
+  content: '';
+  position: absolute;
+  top: var(--eva-menu-anchor-y);
+  left: calc(0px - var(--eva-menu-anchor-gap));
+  width: calc(var(--eva-menu-anchor-gap) - 8px);
+  border-top: 2px dashed color-mix(in srgb, var(--eva-primary) 45%, transparent);
+  pointer-events: none;
+}
+.eva-pb-menu-add-panel.is-left::before { right: -7px; left: auto; transform: translateY(-50%) rotate(225deg); }
+.eva-pb-menu-add-panel.is-left::after { right: calc(0px - var(--eva-menu-anchor-gap)); left: auto; }
+.eva-pb-menu-add-head {
+  display: flex;
+  flex: none;
+  min-height: 68px;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--eva-border);
+}
+.eva-pb-menu-add-head-icon { display: grid; flex: none; width: 36px; height: 36px; place-items: center; border-radius: 11px; background: var(--eva-primary-050); color: var(--eva-primary); font-size: 20px; }
+.eva-pb-menu-add-heading { flex: 1; min-width: 0; }
+.eva-pb-menu-add-heading strong { display: block; color: var(--eva-text); font-size: 16px; font-weight: 700; }
+.eva-pb-menu-add-heading p { margin: 1px 0 0; color: var(--eva-text-sub); font-size: 12px; }
+.eva-pb-menu-add-mode { flex: none; padding: 4px 8px; border-radius: 7px; background: color-mix(in srgb, var(--eva-primary) 8%, var(--eva-surface)); color: var(--eva-primary-600); font-size: 12px; }
+.eva-pb-menu-add-head button { display: grid; flex: none; width: 28px; height: 28px; place-items: center; padding: 0; border: 1px solid var(--eva-border); border-radius: 8px; background: var(--eva-surface); color: var(--eva-text-sub); font-size: 16px; cursor: pointer; }
+.eva-pb-menu-add-head button:hover { color: var(--eva-primary); border-color: var(--eva-primary); }
+.eva-pb-menu-add-layout { display: grid; flex: 1; min-width: 0; min-height: 0; grid-template-columns: 192px minmax(0, 1fr); overflow: hidden; }
+.eva-pb-menu-add-nav { display: flex; min-width: 0; min-height: 0; flex-direction: column; gap: 10px; overflow-y: auto; padding: 16px 12px 12px; scrollbar-width: thin; border-right: 1px solid var(--eva-border); background: color-mix(in srgb, var(--eva-soft) 48%, var(--eva-surface)); }
+.eva-pb-menu-add-caption { margin: 0; padding: 0 8px; color: var(--eva-text-sub); font-size: 12px; }
+.eva-pb-menu-add-types { display: flex; flex-direction: column; gap: 4px; }
+.eva-pb-menu-add-type {
+  --eva-menu-type-color: var(--eva-primary);
+  display: flex;
+  flex: none;
+  min-width: 0;
+  min-height: 42px;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--eva-text-sub);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.eva-pb-menu-add-type.is-page, .eva-pb-menu-add-type-icon.is-page { --eva-menu-type-color: #9174c7; }
+.eva-pb-menu-add-type.is-post, .eva-pb-menu-add-type-icon.is-post { --eva-menu-type-color: #35a995; }
+.eva-pb-menu-add-type.is-category, .eva-pb-menu-add-type-icon.is-category { --eva-menu-type-color: #e4954e; }
+.eva-pb-menu-add-type.is-post_tag, .eva-pb-menu-add-type-icon.is-post_tag { --eva-menu-type-color: #779bc9; }
+.eva-pb-menu-add-type.is-post_format, .eva-pb-menu-add-type-icon.is-post_format { --eva-menu-type-color: #789ac5; }
+.eva-pb-menu-add-type strong { flex: 1; min-width: 0; font-size: 13px; font-weight: 600; white-space: nowrap; }
+.eva-pb-menu-add-type-arrow { color: var(--eva-primary); font-size: 16px; opacity: 0; }
+.eva-pb-menu-add-type:hover { background: var(--eva-soft); color: var(--eva-text); }
+.eva-pb-menu-add-type.is-active { border-color: color-mix(in srgb, var(--eva-primary) 25%, var(--eva-border)); background: color-mix(in srgb, var(--eva-primary) 11%, var(--eva-surface)); color: var(--eva-primary-600); }
+.eva-pb-menu-add-type.is-active .eva-pb-menu-add-type-arrow { opacity: 1; }
+.eva-pb-menu-add-type:focus-visible { outline: 2px solid var(--eva-primary); outline-offset: -2px; }
+.eva-pb-menu-add-type-icon { display: grid; flex: none; width: 28px; height: 28px; place-items: center; border-radius: 9px; background: color-mix(in srgb, var(--eva-menu-type-color, var(--eva-primary)) 9%, var(--eva-surface)); color: var(--eva-menu-type-color, var(--eva-primary)); font-size: 18px; }
+.eva-pb-menu-add-type.is-active .eva-pb-menu-add-type-icon { background: var(--eva-surface); color: var(--eva-primary); }
+.eva-pb-menu-add-nav-note { margin-top: auto; padding: 10px 6px 0; border-top: 1px solid var(--eva-border); color: var(--eva-text-mute); font-size: 11px; }
+.eva-pb-menu-add-editor { min-width: 0; min-height: 0; overflow-y: auto; padding: 20px 24px; scrollbar-width: thin; }
+.eva-pb-menu-add-group-title { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+.eva-pb-menu-add-group-title > .eva-pb-menu-add-type-icon { width: 38px; height: 38px; border-radius: 12px; font-size: 22px; }
+.eva-pb-menu-add-group-title > div { flex: 1; min-width: 0; }
+.eva-pb-menu-add-group-title h3 { margin: 0; color: var(--eva-text); font-size: 17px; line-height: 1.4; }
+.eva-pb-menu-add-group-title p { margin: 2px 0 0; color: var(--eva-text-sub); font-size: 12px; }
+.eva-pb-menu-add-availability { display: inline-flex; flex: none; align-items: center; gap: 4px; padding: 4px 7px; border-radius: 6px; background: color-mix(in srgb, var(--eva-success) 8%, var(--eva-surface)); color: var(--eva-success); font-size: 11px; white-space: nowrap; }
+.eva-pb-menu-add-availability span { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.eva-pb-menu-add-group-body { display: grid; min-width: 0; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.eva-pb-menu-add-search { display: flex; align-items: center; gap: 8px; min-width: 0; min-height: 34px; padding: 0 10px; border: 1px solid var(--eva-border); border-radius: 8px; background: var(--eva-surface); color: var(--eva-text-sub); }
+.eva-pb-menu-add-search:focus-within { border-color: var(--eva-primary); }
+.eva-pb-menu-add-search input { flex: 1; width: 100%; min-width: 0; padding: 6px 0; border: 0; outline: none; background: transparent; color: var(--eva-text); font: inherit; font-size: 12px; }
+.eva-pb-menu-add-editor .eva-link-grid { gap: 16px; }
+.eva-pb-menu-add-editor .eva-link-grid label { gap: 7px; }
+.eva-pb-menu-add-editor .eva-link-grid label > span { display: flex; align-items: center; justify-content: space-between; font-size: 12px; }
+.eva-pb-menu-add-editor .eva-link-grid label:nth-child(-n + 2) > span::after { content: '必填'; color: var(--eva-text-mute); font-size: 11px; font-weight: 400; }
+.eva-pb-menu-add-editor .eva-common-input, .eva-pb-menu-add-editor .eva-select-trigger { height: 38px; min-height: 38px; border-radius: 8px; font-size: 13px; }
+.eva-pb-menu-add-editor .eva-common-input { width: 100%; max-width: none; padding-top: 0; padding-bottom: 0; border: 1px solid var(--eva-border); background: var(--eva-surface); color: var(--eva-text); font-family: inherit; outline: 0; box-shadow: none; }
+.eva-pb-menu-add-editor .eva-common-input:focus { outline: 0; border-color: var(--eva-primary); background: color-mix(in srgb, var(--eva-primary) 2%, var(--eva-surface)); box-shadow: 0 0 0 2px color-mix(in srgb, var(--eva-primary) 12%, transparent); }
+.eva-pb-menu-add-editor .eva-common-input::placeholder { color: var(--eva-text-mute); }
+/* 打开方式的短选项列表朝上悬浮，避免向下扩展内容区的滚动高度。 */
+.eva-pb-menu-add-editor .eva-link-field .eva-select-panel {
+  top: auto;
+  bottom: calc(100% + 4px);
+  z-index: 50;
+}
+.eva-pb-menu-add-tip { display: flex; align-items: center; gap: 7px; margin: 0; padding: 10px 12px; border-radius: 8px; background: var(--eva-soft); color: var(--eva-text-sub); font-size: 12px; }
+.eva-pb-menu-add-tip > span { flex: none; width: 5px; height: 5px; border-radius: 50%; background: var(--eva-primary); }
+.eva-pb-menu-add-resource-list { max-height: 240px; overflow-y: auto; }
+.eva-pb-menu-add-resource { display: flex; align-items: center; gap: 8px; min-width: 0; min-height: 32px; color: var(--eva-text); cursor: pointer; }
+.eva-pb-menu-add-resource input[type="checkbox"] { box-sizing: border-box; flex: 0 0 16px; width: 16px; height: 16px; min-width: 16px; min-height: 16px; max-width: 16px; max-height: 16px; aspect-ratio: 1; margin: 0; accent-color: var(--eva-primary); }
+.eva-pb-menu-add-resource input[type="checkbox"]:checked { border-color: var(--eva-primary); background: var(--eva-primary); }
+.eva-pb-menu-add-resource input[type="checkbox"]:checked::before { width: 20px; height: 20px; margin: -3px 0 0 -3px; }
+.eva-pb-menu-add-resource span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.eva-pb-menu-add-resource small { flex: none; max-width: 90px; overflow: hidden; color: var(--eva-text-sub); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.eva-pb-menu-add-submit { display: flex; min-height: 40px; align-items: center; justify-content: center; gap: 7px; padding: 8px 12px; border: 0; border-radius: 9px; background: var(--eva-primary); color: var(--eva-on-primary); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.eva-pb-menu-add-submit i { font-size: 17px; }
+.eva-pb-menu-add-submit:hover { background: var(--eva-primary-600); }
+.eva-pb-menu-add-submit:disabled { opacity: .45; cursor: not-allowed; }
+.eva-pb-menu-add-group-body > .eva-pb-menu-editor-hint, .eva-pb-menu-add-group-body > .eva-pb-menu-editor-error { margin: 0; font-size: 12px; }
+.eva-pb-menu-add-footer { display: flex; flex: none; min-height: 46px; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 20px; border-top: 1px solid var(--eva-border); color: var(--eva-text-sub); font-size: 11px; }
+.eva-pb-menu-add-footer > span { display: inline-flex; align-items: center; gap: 7px; }
+.eva-pb-menu-add-footer i, .eva-pb-menu-add-footer b { color: var(--eva-primary); }
+.eva-pb-menu-add-footer kbd { padding: 1px 5px; border: 1px solid var(--eva-border); border-radius: 4px; background: var(--eva-soft); color: var(--eva-text-sub); font: inherit; }
+/* 与后台设置统一：低控件、小圆角、细边框，减少卡片装饰与留白。 */
+.eva-pb-menu-add-panel.is-compact { border-color: var(--eva-border); border-radius: 6px; box-shadow: 0 4px 16px color-mix(in srgb, var(--eva-text) 8%, transparent); }
+.eva-pb-menu-add-panel.is-compact .eva-pb-menu-add-head { min-height: 42px; gap: 7px; padding: 6px 10px; }
+.eva-pb-menu-add-panel.is-compact .eva-pb-menu-add-head-icon { width: 24px; height: 24px; border-radius: 4px; background: transparent; font-size: 16px; }
+.eva-pb-menu-add-panel.is-compact .eva-pb-menu-add-head button { width: 22px; height: 22px; border-radius: 4px; font-size: 14px; }
+.eva-pb-menu-add-panel.is-compact .eva-pb-menu-add-mode { display: none; }
+.eva-pb-menu-add-panel.is-compact .eva-pb-menu-add-heading p { display: none; }
+.eva-pb-menu-add-panel.is-compact .eva-pb-menu-add-heading strong { font-size: 13px; font-weight: 600; }
+/* 缩小弹窗时保留左侧纵向分类，左右区域分别滚动。 */
+.eva-pb-menu-add-panel.is-compact .eva-pb-menu-add-layout { grid-template-columns: minmax(112px, 32%) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
+.eva-pb-menu-add-panel.is-compact .eva-pb-menu-add-nav { gap: 6px; overflow-y: auto; padding: 8px; border-right: 1px solid var(--eva-border); border-bottom: 0; }
+.eva-pb-menu-add-panel.is-compact .eva-pb-menu-add-search { min-height: 28px; padding: 0 7px; border-radius: 4px; }
+.eva-pb-menu-add-panel.is-compact .eva-pb-menu-add-search input { padding: 3px 0; font-size: 11.5px; }
+.eva-pb-menu-add-panel.is-compact .eva-pb-menu-add-caption, .eva-pb-menu-add-panel.is-compact .eva-pb-menu-add-nav-note { display: none; }
+.eva-pb-menu-add-panel.is-compact .eva-pb-menu-add-types { flex: none; flex-direction: column; gap: 2px; }
+.eva-pb-menu-add-panel.is-compact .eva-pb-menu-add-type { min-height: 28px; gap: 6px; padding: 3px 6px; border-radius: 4px; }
+.eva-pb-menu-add-panel.is-compact .eva-pb-menu-add-type strong { font-size: 12px; }
+.eva-pb-menu-add-panel.is-compact .eva-pb-menu-add-type-icon { width: 18px; height: 18px; border-radius: 0; background: transparent; font-size: 15px; }
+.eva-pb-menu-add-panel.is-compact .eva-pb-menu-add-type-arrow { display: none; }
+.eva-pb-menu-add-panel.is-compact .eva-pb-menu-add-editor { padding: 10px; }
+.eva-pb-menu-add-panel.is-compact .eva-pb-menu-add-group-title { gap: 6px; margin-bottom: 10px; }
+.eva-pb-menu-add-panel.is-compact .eva-pb-menu-add-group-title > .eva-pb-menu-add-type-icon { width: 20px; height: 20px; border-radius: 0; background: transparent; font-size: 16px; }
+.eva-pb-menu-add-panel.is-compact .eva-pb-menu-add-group-title h3 { font-size: 13px; font-weight: 600; }
+.eva-pb-menu-add-panel.is-compact .eva-pb-menu-add-group-title p { font-size: 11px; }
+.eva-pb-menu-add-panel.is-compact .eva-pb-menu-add-availability { gap: 3px; padding: 0; border-radius: 0; background: transparent; font-size: 10px; }
+.eva-pb-menu-add-panel.is-compact .eva-pb-menu-add-group-body { gap: 8px; }
+.eva-pb-menu-add-panel.is-compact .eva-link-grid { gap: 8px; }
+.eva-pb-menu-add-panel.is-compact .eva-link-grid label { gap: 4px; }
+.eva-pb-menu-add-panel.is-compact .eva-link-grid label > span { font-size: 11.5px; line-height: 16px; }
+.eva-pb-menu-add-panel.is-compact .eva-common-input,
+.eva-pb-menu-add-panel.is-compact .eva-select-trigger { height: 28px; min-height: 28px; border-radius: 4px; font-size: 12px; line-height: 20px; }
+.eva-pb-menu-add-panel.is-compact .eva-select-trigger { padding: 0 8px; }
+.eva-pb-menu-add-panel.is-compact .eva-pb-menu-add-tip { gap: 5px; padding: 3px 0; border-radius: 0; background: transparent; font-size: 11px; }
+.eva-pb-menu-add-panel.is-compact .eva-pb-menu-add-submit { min-height: 28px; padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+.eva-pb-menu-add-panel.is-compact .eva-pb-menu-add-submit i { font-size: 14px; }
+.eva-pb-menu-add-panel.is-compact .eva-pb-menu-add-footer { min-height: 28px; padding: 5px 10px; font-size: 10px; }
+.eva-pb-menu-add-panel.is-compact .eva-pb-menu-add-footer > span:last-child { display: none; }
+
+/* One menu level per list; descendants are inspected in an anchored side panel. */
+.eva-pb-menu-scope-heading { display: flex; flex: 1; min-width: 0; align-items: center; gap: 6px; }
+.eva-pb-menu-scope-heading strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.eva-pb-menu-scope-heading > button { display: grid; flex: none; width: 22px; height: 22px; place-items: center; padding: 0; border: 1px solid var(--eva-border); border-radius: 4px; background: var(--eva-surface); color: var(--eva-text-sub); cursor: pointer; }
+.eva-pb-menu-editor-collapse[aria-expanded="true"] { color: var(--eva-primary); background: var(--eva-primary-050); }
+.eva-pb-menu-editor-item.is-submenu-open { background: color-mix(in srgb, var(--eva-primary) 8%, var(--eva-surface)); }
+.eva-pb-menu-submenu-panel { border-radius: 13px; }
+.eva-pb-menu-submenu-panel .eva-pb-menu-add-head { min-height: 64px; gap: 9px; padding: 12px 14px; }
+.eva-pb-menu-submenu-panel .eva-pb-menu-add-head-icon { width: 32px; height: 32px; border-radius: 10px; font-size: 18px; }
+.eva-pb-menu-submenu-panel .eva-pb-menu-add-heading strong { overflow: hidden; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.eva-pb-menu-submenu-panel .eva-pb-menu-add-heading p { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.eva-pb-menu-submenu-panel .eva-pb-menu-add-head > button { width: 24px; height: 24px; border-radius: 6px; }
+.eva-pb-menu-submenu-body { display: flex; flex: 1; min-height: 0; flex-direction: column; gap: 8px; padding: 8px 14px; }
+.eva-pb-menu-submenu-body > .eva-pb-menu-add-search { flex: none; min-height: 32px; }
+.eva-pb-menu-submenu-list { flex: 1; min-height: 0; overflow-y: auto; border: 1px solid var(--eva-border); border-radius: 5px; scrollbar-width: thin; }
+.eva-pb-menu-submenu-row { display: flex; min-width: 0; min-height: 30px; align-items: center; gap: 7px; padding: 0 8px; border-bottom: 1px solid var(--eva-border); }
+.eva-pb-menu-submenu-row:last-child { border-bottom: 0; }
+.eva-pb-menu-submenu-row:hover { background: var(--eva-soft); }
+.eva-pb-menu-submenu-row .eva-pb-menu-editor-icon { width: 18px; height: 18px; font-size: 17px; }
+.eva-pb-menu-submenu-label { flex: 1; min-width: 0; min-height: 29px; overflow: hidden; padding: 4px 0; border: 0; background: transparent; color: var(--eva-text); font: inherit; font-size: 12px; text-align: left; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+.eva-pb-menu-submenu-next { display: grid; flex: none; width: 18px; height: 28px; place-items: center; padding: 0; border: 0; border-radius: 4px; background: transparent; color: var(--eva-text-sub); font-size: 16px; cursor: pointer; }
+.eva-pb-menu-submenu-next:hover { color: var(--eva-primary); background: var(--eva-primary-050); }
+.eva-pb-menu-submenu-empty { margin: 0; padding: 16px 10px; color: var(--eva-text-sub); font-size: 12px; line-height: 1.6; }
+.eva-pb-menu-submenu-footer { display: flex; flex: none; gap: 8px; padding: 10px 14px; border-top: 1px solid var(--eva-border); }
+.eva-pb-menu-submenu-footer button { display: flex; flex: 1; min-width: 0; min-height: 32px; align-items: center; justify-content: center; gap: 5px; padding: 5px 6px; border: 1px solid var(--eva-border); border-radius: 5px; background: var(--eva-surface); color: var(--eva-text); font: inherit; font-size: 12px; white-space: nowrap; cursor: pointer; }
+.eva-pb-menu-submenu-footer button:hover { border-color: var(--eva-primary); color: var(--eva-primary); }
+.eva-pb-menu-submenu-footer button.is-primary { border-color: var(--eva-primary); background: var(--eva-primary); color: var(--eva-on-primary); }
+.eva-pb-menu-submenu-footer button.is-primary:hover { border-color: var(--eva-primary-600); background: var(--eva-primary-600); }

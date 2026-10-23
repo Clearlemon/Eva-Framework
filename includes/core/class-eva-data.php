@@ -133,6 +133,28 @@ class Data
         $stored = is_array($stored) ? $stored : [];
 
         foreach (array_keys($errors) as $field_id) {
+            // 手风琴错误使用 root/panel/child 路径，仅回滚出错叶子，保留其它修改。
+            if (! array_key_exists($field_id, $clean) && strpos($field_id, '/') !== false) {
+                $parts = array_map('rawurldecode', explode('/', $field_id));
+                $leaf = array_pop($parts);
+                $target = &$clean;
+                $original = $stored;
+                foreach ($parts as $part) {
+                    if (! isset($target[$part]) || ! is_array($target[$part])) {
+                        unset($target);
+                        continue 2;
+                    }
+                    $target = &$target[$part];
+                    $original = isset($original[$part]) && is_array($original[$part]) ? $original[$part] : [];
+                }
+                if (array_key_exists($leaf, $original)) {
+                    $target[$leaf] = $original[$leaf];
+                } else {
+                    unset($target[$leaf]);
+                }
+                unset($target);
+                continue;
+            }
             // 该字段本就不参与存储（纯展示、save=false、依赖隐藏）时无需回滚。
             if (! array_key_exists($field_id, $clean)) {
                 continue;
@@ -148,7 +170,7 @@ class Data
     }
 
     /**
-     * 按 sections 执行字段级 validate；返回 [field_id => error_message]。
+     * 按 sections 执行字段级 validate；手风琴子字段错误使用 root/panel/child 路径。
      *
      * 支持：
      * - `required => true` 快捷必填。
@@ -158,9 +180,10 @@ class Data
      *
      * @param array $sections 容器字段分组。
      * @param array $raw      前端提交的原始字段值。
+     * @param bool  $visible_only 只校验容器内可见、可编辑的子字段。
      * @return array<string,string>
      */
-    public static function validate_by_sections($sections, $raw)
+    public static function validate_by_sections($sections, $raw, $visible_only = false)
     {
         $raw    = is_array($raw) ? $raw : [];
         $errors = [];
@@ -175,6 +198,13 @@ class Data
                     continue;
                 }
 
+                // 手风琴内隐藏、禁用和展示字段无需阻止保存，但仍按原规则保留值。
+                if ($visible_only && (! empty($field['disabled']) || ! empty($field['readonly'])
+                    || (isset($field['save']) && $field['save'] === false)
+                    || ! Admin\Dependency::should_save_field(array_merge($field, ['save_when_hidden' => false]), $raw))) {
+                    continue;
+                }
+
                 if (! Admin\Dependency::should_save_field($field, $raw)) {
                     continue;
                 }
@@ -184,6 +214,19 @@ class Data
                 $error = self::validate_field($field, $value, $raw);
                 if ($error !== '') {
                     $errors[$id] = $error;
+                }
+                if (isset($field['type']) && $field['type'] === 'accordion' && empty($field['disabled']) && empty($field['readonly'])) {
+                    $values = Admin\Fields\Accordion::values_with_defaults($field, $value);
+                    foreach (isset($field['sections']) ? $field['sections'] : [] as $index => $panel) {
+                        if (! empty($panel['disabled']) || ! Admin\Dependency::should_save_field(array_merge($panel, ['save_when_hidden' => false]), $values)) {
+                            continue;
+                        }
+                        $panel_id = isset($panel['id']) && $panel['id'] !== '' ? (string) $panel['id'] : (isset($panel['key']) ? (string) $panel['key'] : (string) $index);
+                        $nested = self::validate_by_sections([['fields' => isset($panel['fields']) ? $panel['fields'] : []]], $values[$panel_id], true);
+                        foreach ($nested as $child_path => $message) {
+                            $errors[$id . '/' . rawurlencode($panel_id) . '/' . $child_path] = $message;
+                        }
+                    }
                 }
             }
         }
@@ -620,10 +663,23 @@ class Data
             if (! is_array($item) || empty($item['type'])) {
                 continue;
             }
+            $type = sanitize_key((string) $item['type']);
+            $values = isset($item['values']) && is_array($item['values']) ? $item['values'] : [];
+            $modules = \Eva::get_builder_modules();
+            if (isset($modules[$type])) {
+                $fields = isset($modules[$type]['fields']) ? (array) $modules[$type]['fields'] : [];
+                foreach ((array) ($modules[$type]['tabs'] ?? []) as $tab) {
+                    $fields = array_merge($fields, (array) ($tab['fields'] ?? []));
+                }
+                // Use registered field IDs and types; generic deep cleaning lowercases Native_* IDs.
+                $values = self::sanitize_by_sections([['fields' => $fields]], $values);
+            } else {
+                $values = self::deep_clean_values($values);
+            }
             $clean[] = [
                 'uid'    => isset($item['uid']) ? sanitize_key((string) $item['uid']) : '',
-                'type'   => sanitize_key((string) $item['type']),
-                'values' => (isset($item['values']) && is_array($item['values'])) ? self::deep_clean_values($item['values']) : [],
+                'type'   => $type,
+                'values' => $values,
             ];
         }
 

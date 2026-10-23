@@ -88,6 +88,16 @@ class Dependency
             $field['eva_dependency'] = $dependency;
         }
 
+        // 容器内的字段和面板同样需要规范化，供局部依赖与保存校验共用。
+        if (! empty($field['fields']) && is_array($field['fields'])) {
+            $field['fields'] = array_map([self::class, 'prepare_field'], $field['fields']);
+        }
+        foreach (['sections', 'tabs'] as $key) {
+            if (! empty($field[$key]) && is_array($field[$key])) {
+                $field[$key] = array_map([self::class, 'prepare_field'], $field[$key]);
+            }
+        }
+
         return $field;
     }
 
@@ -337,7 +347,7 @@ class Dependency
             $actual = self::read_source_value($source, $option, $key);
         } else {
             $id = isset($rule['id']) ? $rule['id'] : '';
-            $actual = ($id !== '' && array_key_exists($id, $values)) ? $values[$id] : null;
+            $actual = ($id !== '' && array_key_exists($id, $values)) ? $values[$id] : self::get_path_value($values, $id);
         }
 
         return self::compare($actual, isset($rule['operator']) ? $rule['operator'] : '==', isset($rule['value']) ? $rule['value'] : '');

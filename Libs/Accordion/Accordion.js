@@ -27,17 +27,22 @@
     props: {
       panels: { type: Array, default: function () { return []; } },
       multiple: { type: Boolean, default: true },
-      defaultOpen: { type: [Array, String, Number], default: function () { return []; } },
+      defaultOpen: { type: [Array, String, Number, Boolean], default: function () { return []; } },
       closedIcon: { type: String, default: 'ri-arrow-down-s-line' },
       openIcon: { type: String, default: 'ri-arrow-up-s-line' },
       disabled: { type: Boolean, default: false },
-      sortable: { type: Boolean, default: true }
+      sortable: { type: Boolean, default: true },
+      toolbar: { type: Boolean, default: false },
+      modeSwitch: { type: Boolean, default: true },
+      bulkActions: { type: Boolean, default: true },
+      storageKey: { type: String, default: '' }
     },
-    emits: ['change', 'reorder'],
+    emits: ['change', 'reorder', 'body-open'],
     // 功能：初始化组件响应式状态与对外数据。
     data: function () {
       return {
         openKeys: this.initialOpenKeys(),
+        multipleMode: this.multiple,
         gsapReady: !!window.gsap,
         dragKey: '',
         overKey: ''
@@ -46,6 +51,17 @@
     // 功能：组件挂载后执行初始化和事件绑定。
     mounted: function () {
       var self = this;
+      // 展开偏好只保存在当前浏览器，不写入业务配置。
+      if (this.storageKey) {
+        try {
+          var saved = JSON.parse(window.localStorage.getItem(this.storageKey));
+          if (saved && Array.isArray(saved.openKeys)) {
+            this.multipleMode = typeof saved.multiple === 'boolean' ? saved.multiple : this.multiple;
+            this.openKeys = saved.openKeys.map(String);
+            if (!this.multipleMode) { this.openKeys = this.openKeys.slice(0, 1); }
+          }
+        } catch (e) { /* 浏览器禁止存储时沿用默认状态。 */ }
+      }
       Load_Gsap().then(function () {
         self.gsapReady = true;
       }).catch(function () {
@@ -54,19 +70,48 @@
     },
     watch: {
       // 功能：处理 panels 相关逻辑。
-      panels: function () {
-        var valid = this.panels.map(this.panelKey);
-        this.openKeys = this.openKeys.filter(function (key) { return valid.indexOf(key) !== -1; });
-      }
+      multiple: function (value) { this.setMode(value); }
     },
     methods: {
       // 功能：处理 initial Open Keys 相关逻辑。
       initialOpenKeys: function () {
+        if (this.defaultOpen === false) { return []; }
         var keys = Array.isArray(this.defaultOpen) ? this.defaultOpen : (this.defaultOpen !== '' ? [this.defaultOpen] : []);
         if (!keys.length && this.panels.length) {
           keys = [this.panelKey(this.panels[0], 0)];
         }
-        return keys.map(String);
+        return this.multiple ? keys.map(String) : keys.slice(0, 1).map(String);
+      },
+      persist: function () {
+        if (this.storageKey) {
+          try { window.localStorage.setItem(this.storageKey, JSON.stringify({ openKeys: this.openKeys, multiple: this.multipleMode })); } catch (e) {}
+        }
+        this.$emit('change', this.openKeys.slice());
+      },
+      setMode: function (multiple) {
+        this.multipleMode = !!multiple;
+        if (!this.multipleMode) { this.openKeys = this.openKeys.slice(0, 1); }
+        this.persist();
+      },
+      // 搜索和校验可临时展开多个目标；不覆盖用户保存的展开偏好。
+      reveal: function (keys, all) {
+        keys = keys.map(String);
+        if (all && keys.length > 1) { this.multipleMode = true; }
+        this.openKeys = this.multipleMode ? Array.from(new Set(this.openKeys.concat(keys))) : keys.slice(0, 1);
+      },
+      expandAll: function () {
+        if (this.disabled) { return; }
+        this.multipleMode = true;
+        this.openKeys = this.panels.filter(function (panel) { return !panel.disabled; }).map(this.panelKey);
+        this.persist();
+      },
+      collapseAll: function () {
+        if (this.disabled) { return; }
+        this.openKeys = [];
+        this.persist();
+      },
+      panelDomId: function (panel, index) {
+        return 'eva-acc-' + this.$.uid + '-' + encodeURIComponent(this.panelKey(panel, index));
       },
       // 功能：处理 panel Key 相关逻辑。
       panelKey: function (panel, index) {
@@ -121,7 +166,7 @@
         if (this.disabled || (panel && panel.disabled)) { return; }
         var key = this.panelKey(panel, index);
         var next;
-        if (this.multiple) {
+        if (this.multipleMode) {
           next = this.openKeys.slice();
           var i = next.indexOf(key);
           if (i >= 0) { next.splice(i, 1); } else { next.push(key); }
@@ -129,7 +174,7 @@
           next = this.isOpen(panel, index) ? [] : [key];
         }
         this.openKeys = next;
-        this.$emit('change', next);
+        this.persist();
       },
       // 功能：重置 reset Tween 相关状态。
       resetTween: function (el) {
@@ -236,6 +281,7 @@
           inner.style.transform = '';
           inner.style.visibility = '';
         }
+        if (el.style.display !== 'none') { this.$emit('body-open'); }
       },
       // 功能：处理 native Tween 相关逻辑。
       nativeTween: function (el, styles, done, duration) {
@@ -252,17 +298,22 @@
     },
     template: [
       '<div class="eva-accordion">',
+      '  <div v-if="toolbar" class="eva-acc-toolbar"><slot name="toolbar"></slot><div v-if="modeSwitch || bulkActions" class="eva-acc-tools"><template v-if="modeSwitch"><button type="button" :disabled="disabled" :aria-pressed="!multipleMode" @click="setMode(false)">单开</button><button type="button" :disabled="disabled" :aria-pressed="multipleMode" @click="setMode(true)">多开</button></template><template v-if="bulkActions"><button type="button" :disabled="disabled" @click="expandAll">展开全部</button><button type="button" :disabled="disabled" @click="collapseAll">折叠全部</button></template></div></div>',
       '  <div v-for="(panel, index) in panels" :key="panelKey(panel, index)" class="eva-acc-panel" :class="{ \'is-open\': isOpen(panel, index), \'is-disabled\': disabled || panel.disabled, \'is-dragging\': dragKey === panelKey(panel, index), \'is-over\': overKey === panelKey(panel, index) && dragKey !== panelKey(panel, index) }" @dragover.prevent="dragOver(panel, index, $event)" @drop.prevent="dropPanel(panel, index)">',
-      '    <button type="button" class="eva-acc-head" @click="toggle(panel, index)">',
+      '    <div class="eva-acc-header">',
+      '    <button type="button" class="eva-acc-head" :id="panelDomId(panel, index) + \'-head\'" :aria-expanded="isOpen(panel, index)" :aria-controls="panelDomId(panel, index)" :disabled="disabled || panel.disabled" @click="toggle(panel, index)">',
       '      <span v-if="panel.icon" class="eva-acc-icon"><i :class="panel.icon"></i></span>',
-      '      <span class="eva-acc-title">{{ panel.title || panel.label || panel.id || panel.key || (index + 1) }}</span>',
+      '      <slot name="title" :panel="panel" :index="index"><span class="eva-acc-title">{{ panel.title || panel.label || panel.id || panel.key || (index + 1) }}</span></slot>',
       '      <span v-if="panel.badge" class="eva-acc-badge">{{ panel.badge }}</span>',
       '      <span v-if="panel.disabled" class="eva-acc-lock"><i class="ri-lock-line"></i></span>',
       '      <span class="eva-acc-toggle"><i :class="panelToggleIcon(panel, index)"></i></span>',
       '      <span v-if="sortable" class="eva-acc-more eva-acc-drag" :draggable="!disabled && !panel.disabled" title="拖拽排序" @click.stop.prevent @dragstart.stop="dragStart(panel, index, $event)" @dragend.stop="dragEnd"><i class="ri-drag-move-2-line"></i></span>',
       '    </button>',
+      '    <slot name="actions" :panel="panel" :index="index"></slot>',
+      '    </div>',
+      '    <slot name="notice" :panel="panel" :index="index"></slot>',
       '    <transition :css="false" @before-enter="beforeEnterBody" @enter="enterBody" @leave="leaveBody" @after-enter="afterBody" @after-leave="afterBody">',
-      '      <div v-show="isOpen(panel, index)" class="eva-acc-body">',
+      '      <div v-show="isOpen(panel, index)" class="eva-acc-body" :id="panelDomId(panel, index)" role="region" :aria-labelledby="panelDomId(panel, index) + \'-head\'">',
       '        <div class="eva-acc-inner"><slot :panel="panel" :index="index" :open="isOpen(panel, index)"></slot></div>',
       '      </div>',
       '    </transition>',

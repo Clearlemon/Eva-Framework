@@ -92,4 +92,13 @@ SorterEnhanced.methods.drop=function(zone,value){
   this.selected=this.selected.filter(function(item){return values.indexOf(item)===-1;});
   this.dragEnd();
 };
+// Builder 输出适配：双栏 Sorter 仍使用 enabled / disabled UI，字段值可按需保持旧格式。
+var sorterBaseEmitState=SorterEnhanced.methods.emitState;
+SorterEnhanced.methods.emitState=function(next,record){
+  var output=this.field&&this.field.output;
+  if(!output){return sorterBaseEmitState.call(this,next,record);}
+  if(record!==false){this.history.push(this.snapshot());if(this.history.length>20){this.history.shift();}}
+  var value=this.dual?next.enabled:next.single;
+  this.$emit('update:modelValue',value);
+};
 window.EvaFields.sorter=SorterEnhanced;window.EvaFields.sortable=SorterEnhanced;})();

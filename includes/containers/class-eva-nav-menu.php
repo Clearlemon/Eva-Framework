@@ -112,10 +112,17 @@ class NavMenu
         if ($hook !== 'nav-menus.php') {
             return;
         }
-        if (empty(\Eva::get_nav_menus())) {
+        $eva_fields = !empty(\Eva::get_nav_menus());
+        $csf = class_exists('CSF', false) ? get_class_vars('CSF') : [];
+        $legacy_fields = isset($csf['args']) && !empty(\CSF::$args['nav_menu_options']);
+        if (!$eva_fields && !$legacy_fields) {
             return;
         }
-        \Eva::enqueue_runtime();
+        wp_enqueue_style('eva-framework', EVA_FW_URL . 'assets/eva.css', [], \Eva::asset_ver('assets/eva.css'));
+        wp_enqueue_style('eva-remixicon', 'https://cdn.jsdelivr.net/npm/remixicon@4.5.0/fonts/remixicon.css', [], '4.5.0');
+        \Eva::add_theme_color_inline_style();
+        wp_enqueue_script('eva-nav-menu', EVA_FW_URL . 'assets/eva-nav-menu.js', [], \Eva::asset_ver('assets/eva-nav-menu.js'), true);
+        if ($eva_fields) { \Eva::enqueue_runtime(); }
     }
 
     /**

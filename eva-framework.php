@@ -20,7 +20,7 @@ if (defined('EVA_FW_LOADED')) {
 }
 define('EVA_FW_LOADED', true);
 
-define('EVA_FW_VERSION', '1.4.0');
+define('EVA_FW_VERSION', '1.4.0-len.29');
 define('EVA_FW_FILE', __FILE__);
 define('EVA_FW_DIR', plugin_dir_path(__FILE__));
 
@@ -74,6 +74,14 @@ if (! defined('EVA_FW_DEV')) {
 
 // 门面：对外注册 API（注册表，置于 includes/ 根）
 require_once EVA_FW_DIR . 'includes/class-eva.php';
+// 通用 Builder 原生模块：直接调用 WordPress 菜单与小工具 API，不依赖具体主题。
+require_once EVA_FW_DIR . 'Fields/Builder/Native.php';
+require_once EVA_FW_DIR . 'Fields/Builder/NativeMenu.php';
+require_once EVA_FW_DIR . 'Fields/Builder/NativeWidgets.php';
+require_once EVA_FW_DIR . 'Fields/Builder/WidgetEditor.php';
+require_once EVA_FW_DIR . 'Fields/Builder/MenuEditor.php';
+require_once EVA_FW_DIR . 'Fields/Builder/MenuLocations.php';
+require_once EVA_FW_DIR . 'Fields/Builder/FixedStructure.php';
 // 字段后端处理器：与 Fields/<name>/<name>.js 对应，集中承载字段清洗与字段专属 AJAX。
 foreach (glob(EVA_FW_DIR . 'includes/admin/Fields/class-eva-field-*.php') as $eva_fw_field_file) {
     require_once $eva_fw_field_file;
@@ -94,6 +102,7 @@ require_once EVA_FW_DIR . 'includes/core/class-eva-csf-shapes.php';
 // 数据层：清洗 + 保存
 require_once EVA_FW_DIR . 'includes/core/class-eva-data.php';
 // 后台呈现：设置页渲染 / 独立页路由 / 后台悬浮窗
+require_once EVA_FW_DIR . 'includes/admin/class-eva-assets.php';
 require_once EVA_FW_DIR . 'includes/admin/class-eva-admin.php';
 require_once EVA_FW_DIR . 'includes/admin/class-eva-standalone.php';
 require_once EVA_FW_DIR . 'includes/admin/class-eva-floating.php';
@@ -136,7 +145,15 @@ add_action('wp_head', ['Eva', 'output_css'], 99);
 add_action('template_redirect', ['Eva', 'builder_preview_bootstrap'], 1);
 add_action('wp_head', ['Eva', 'builder_preview_head'], 999);
 add_action('wp_footer', ['Eva', 'builder_preview_script'], 99);
+\Eva\Framework\Builder\MenuLocations::register();
+\Eva\Framework\Builder\NativeWidgets::register_preview();
 add_action('wp_ajax_eva_fw_render_builder_preview', ['Eva', 'ajax_render_builder_preview']);
+add_action('wp_ajax_eva_fw_builder_menu_get', ['Eva\\Framework\\Builder\\MenuEditor', 'ajax_get']);
+add_action('wp_ajax_eva_fw_builder_menu_create', ['Eva\\Framework\\Builder\\MenuEditor', 'ajax_create']);
+add_action('wp_ajax_eva_fw_builder_widgets_get', ['Eva\\Framework\\Builder\\NativeWidgets', 'ajax_get']);
+add_action('wp_ajax_eva_fw_builder_widget_change', ['Eva\\Framework\\Builder\\WidgetEditor', 'ajax_change']);
+add_action('wp_ajax_eva_fw_builder_menu_save', ['Eva\\Framework\\Builder\\MenuEditor', 'ajax_save']);
+add_action('wp_ajax_eva_fw_builder_menu_resources', ['Eva\\Framework\\Builder\\MenuEditor', 'ajax_resources']);
 
 // 插件激活时刷新伪静态规则（规则由 Standalone 在 init 依据注册表动态生成；
 // 主题内嵌等无激活钩子的场景由 Standalone 的「规则签名」机制兜底 flush）
@@ -145,4 +162,8 @@ register_activation_hook(__FILE__, static function () {
 });
 
 // 框架就绪（对应 CSF 的 csf_init）：注册表与各容器都已挂好，主题 / 扩展可以在这里开始 create*。
+add_action('eva_loaded', ['Eva\\Framework\\Builder\\NativeMenu', 'register'], 20);
+add_action('eva_loaded', ['Eva\\Framework\\Builder\\NativeWidgets', 'register'], 20);
 do_action('eva_loaded');
+
+// Len 内嵌版本：由主题注册实际设置页，不加载演示容器。

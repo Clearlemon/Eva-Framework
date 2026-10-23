@@ -48,6 +48,7 @@ return [
     'floating'               => '后台悬浮窗',
     'theme_color'            => '主题色',
     'interface_font'         => '界面字体',
+    'panel_opacity'          => '面板透明度',
     'font_default'           => '默认字体',
     'font_jingnan'           => '荆南麦圆体',
     'search_ph'              => '搜索设置…',
