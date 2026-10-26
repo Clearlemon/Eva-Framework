@@ -29,17 +29,25 @@ class MenuLocations
   public static function preview_empty($html, $args)
   {
     $id = self::location($args);
-    if ($id === '' || $html !== null || !empty($args->menu)) {
+    if ($id === '' || $html !== null) {
       return $html;
     }
 
-    $locations = get_nav_menu_locations();
-    $menu_id = absint($locations[$id] ?? 0);
-    if ($menu_id && wp_get_nav_menu_items($menu_id, array('update_post_term_cache' => false))) {
+    // 与 WordPress 保持一致：先解析显式菜单，名称无效时再使用位置分配。
+    // 主题可能同时把位置名称传给 menu 和 theme_location，非空名称不代表菜单存在。
+    $menu = wp_get_nav_menu_object($args->menu ?? '');
+    if (!$menu || is_wp_error($menu)) {
+      $locations = get_nav_menu_locations();
+      $menu_id = absint($locations[$id] ?? 0);
+      $menu = $menu_id ? wp_get_nav_menu_object($menu_id) : false;
+    }
+    if ($menu && !is_wp_error($menu) && wp_get_nav_menu_items($menu->term_id, array('update_post_term_cache' => false))) {
       return $html;
     }
 
-    return '<div' . self::attributes($id) . ' data-eva-menu-empty="1"></div>';
+    $registered = get_registered_nav_menus();
+    $label = '菜单位置 · ' . $registered[$id];
+    return '<div' . self::attributes($id) . ' data-eva-menu-empty="1"><span class="eva-builder-menu-empty-label"><span>' . esc_html($label) . '</span></span></div>';
   }
 
   /** 在现有菜单根节点上标记位置，不额外包一层改变主题布局。 */

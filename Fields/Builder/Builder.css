@@ -2788,7 +2788,7 @@ body.eva-menu-dragging * {
   font-size: 13px;
   line-height: 1.5;
 }
-.eva-pb-menu-add-panel.is-anchored::before {
+:is(.eva-pb-menu-add-panel, .eva-pb-menu-popover-anchor).is-anchored::before {
   content: '';
   position: absolute;
   z-index: 2;
@@ -2802,7 +2802,7 @@ body.eva-menu-dragging * {
   background: var(--eva-surface);
   pointer-events: none;
 }
-.eva-pb-menu-add-panel.is-anchored::after {
+:is(.eva-pb-menu-add-panel, .eva-pb-menu-popover-anchor).is-anchored::after {
   content: '';
   position: absolute;
   top: var(--eva-menu-anchor-y);
@@ -2811,8 +2811,8 @@ body.eva-menu-dragging * {
   border-top: 2px dashed color-mix(in srgb, var(--eva-primary) 45%, transparent);
   pointer-events: none;
 }
-.eva-pb-menu-add-panel.is-left::before { right: -7px; left: auto; transform: translateY(-50%) rotate(225deg); }
-.eva-pb-menu-add-panel.is-left::after { right: calc(0px - var(--eva-menu-anchor-gap)); left: auto; }
+:is(.eva-pb-menu-add-panel, .eva-pb-menu-popover-anchor).is-left::before { right: -7px; left: auto; transform: translateY(-50%) rotate(225deg); }
+:is(.eva-pb-menu-add-panel, .eva-pb-menu-popover-anchor).is-left::after { right: calc(0px - var(--eva-menu-anchor-gap)); left: auto; }
 .eva-pb-menu-add-head {
   display: flex;
   flex: none;
@@ -2974,3 +2974,371 @@ body.eva-menu-dragging * {
 .eva-pb-menu-submenu-footer button:hover { border-color: var(--eva-primary); color: var(--eva-primary); }
 .eva-pb-menu-submenu-footer button.is-primary { border-color: var(--eva-primary); background: var(--eva-primary); color: var(--eva-on-primary); }
 .eva-pb-menu-submenu-footer button.is-primary:hover { border-color: var(--eva-primary-600); background: var(--eva-primary-600); }
+
+/* Empty menu locations can reuse menus created in the WordPress menu editor. */
+.eva-pb-menu-existing-hint { color: var(--eva-text-mute); font-size: 12px; line-height: 1.6; }
+.eva-pb-menu-refresh { align-self: flex-start; padding: 0; border: 0; background: transparent; color: var(--eva-primary); font: inherit; font-size: 12px; cursor: pointer; }
+.eva-pb-menu-refresh:hover { text-decoration: underline; }
+.eva-pb-menu-create-divider { display: flex; align-items: center; gap: 10px; margin: 6px 0; color: var(--eva-text-mute); font-size: 12px; }
+.eva-pb-menu-create-divider::before, .eva-pb-menu-create-divider::after { content: ""; flex: 1; height: 1px; background: var(--eva-border); }
+.eva-pb-menu-create button:disabled { cursor: not-allowed; }
+
+/* Menu cards and grouped actions use the same theme tokens in light and dark mode. */
+.eva-pb-menu-location-card, .eva-pb-menu-actions-popover { --eva-menu-danger: color-mix(in srgb, var(--eva-danger) 65%, var(--eva-text)); }
+.eva-pb-menu-location-card { container-type: inline-size; }
+.eva-pb-menu-editor { gap: 14px; border-top-color: color-mix(in srgb, var(--eva-border) 65%, transparent); }
+.eva-pb-menu-editor-status { padding: 0 2px; font-size: 11px; }
+.eva-pb-menu-editor-status > span::before { content: ''; display: inline-block; width: 5px; height: 5px; margin-right: 6px; border-radius: 50%; background: var(--eva-primary); vertical-align: middle; }
+.eva-pb-menu-name-field, .eva-pb-menu-editor-details, .eva-pb-menu-editor-locations { padding: 12px; border: 1px solid var(--eva-border); border-radius: 12px; background: var(--eva-surface); box-shadow: 0 3px 14px color-mix(in srgb, var(--eva-text) 3%, transparent); }
+.eva-pb-menu-editor-field > input { min-height: 34px; border-radius: 7px; }
+.eva-pb-menu-editor-list-head { gap: 8px; margin-bottom: -6px; padding: 0 2px; }
+.eva-pb-menu-editor-list { gap: 0; padding: 5px; border-color: color-mix(in srgb, var(--eva-border) 70%, transparent); border-radius: 13px; background: var(--eva-surface); box-shadow: 0 4px 18px color-mix(in srgb, var(--eva-text) 4%, transparent); }
+.eva-pb-menu-editor-item { border-bottom-color: color-mix(in srgb, var(--eva-border) 65%, transparent); background: transparent; }
+.eva-pb-menu-editor-item.is-active, .eva-pb-menu-editor-item.is-actions-open, .eva-pb-menu-editor-item.is-submenu-open { border-radius: 8px; background: linear-gradient(100deg, color-mix(in srgb, var(--eva-primary) 11%, var(--eva-surface)), color-mix(in srgb, var(--eva-primary) 4%, var(--eva-surface))); }
+.eva-pb-menu-editor-row { min-height: 48px; gap: 7px; padding: 5px 4px; }
+.eva-pb-menu-editor-grip { flex: 0 0 14px; width: 14px; min-width: 14px; color: var(--eva-text-mute); }
+.eva-pb-menu-item-open { display: flex; flex: 1; align-items: center; gap: 8px; min-width: 0; padding: 5px 0; border: 0; background: transparent; color: var(--eva-text); font: inherit; text-align: left; cursor: pointer; }
+.eva-pb-menu-item-open .eva-pb-menu-editor-icon { flex: none; width: 20px; height: 20px; color: var(--eva-text); font-size: 19px; }
+.eva-pb-menu-editor-item-title { font-size: 13px; font-weight: 650; }
+.eva-pb-menu-child-count { display: grid; flex: none; min-width: 16px; height: 16px; padding: 0 3px; place-items: center; border-radius: 4px; background: var(--eva-soft); color: var(--eva-text-mute); font-size: 10px; }
+.eva-pb-menu-editor-row > .eva-pb-menu-item-type { max-width: 60px; padding: 4px 6px; border-radius: 6px; color: var(--eva-text-mute); font-size: 11px; font-weight: 550; }
+.eva-pb-menu-item-tools { display: flex; flex: none; align-items: center; gap: 4px; }
+.eva-pb-menu-item-tools > button { display: grid; box-sizing: border-box; flex: none; width: 28px; height: 30px; min-width: 28px; min-height: 30px; place-items: center; padding: 0; border: 1px solid var(--eva-border); border-radius: 7px; background: var(--eva-surface); color: var(--eva-text-mute); font: inherit; font-size: 15px; cursor: pointer; box-shadow: 0 1px 2px color-mix(in srgb, var(--eva-text) 3%, transparent); }
+.eva-pb-menu-item-tools > .eva-pb-menu-editor-delete { color: var(--eva-menu-danger); }
+.eva-pb-menu-item-tools > button:hover, .eva-pb-menu-item-tools > button.is-active { border-color: color-mix(in srgb, var(--eva-primary) 65%, var(--eva-border)); background: color-mix(in srgb, var(--eva-primary) 10%, var(--eva-surface)); color: var(--eva-primary); }
+.eva-pb-menu-item-tools > .eva-pb-menu-editor-delete:hover { border-color: var(--eva-menu-danger); color: var(--eva-menu-danger); background: color-mix(in srgb, var(--eva-menu-danger) 6%, var(--eva-surface)); }
+.eva-pb-menu-item-tools > button:focus-visible, .eva-pb-menu-item-open:focus-visible { outline: 2px solid var(--eva-primary); outline-offset: 2px; }
+.eva-pb-menu-editor-details-head { padding-bottom: 9px; border-bottom: 1px solid var(--eva-border); }
+.eva-pb-menu-editor-location { padding: 7px 8px; border-radius: 7px; background: var(--eva-soft); font-size: 12px; }
+.eva-pb-menu-editor-location:has(input:checked) { background: color-mix(in srgb, var(--eva-primary) 10%, var(--eva-surface)); color: var(--eva-text); }
+.eva-pb-menu-editor-location input { accent-color: var(--eva-primary); }
+.eva-pb-menu-actions-popover { position: absolute; z-index: 55; box-sizing: border-box; overflow: auto; padding: 8px; border: 1px solid var(--eva-border); border-radius: 14px; background: var(--eva-surface); color: var(--eva-text); box-shadow: 0 14px 45px color-mix(in srgb, var(--eva-text) 15%, transparent); scrollbar-width: thin; }
+.eva-pb-menu-actions-popover > header { display: flex; flex-direction: column; gap: 2px; padding: 6px 10px 10px; }
+.eva-pb-menu-actions-popover > header span { color: var(--eva-text-mute); font-size: 10px; }
+.eva-pb-menu-actions-popover > header strong { overflow: hidden; color: var(--eva-text); font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.eva-pb-menu-action-group { padding: 4px 0; border-top: 1px solid var(--eva-border); }
+.eva-pb-menu-action-group > button, .eva-pb-menu-action-group > a { display: flex; box-sizing: border-box; align-items: center; gap: 10px; width: 100%; min-height: 35px; padding: 7px 10px; border: 0; border-radius: 7px; background: transparent; color: var(--eva-text); font: inherit; font-size: 12px; line-height: 1.5; text-align: left; text-decoration: none; cursor: pointer; }
+.eva-pb-menu-action-group > :is(button, a) > i { flex: none; color: var(--eva-text-sub); font-size: 17px; }
+.eva-pb-menu-action-group > :is(button, a) > span { flex: 1; }
+.eva-pb-menu-action-group .is-amber { color: #f5a623; }
+.eva-pb-menu-action-group .is-blue { color: #4e83c4; }
+.eva-pb-menu-action-group .is-green { color: #43b581; }
+.eva-pb-menu-action-group > :is(button, a):hover, .eva-pb-menu-action-group > :is(button, a):focus-visible { outline: none; background: var(--eva-soft); }
+.eva-pb-menu-action-group > button:disabled { color: var(--eva-text-mute); opacity: .45; cursor: not-allowed; }
+.eva-pb-menu-action-group > button:disabled:hover { background: transparent; }
+.eva-pb-menu-action-group.is-danger { padding-bottom: 0; }
+.eva-pb-menu-action-group.is-danger > button { background: color-mix(in srgb, var(--eva-menu-danger) 6%, var(--eva-surface)); color: var(--eva-menu-danger); }
+.eva-pb-menu-action-group.is-danger > button > i { color: inherit; }
+.eva-pb-menu-action-group.is-danger > button:hover { background: color-mix(in srgb, var(--eva-menu-danger) 11%, var(--eva-surface)); }
+.eva-pb-menu-action-status { margin: 6px 8px 2px; color: var(--eva-primary); font-size: 11px; }
+@container (max-width: 320px) { .eva-pb-menu-editor-row > .eva-pb-menu-item-type { display: none; } .eva-pb-menu-editor-row { gap: 4px; } .eva-pb-menu-item-tools { gap: 3px; } }
+
+.eva-pb-menu-editor-item.is-active .eva-pb-menu-editor-toggle { background: color-mix(in srgb, var(--eva-primary) 10%, var(--eva-surface)); }
+
+/* Item editing is a third-level card beside the actions menu. */
+.eva-pb-menu-edit-popover { position: absolute; z-index: 60; display: flex; box-sizing: border-box; flex-direction: column; min-width: 0; overflow: hidden; border: 1px solid var(--eva-border); border-radius: 8px; background: var(--eva-surface); color: var(--eva-text); box-shadow: 0 4px 14px color-mix(in srgb, var(--eva-text) 7%, transparent); }
+.eva-pb-menu-edit-popover > header { box-sizing: border-box; flex: none; min-height: 38px; padding: 6px 12px; border-bottom: 1px solid var(--eva-border); }
+.eva-pb-menu-edit-popover > header > div { display: flex; flex: 1; min-width: 0; flex-direction: row; align-items: center; gap: 6px; line-height: 20px; }
+.eva-pb-menu-edit-popover > header small { flex: 0 1 auto; max-width: 40%; min-width: 0; overflow: hidden; color: var(--eva-text-sub); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.eva-pb-menu-edit-popover > header strong { flex: 1; font-size: 12px; font-weight: 600; }
+.eva-pb-menu-edit-popover > header strong::before { content: "·"; margin-right: 6px; color: var(--eva-text-mute); font-weight: 400; }
+.eva-pb-menu-edit-popover .eva-pb-menu-editor-close { display: grid; width: 24px; min-height: 24px; padding: 0; place-items: center; border: 0; border-radius: 4px; background: transparent; color: var(--eva-text-mute); font-size: 16px; }
+.eva-pb-menu-edit-popover .eva-pb-menu-editor-close:hover { background: var(--eva-soft); color: var(--eva-text); }
+.eva-pb-menu-edit-body { display: grid; flex: 1 1 auto; min-height: 0; grid-template-columns: minmax(0, 1fr); gap: 14px; overflow: auto; padding: 16px; scrollbar-width: thin; }
+.eva-pb-menu-edit-popover .eva-pb-menu-editor-field { font-size: 12px; }
+.eva-pb-menu-edit-popover .eva-pb-menu-editor-link-field .eva-link-grid { grid-template-columns: minmax(0, 1fr); }
+.eva-pb-menu-edit-popover > footer { display: flex; flex: none; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 16px; border-top: 1px solid var(--eva-border); background: var(--eva-soft); }
+.eva-pb-menu-edit-popover > footer > span { flex: 1; min-width: 0; color: var(--eva-text-sub); font-size: 11px; line-height: 1.5; }
+.eva-pb-menu-edit-popover > footer > button { flex: none; min-height: 30px; padding: 4px 12px; border: 1px solid var(--eva-primary); border-radius: 7px; background: var(--eva-primary); color: var(--eva-on-primary); font: inherit; font-size: 12px; cursor: pointer; }
+.eva-pb-menu-edit-popover > footer > button:disabled { opacity: .55; cursor: wait; }
+.eva-pb-menu-action-group > .eva-pb-menu-action-edit.is-active { background: color-mix(in srgb, var(--eva-primary) 10%, var(--eva-surface)); color: var(--eva-primary); }
+.eva-pb-menu-edit-popover .eva-icon-popover { position: static; width: 100%; min-width: 0; max-width: 100%; margin-top: 8px; transform: none; box-shadow: none; }
+.eva-pb-menu-edit-popover .eva-icon-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+
+/* WordPress navigation label, parent, and sibling order belong to the selected item. */
+.eva-pb-menu-wp-position { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 10px; }
+.eva-pb-menu-wp-position > label { min-width: 0; }
+.eva-pb-menu-wp-position .eva-select { width: 100%; min-width: 0; font-weight: 400; }
+.eva-pb-menu-wp-position .eva-select-trigger { min-width: 0; min-height: 34px; font-size: 12px; }
+.eva-pb-menu-action-setting-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Keep connectors outside the cards so scrolling content cannot clip them. */
+.eva-pb-menu-popover-anchor { position: absolute; z-index: 54; height: 0; pointer-events: none; }
+.eva-pb-menu-popover-anchor.is-editor { z-index: 59; }
+.eva-pb-menu-actions-popover, .eva-pb-menu-edit-popover { border-color: color-mix(in srgb, var(--eva-primary) 22%, var(--eva-border)); }
+
+/* Each settings entry opens only its own WordPress-style control. */
+.eva-pb-menu-wp-select { box-sizing: border-box; width: 100%; min-height: 36px; padding: 6px 10px; border: 1px solid var(--eva-border); border-radius: 7px; background: var(--eva-surface); color: var(--eva-text); font: inherit; }
+.eva-pb-menu-wp-select:focus-visible { outline: 2px solid var(--eva-primary); outline-offset: 1px; }
+.eva-pb-menu-wp-checkbox { display: flex; align-items: center; gap: 8px; color: var(--eva-text); font-size: 12px; }
+.eva-pb-menu-wp-checkbox input { accent-color: var(--eva-primary); }
+
+/* Menu data keeps its normal layout while GSAP owns entry and exit transforms. */
+.eva-pb-menu-motion-data { display: flex; min-width: 0; flex-direction: column; gap: 14px; }
+.eva-pb-menu-motion-results { display: flex; min-width: 0; min-height: 0; flex: 1; flex-direction: column; gap: 8px; }
+
+/* GSAP slides the selected tab surface and its content in the navigation direction. */
+.eva-pb-module-tabs { position: relative; isolation: isolate; flex: none; }
+.eva-pb-module-tab-indicator { position: absolute; z-index: 0; top: 0; left: 0; box-sizing: border-box; border: 1px solid color-mix(in srgb, var(--eva-primary) 34%, var(--eva-border)); border-radius: var(--eva-radius); background: var(--eva-surface); opacity: 0; pointer-events: none; }
+.eva-pb-module-tabs > .eva-pb-module-tab { position: relative; z-index: 1; }
+.eva-pb-module-tabs > .eva-pb-module-tab.is-active { border-color: transparent; background: transparent; box-shadow: none; }
+.eva-pb-tab-viewport { position: relative; min-width: 0; }
+.eva-pb-tab-viewport.is-switching { overflow: hidden; }
+.eva-pb-tab-content { width: 100%; min-width: 0; }
+
+/* Menu selects unfold vertically without moving the menu editor or its rows. */
+.eva-pb-menu-dropdown-enter-active,
+.eva-pb-menu-dropdown-leave-active {
+  overflow: hidden;
+  transition: max-height .22s cubic-bezier(.22, 1, .36, 1);
+}
+.eva-pb-menu-dropdown-leave-active { pointer-events: none; }
+.eva-pb-menu-dropdown-enter-from,
+.eva-pb-menu-dropdown-leave-to { max-height: 0; }
+.eva-pb-menu-dropdown-enter-to,
+.eva-pb-menu-dropdown-leave-from { max-height: var(--eva-menu-dropdown-height, 320px); }
+@media (prefers-reduced-motion: reduce) {
+  .eva-pb-menu-dropdown-enter-active,
+  .eva-pb-menu-dropdown-leave-active { transition: none; }
+}
+
+/* Menu rows unfold as a staggered stack and return to natural layout. */
+.eva-pb-menu-stack-enter-active,
+.eva-pb-menu-stack-leave-active {
+  overflow: hidden;
+  transform-origin: center top;
+  will-change: max-height, opacity, transform;
+}
+.eva-pb-menu-stack-enter-active {
+  transition: max-height .34s cubic-bezier(.22, 1, .36, 1), opacity .26s ease, transform .34s cubic-bezier(.22, 1, .36, 1);
+  transition-delay: var(--eva-menu-row-delay, 0ms);
+}
+.eva-pb-menu-stack-leave-active {
+  pointer-events: none;
+  transition: max-height .2s ease, opacity .16s ease, transform .2s ease;
+}
+.eva-pb-menu-stack-enter-from,
+.eva-pb-menu-stack-leave-to {
+  max-height: 0;
+  opacity: 0;
+  transform: perspective(700px) translateY(-14px) rotateX(-16deg) scale(.96);
+}
+.eva-pb-menu-stack-enter-to,
+.eva-pb-menu-stack-leave-from {
+  max-height: var(--eva-menu-row-height, 64px);
+  opacity: 1;
+  transform: perspective(700px) translateY(0) rotateX(0) scale(1);
+}
+.eva-pb-menu-stack-move { transition: transform .24s cubic-bezier(.22, 1, .36, 1); }
+@media (prefers-reduced-motion: reduce) {
+  .eva-pb-menu-stack-enter-active,
+  .eva-pb-menu-stack-leave-active,
+  .eva-pb-menu-stack-move { transition: none; transition-delay: 0s; }
+}
+
+/* Center the menu loading status in the remaining visible sidebar space. */
+.eva-pb-tab-viewport.is-menu-loading {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+.eva-pb-tab-viewport.is-menu-loading > .eva-pb-tab-content,
+.eva-pb-tab-viewport.is-menu-loading .eva-pb-menu-location-card {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+.eva-pb-tab-viewport.is-menu-loading .eva-pb-menu-location-head,
+.eva-pb-tab-viewport.is-menu-loading .eva-pb-menu-location-select-wrap,
+.eva-pb-tab-viewport.is-menu-loading .eva-pb-menu-location-subtitle { flex-shrink: 0; }
+.eva-pb-tab-viewport.is-menu-loading .eva-pb-menu-editor { flex: 1; min-height: 0; }
+.eva-pb-menu-loading {
+  display: flex;
+  flex: 1;
+  min-height: 120px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 24px 12px;
+  color: var(--eva-text-sub);
+  font-size: 15px;
+  font-weight: 600;
+  text-align: center;
+}
+.eva-pb-menu-loading-spinner {
+  box-sizing: border-box;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border: 3px solid color-mix(in srgb, var(--eva-primary) 16%, transparent);
+  border-top-color: var(--eva-primary);
+  border-radius: 50%;
+  animation: eva-pb-menu-loading-spin .8s linear infinite;
+}
+@keyframes eva-pb-menu-loading-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .eva-pb-menu-loading-spinner { animation: none; }
+}
+
+.eva-pb-menu-save-fallback { position: absolute; left: 16px; bottom: 16px; z-index: 70; }
+
+/* Anchored menu panels pull out to the right, independently of list/dropdown motion. */
+.eva-pb-menu-pullout-enter-active {
+  transform-origin: left center;
+  transition: transform .24s cubic-bezier(.22, 1, .36, 1), opacity .18s ease;
+  will-change: transform, opacity;
+}
+.eva-pb-menu-pullout-leave-active {
+  visibility: visible !important;
+  pointer-events: none;
+  transition: transform .16s ease, opacity .14s ease;
+}
+.eva-pb-menu-pullout-enter-from,
+.eva-pb-menu-pullout-leave-to { opacity: 0; transform: translateX(-18px) scaleX(.97); }
+.eva-pb-menu-pullout-enter-to,
+.eva-pb-menu-pullout-leave-from { opacity: 1; transform: translateX(0) scaleX(1); }
+@media (prefers-reduced-motion: reduce) {
+  .eva-pb-menu-pullout-enter-active,
+  .eva-pb-menu-pullout-leave-active { transition: none; }
+}
+
+/* Location assignments use a flat list inside the anchored panel. */
+.eva-pb-menu-editor-list-head .eva-pb-menu-scope-heading { flex: 1; min-width: 0; }
+.eva-pb-menu-toolbar-actions { display: flex; flex: none; align-items: center; gap: 6px; }
+.eva-pb-menu-locations-trigger {
+  display: inline-flex; flex: none; align-items: center; justify-content: center; gap: 4px;
+  height: 22px; min-height: 22px; padding: 0 7px; border: 1px solid color-mix(in srgb, var(--eva-primary) 25%, var(--eva-border));
+  border-radius: 3px; background: var(--eva-primary-050); color: var(--eva-primary); font: inherit; font-size: 11px; line-height: 1; cursor: pointer;
+}
+.eva-pb-menu-locations-trigger:hover,
+.eva-pb-menu-locations-trigger.is-active { border-color: var(--eva-primary); background: color-mix(in srgb, var(--eva-primary) 13%, var(--eva-surface)); }
+.eva-pb-menu-locations-trigger:focus-visible { outline: 2px solid var(--eva-primary); outline-offset: 2px; }
+.eva-pb-menu-locations-panel { border-color: var(--eva-border); border-radius: 6px; box-shadow: none; }
+.eva-pb-menu-locations-panel.is-anchored::before { border-color: var(--eva-border); }
+.eva-pb-menu-locations-panel .eva-pb-menu-add-head-icon { width: 24px; height: 28px; border-radius: 0; background: transparent; font-size: 20px; }
+.eva-pb-menu-locations-panel .eva-pb-menu-add-heading strong { font-size: 14px; font-weight: 600; }
+.eva-pb-menu-locations-panel .eva-pb-menu-add-head button { width: 26px; height: 26px; border: 0; border-radius: 3px; background: transparent; }
+.eva-pb-menu-locations-panel .eva-pb-menu-add-head button:hover { background: var(--eva-soft); }
+.eva-pb-menu-locations-panel .eva-pb-menu-add-head { min-height: 60px; gap: 8px; padding: 10px 14px; }
+.eva-pb-menu-locations-panel .eva-pb-menu-add-heading { flex: 1; min-width: 0; }
+.eva-pb-menu-locations-panel .eva-pb-menu-add-heading p { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.eva-pb-menu-locations-body { display: flex; flex: 1; min-height: 0; flex-direction: column; gap: 0; overflow-y: auto; padding: 12px 14px; scrollbar-width: thin; }
+.eva-pb-menu-locations-summary { display: flex; flex: none; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; color: var(--eva-text-sub); font-size: 12px; }
+.eva-pb-menu-locations-summary em { padding: 0; border-radius: 0; background: transparent; color: var(--eva-primary); font-size: 11px; font-style: normal; }
+.eva-pb-menu-position-option { display: flex; flex: none; min-height: 62px; align-items: center; gap: 8px; padding: 10px 8px; border: 0; border-bottom: 1px solid var(--eva-border); border-left: 2px solid transparent; border-radius: 0; background: transparent; cursor: pointer; transition: border-color var(--eva-ease), background var(--eva-ease); }
+.eva-pb-menu-position-option:hover { background: var(--eva-soft); }
+.eva-pb-menu-position-option:last-of-type { border-bottom-color: transparent; }
+.eva-pb-menu-position-option.is-selected { border-left-color: var(--eva-primary); background: color-mix(in srgb, var(--eva-primary) 9%, var(--eva-surface)); }
+.eva-pb-menu-position-icon { display: grid; flex: none; width: 22px; height: 24px; place-items: center; border-radius: 0; background: transparent; color: var(--eva-text-sub); font-size: 18px; }
+.eva-pb-menu-position-option.is-selected .eva-pb-menu-position-icon { color: var(--eva-primary); }
+.eva-pb-menu-position-copy { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 4px; }
+.eva-pb-menu-position-copy strong { color: var(--eva-text); font-size: 12px; line-height: 1.5; font-weight: 600; }
+.eva-pb-menu-position-copy small { color: var(--eva-text-mute); font-size: 10.5px; line-height: 1.5; }
+.eva-pb-menu-position-option input[type="checkbox"] {
+  position: relative;
+  box-sizing: border-box;
+  flex: none;
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  padding: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid var(--eva-text-mute);
+  border-radius: 3px;
+  background: var(--eva-surface);
+  cursor: pointer;
+}
+.eva-pb-menu-position-option input[type="checkbox"]::before { content: none; }
+.eva-pb-menu-position-option input[type="checkbox"]::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: #fff;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2016%2016'%3E%3Cpath%20d%3D'M3.5%208L6.5%2011L12.5%205'%20fill%3D'none'%20stroke%3D'white'%20stroke-width%3D'2'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%2F%3E%3C%2Fsvg%3E") center / 12px 12px no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2016%2016'%3E%3Cpath%20d%3D'M3.5%208L6.5%2011L12.5%205'%20fill%3D'none'%20stroke%3D'white'%20stroke-width%3D'2'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%2F%3E%3C%2Fsvg%3E") center / 12px 12px no-repeat;
+  opacity: 0;
+}
+.eva-pb-menu-position-option input[type="checkbox"]:checked { border-color: var(--eva-primary); background: var(--eva-primary); }
+.eva-pb-menu-position-option input[type="checkbox"]:checked::after { opacity: 1; }
+.eva-pb-menu-position-option input[type="checkbox"]:focus-visible { outline: 2px solid var(--eva-primary); outline-offset: 2px; }
+.eva-pb-menu-locations-footer { display: flex; flex: none; justify-content: space-between; gap: 12px; min-height: 46px; padding: 8px 14px; }
+.eva-pb-menu-locations-footer button { min-height: 28px; padding: 4px 12px; border: 1px solid var(--eva-primary); border-radius: 3px; background: var(--eva-primary); color: var(--eva-on-primary); font: inherit; font-size: 12px; cursor: pointer; }
+
+/* Framework actions share the builder toolbar's compact icon-button treatment. */
+.eva-pb-actions { gap: 6px; }
+.eva-pb-actions button.is-active {
+  border-color: color-mix(in srgb, var(--eva-primary) 35%, var(--eva-border));
+  background: var(--eva-primary-050);
+  color: var(--eva-primary);
+}
+.eva-pb-actions-separator { flex: none; width: 1px; height: 16px; margin: 0 2px; background: var(--eva-border); }
+
+/* Saved versions share the builder's flat toolbar and panel treatment. */
+.eva-pb-history-layer { position: absolute; z-index: 90; inset: 44px 0 0; display: flex; align-items: flex-start; justify-content: flex-end; padding: 10px; background: color-mix(in srgb, var(--eva-bg) 28%, transparent); }
+.eva-pb-history-panel { display: flex; box-sizing: border-box; flex-direction: column; width: min(600px, 100%); height: min(440px, 100%); min-height: 0; overflow: hidden; border: 1px solid var(--eva-border); border-radius: 6px; outline: none; background: var(--eva-surface); color: var(--eva-text); font-size: 12px; line-height: 1.5; }
+.eva-pb-history-panel *, .eva-pb-history-panel *::before, .eva-pb-history-panel *::after { box-sizing: border-box; }
+.eva-pb-history-panel > header { display: flex; flex: none; align-items: center; justify-content: space-between; min-height: 40px; padding: 6px 12px; border-bottom: 1px solid var(--eva-border); }
+.eva-pb-history-panel > header > div { display: flex; align-items: center; gap: 8px; }
+.eva-pb-history-panel > header strong { font-size: 13px; font-weight: 600; }
+.eva-pb-history-panel > header i { font-size: 18px; color: var(--eva-primary); }
+.eva-pb-history-panel > header span { margin-left: 4px; color: var(--eva-text-mute); font-size: 11px; }
+.eva-pb-history-panel button { font: inherit; cursor: pointer; }
+.eva-pb-history-panel > header > button, .eva-pb-history-list-head button { display: grid; width: 26px; height: 26px; padding: 0; place-items: center; border: 0; border-radius: 3px; background: transparent; color: var(--eva-text-sub); }
+.eva-pb-history-panel > header > button i { color: inherit; }
+.eva-pb-history-panel > header > button:hover, .eva-pb-history-list-head button:hover { background: var(--eva-soft); color: var(--eva-primary); }
+.eva-pb-history-content { display: grid; grid-template-columns: 210px minmax(0, 1fr); flex: 1; min-height: 0; }
+.eva-pb-history-list { min-height: 0; overflow-y: auto; border-right: 1px solid var(--eva-border); scrollbar-width: thin; }
+.eva-pb-history-list-head { display: flex; align-items: center; justify-content: space-between; padding: 3px 10px; color: var(--eva-text-mute); font-size: 11px; }
+.eva-pb-history-entry { display: flex; width: 100%; flex-direction: column; gap: 2px; padding: 7px 10px; border: 0; border-bottom: 1px solid var(--eva-border); border-left: 2px solid transparent; background: transparent; color: var(--eva-text); text-align: left; line-height: 1.35; letter-spacing: normal; }
+.eva-pb-history-entry :is(strong, time, small) { margin: 0; line-height: 1.35; letter-spacing: normal; }
+.eva-pb-history-entry:hover { background: var(--eva-soft); }
+.eva-pb-history-entry.is-active { border-left-color: var(--eva-primary); background: color-mix(in srgb, var(--eva-primary) 9%, var(--eva-surface)); }
+.eva-pb-history-entry-top { display: flex; width: 100%; align-items: center; gap: 6px; }
+.eva-pb-history-entry-top i { flex: none; color: var(--eva-primary); font-size: 15px; }
+.eva-pb-history-entry-top strong { overflow: hidden; flex: 1; font-size: 12px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.eva-pb-history-entry-top em { flex: none; color: var(--eva-primary); font-size: 10px; font-style: normal; }
+.eva-pb-history-entry time { color: var(--eva-text-sub); font-size: 11px; }
+.eva-pb-history-entry small { color: var(--eva-text-mute); font-size: 10px; }
+.eva-pb-history-detail { display: flex; min-width: 0; min-height: 0; flex-direction: column; overflow-y: auto; padding: 12px; scrollbar-width: thin; }
+.eva-pb-history-detail-head > span { color: var(--eva-primary); font-size: 11px; }
+.eva-pb-history-detail-head h3 { margin: 3px 0; font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+.eva-pb-history-detail-head p { margin: 0 0 10px; color: var(--eva-text-mute); font-size: 11px; }
+.eva-pb-history-preview > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--eva-border); }
+.eva-pb-history-preview > div > span { min-width: 0; overflow-wrap: anywhere; }
+.eva-pb-history-preview small { max-width: 55%; overflow-wrap: anywhere; color: var(--eva-text-sub); text-align: right; font-size: 11px; }
+.eva-pb-history-more { margin: 12px 0 0; color: var(--eva-text-mute); font-size: 11px; }
+.eva-pb-history-empty { display: flex; flex: 1; min-height: 0; align-items: center; justify-content: center; flex-direction: column; gap: 12px; padding: 30px 20px; color: var(--eva-text-sub); text-align: center; }
+.eva-pb-history-empty > i { color: var(--eva-primary); font-size: 30px; }
+.eva-pb-history-empty > span { max-width: 360px; }
+.eva-pb-history-empty button, .eva-pb-history-error button { padding: 3px 10px; border: 1px solid var(--eva-border); border-radius: 3px; background: var(--eva-surface); color: var(--eva-primary); }
+.eva-pb-history-error { display: flex; flex: none; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 14px; background: var(--eva-soft); color: var(--eva-menu-danger); }
+.eva-pb-history-notice { flex: none; margin: 0; padding: 9px 14px; background: var(--eva-primary-050); color: var(--eva-primary); }
+.eva-pb-history-panel > footer { display: flex; flex: none; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px; border-top: 1px solid var(--eva-border); }
+.eva-pb-history-panel > footer > span { color: var(--eva-text-sub); font-size: 11px; }
+.eva-pb-history-panel > footer i { margin-right: 5px; color: var(--eva-primary); }
+.eva-pb-history-restore { flex: none; min-height: 28px; padding: 3px 10px; border: 1px solid var(--eva-primary); border-radius: 3px; background: var(--eva-primary); color: var(--eva-on-primary); }
+.eva-pb-history-restore:disabled { opacity: .45; cursor: not-allowed; }
+.eva-pb-history-panel button:focus-visible { outline: 2px solid var(--eva-primary); outline-offset: -2px; }
+.eva-pb-history-enter-active, .eva-pb-history-leave-active { transition: opacity .16s ease; }
+.eva-pb-history-enter-active .eva-pb-history-panel, .eva-pb-history-leave-active .eva-pb-history-panel { transition: transform .22s cubic-bezier(.22, 1, .36, 1); }
+.eva-pb-history-enter-from, .eva-pb-history-leave-to { opacity: 0; }
+.eva-pb-history-enter-from .eva-pb-history-panel, .eva-pb-history-leave-to .eva-pb-history-panel { transform: translateX(16px); }
+@media (max-width: 640px) {
+  .eva-pb-history-content { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .eva-pb-history-detail { padding: 12px; }
+  .eva-pb-history-panel > footer { flex-wrap: wrap; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .eva-pb-history-enter-active, .eva-pb-history-leave-active,
+  .eva-pb-history-enter-active .eva-pb-history-panel, .eva-pb-history-leave-active .eva-pb-history-panel { transition: none; }
+}
+
+/* Registered WP/Eva fields retain their controls inside the compact menu flyout. */
+.eva-pb-menu-registered-field > label { color: var(--eva-text-sub); font-size: 12px; font-weight: 600; }
+.eva-pb-menu-registered-field .eva-image-select-grid { gap: 8px; }
+.eva-pb-menu-edit-popover .eva-pb-menu-editor-field > textarea { box-sizing: border-box; width: 100%; min-height: 96px; padding: 8px 10px; resize: vertical; border: 1px solid var(--eva-border); border-radius: 6px; background: var(--eva-surface); color: var(--eva-text); font: inherit; }
+.eva-pb-menu-edit-popover .eva-pb-menu-editor-field > textarea:focus { border-color: var(--eva-primary); outline: none; }

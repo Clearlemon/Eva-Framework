@@ -5,6 +5,32 @@
   var selectedStructure = '';
   var widgetState = { active: false, area: '', dragging: false, target: '' };
 
+  var observedMenuLabels = new WeakSet();
+  var menuLabelObserver = typeof ResizeObserver === 'function' ? new ResizeObserver(function (entries) {
+    entries.forEach(function (entry) {
+      var node = entry.target.closest('[data-eva-menu-empty]');
+      if (node) { updateMenuLabel(node); }
+    });
+  }) : null;
+
+  function updateMenuLabel(node) {
+    var label = node.querySelector('.eva-builder-menu-empty-label');
+    var text = label && label.firstElementChild;
+    if (!text) { return; }
+    var distance = Math.max(0, text.scrollWidth - label.clientWidth);
+    node.classList.toggle('eva-builder-menu-label-overflow', distance > 1);
+    node.style.setProperty('--eva-menu-marquee-distance', -distance + 'px');
+    node.style.setProperty('--eva-menu-marquee-duration', Math.max(3, distance / 30 + 1) + 's');
+    if (menuLabelObserver && !observedMenuLabels.has(label)) {
+      observedMenuLabels.add(label);
+      menuLabelObserver.observe(label);
+    }
+  }
+
+  window.addEventListener('resize', function () {
+    document.querySelectorAll('[data-eva-menu-empty]').forEach(updateMenuLabel);
+  });
+
   function updateWidgetAreas() {
     document.body.classList.toggle('eva-builder-widget-mode', widgetState.active);
     document.body.classList.toggle('eva-builder-widget-dragging', widgetState.dragging);
@@ -38,6 +64,7 @@
       node.classList.toggle('eva-builder-menu-selected', menuState.active && id === menuState.location);
       node.classList.toggle('eva-builder-menu-drop-target', menuState.dragging && id === menuState.target);
       if (node.hasAttribute('data-eva-menu-empty')) {
+        updateMenuLabel(node);
         node.setAttribute('role', 'button');
         node.setAttribute('aria-label', '选择菜单位置：' + node.getAttribute('data-eva-menu-label'));
         node.setAttribute('tabindex', menuState.active ? '0' : '-1');

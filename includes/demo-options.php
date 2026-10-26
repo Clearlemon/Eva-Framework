@@ -384,7 +384,7 @@ if (! function_exists('eva_demo_image_select_options')) {
     ],
 ]);
 
-// 帮助中心：CSF 里就是个 iframe，直接搬过来即可用。
+// 字段参数：演示通用字段行参数与各控件的专属参数。
 \Eva::createSection('eva_demo', [
     'id'     => 'field-params',
     'title'  => '字段参数',

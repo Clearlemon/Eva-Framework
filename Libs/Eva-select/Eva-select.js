@@ -40,7 +40,7 @@
   }
 
   window.EvaUI.Select = {
-    props: ['modelValue', 'options', 'placeholder', 'searchable', 'emptyMessage', 'multiple', 'sortable', 'disabled'],
+    props: ['motion', 'modelValue', 'options', 'placeholder', 'searchable', 'emptyMessage', 'multiple', 'sortable', 'disabled'],
     emits: ['update:modelValue'],
     // 功能：初始化组件响应式状态与对外数据。
     data: function () {
@@ -296,6 +296,7 @@
       '    </span>',
       '    <i class="eva-select-arrow ri-arrow-down-s-line"></i>',
       '  </button>',
+      '<transition v-bind="motion || { css: false }">',
       '  <div v-show="open" ref="panel" class="eva-select-panel" :class="{ \'is-up\': dropUp }">',
       '    <div v-if="showSearch" class="eva-select-search">',
       '      <i class="ri-search-line"></i>',
@@ -316,6 +317,7 @@
       '      <li v-if="!flatItems.length" class="eva-select-empty" role="presentation">{{ emptyMsg }}</li>',
       '    </ul>',
       '  </div>',
+      '</transition>',
       '</div>'
     ].join('\n')
   };

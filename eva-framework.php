@@ -79,7 +79,10 @@ require_once EVA_FW_DIR . 'Fields/Builder/Native.php';
 require_once EVA_FW_DIR . 'Fields/Builder/NativeMenu.php';
 require_once EVA_FW_DIR . 'Fields/Builder/NativeWidgets.php';
 require_once EVA_FW_DIR . 'Fields/Builder/WidgetEditor.php';
+require_once EVA_FW_DIR . 'Fields/Builder/MenuFields.php';
 require_once EVA_FW_DIR . 'Fields/Builder/MenuEditor.php';
+require_once EVA_FW_DIR . 'Fields/Builder/SaveHistory.php';
+add_action('wp_ajax_eva_fw_builder_history', ['Eva\\Framework\\Builder\\SaveHistory', 'ajax_get']);
 require_once EVA_FW_DIR . 'Fields/Builder/MenuLocations.php';
 require_once EVA_FW_DIR . 'Fields/Builder/FixedStructure.php';
 // 字段后端处理器：与 Fields/<name>/<name>.js 对应，集中承载字段清洗与字段专属 AJAX。
@@ -150,6 +153,7 @@ add_action('wp_footer', ['Eva', 'builder_preview_script'], 99);
 add_action('wp_ajax_eva_fw_render_builder_preview', ['Eva', 'ajax_render_builder_preview']);
 add_action('wp_ajax_eva_fw_builder_menu_get', ['Eva\\Framework\\Builder\\MenuEditor', 'ajax_get']);
 add_action('wp_ajax_eva_fw_builder_menu_create', ['Eva\\Framework\\Builder\\MenuEditor', 'ajax_create']);
+add_action('wp_ajax_eva_fw_builder_menu_assign', ['Eva\\Framework\\Builder\\MenuEditor', 'ajax_assign']);
 add_action('wp_ajax_eva_fw_builder_widgets_get', ['Eva\\Framework\\Builder\\NativeWidgets', 'ajax_get']);
 add_action('wp_ajax_eva_fw_builder_widget_change', ['Eva\\Framework\\Builder\\WidgetEditor', 'ajax_change']);
 add_action('wp_ajax_eva_fw_builder_menu_save', ['Eva\\Framework\\Builder\\MenuEditor', 'ajax_save']);

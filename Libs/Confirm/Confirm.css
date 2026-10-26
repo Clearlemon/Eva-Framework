@@ -1,14 +1,30 @@
-/* Eva UI 库 · eva-confirm 样式（骨架 / 占位，遵循 ui-style-guard：5px 圆角、--eva-* 令牌、暗色自适配）。待实现。 */
+/* Eva confirmation dialog: inherits the current light/dark theme tokens. */
 .eva-confirm {
-  /* TODO: 复用 modal 壳 + 危险态（--eva-danger）按钮样式 */
+  position: fixed;
+  inset: 0;
+  box-sizing: border-box;
+  width: min(420px, calc(100% - 32px));
+  max-height: calc(100% - 48px);
+  margin: auto;
+  padding: 0;
+  overflow: auto;
+  border: 1px solid var(--eva-border);
+  border-radius: 5px;
+  background: var(--eva-surface);
+  color: var(--eva-text);
+  font: inherit;
+  box-shadow: 0 16px 56px rgb(0 0 0 / 20%);
 }
-
-/* 占位提示（实现后删除） */
-.eva-confirm-placeholder {
-  padding: 12px;
-  border: 1px dashed var(--eva-border);
-  border-radius: var(--eva-radius);
-  background: var(--eva-soft);
-  color: var(--eva-text-mute);
-  font-size: 12.5px;
-}
+.eva-confirm::backdrop { background: rgb(15 23 42 / 35%); }
+.eva-confirm-content { padding: 22px; }
+.eva-confirm-heading { display: flex; align-items: center; gap: 10px; }
+.eva-confirm-heading h2 { margin: 0; color: var(--eva-text); font-size: 16px; font-weight: 650; line-height: 1.5; }
+.eva-confirm-icon { display: grid; flex: none; width: 34px; height: 34px; place-items: center; border-radius: 5px; background: var(--eva-soft); color: var(--eva-primary); font-size: 19px; }
+.eva-confirm.is-danger .eva-confirm-icon { background: color-mix(in srgb, var(--eva-danger) 10%, var(--eva-surface)); color: var(--eva-danger); }
+.eva-confirm-message { margin: 14px 0 22px; color: var(--eva-text-sub); font-size: 13px; line-height: 1.8; overflow-wrap: anywhere; white-space: pre-wrap; }
+.eva-confirm-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.eva-confirm-actions button { min-height: 34px; padding: 6px 14px; border: 1px solid var(--eva-border); border-radius: 5px; background: var(--eva-surface); color: var(--eva-text); font: inherit; font-size: 13px; cursor: pointer; }
+.eva-confirm-actions .eva-confirm-submit { border-color: var(--eva-primary); background: var(--eva-primary); color: var(--eva-on-primary); }
+.eva-confirm.is-danger .eva-confirm-submit { border-color: var(--eva-danger); background: var(--eva-danger); color: #fff; }
+.eva-confirm-actions button:hover { filter: brightness(.96); }
+.eva-confirm-actions button:focus-visible { outline: 2px solid var(--eva-primary); outline-offset: 3px; }

@@ -33,6 +33,8 @@ class Assets
                 $walk($module['fields'] ?? []);
                 $walk($module['tabs'] ?? []);
             }
+            // Registered WP/Eva menu fields are rendered by the same components in Builder.
+            foreach (\Eva\Framework\Builder\MenuFields::containers() as $container) { $walk($container['sections']); }
             // The Builder menu editor creates these fields dynamically.
             foreach (['text', 'textarea', 'select', 'link'] as $type) {
                 $types[$type] = true;

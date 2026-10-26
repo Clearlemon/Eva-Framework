@@ -163,18 +163,43 @@ body.eva-builder-menu-dragging [data-eva-menu-empty] {
   display: inline-flex !important;
   align-items: center;
   justify-content: center;
-  min-width: 180px;
+  box-sizing: border-box;
+  width: fit-content;
+  max-width: 100%;
+  min-width: 0;
   min-height: 38px;
-  padding: 8px 18px;
+  padding: 8px 12px;
   color: #28745f;
   background: #eff9f4;
   font: 500 12px/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
-[data-eva-menu-empty]::after {
-  content: '菜单位置 · ' attr(data-eva-menu-label);
+[data-eva-menu-empty] .eva-builder-menu-empty-label {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
   white-space: nowrap;
   pointer-events: none;
+}
+[data-eva-menu-empty] .eva-builder-menu-empty-label > span {
+  display: block;
+  width: max-content;
+  white-space: nowrap;
+  transform: translateX(0);
+}
+[data-eva-menu-empty].eva-builder-menu-label-overflow:is(:hover, :focus-visible) .eva-builder-menu-empty-label > span {
+  animation: eva-menu-label-marquee var(--eva-menu-marquee-duration, 4s) linear infinite alternate;
+}
+@keyframes eva-menu-label-marquee {
+  0%, 15% { transform: translateX(0); }
+  85%, 100% { transform: translateX(var(--eva-menu-marquee-distance, 0px)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-eva-menu-empty].eva-builder-menu-label-overflow:is(:hover, :focus-visible) .eva-builder-menu-empty-label > span {
+    animation: none;
+    transform: translateX(var(--eva-menu-marquee-distance, 0px));
+  }
 }
 
 body.eva-builder-menu-mode .eva-builder-menu-selected,

@@ -88,6 +88,7 @@ class Data
 
         // 8) 落库：整组以 option_id 为键保存。存到哪里由设置页的 database 参数决定
         //    （默认 wp_options，与 CSF 的 serialize 行为一致；还支持 transient / theme_mod / network）。
+        $history_before = Csf_Compat::values_to_eva($opt['sections'], \Eva::get_values($option_id));
         \Eva::write_stored($option_id, $clean);
 
         do_action('eva_' . $option_id . '_saved', $clean, $opt);
@@ -96,6 +97,7 @@ class Data
         // 9) 回吐清洗结果，前端可据此刷新本地状态（确认实际入库的值）；库里是 CSF 格式，回给组件前先转回去。
         //    errors 非空表示「已保存，但这几个字段被还原了」，前端据此标红并定位，不再当作整次保存失败。
         $response = ['values' => Csf_Compat::values_to_eva($opt['sections'], $clean)];
+        \Eva\Framework\Builder\SaveHistory::record_options($option_id, $opt['sections'], $history_before, $response['values']);
         if (! empty($errors)) {
             $response['errors'] = $errors;
         }

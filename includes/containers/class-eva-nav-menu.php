@@ -84,20 +84,27 @@ class NavMenu
             $raw = isset($_POST['eva_fields'][$id][$item_id])
                 ? (array) wp_unslash($_POST['eva_fields'][$id][$item_id])
                 : [];
-            // 与渲染时同一套层级过滤：这一层没渲染出来的字段不参与清洗，否则会被空值覆盖。
-            $sections = self::sections_for_depth(isset($cfg['sections']) ? $cfg['sections'] : [], self::item_depth($item_id));
-            // 嵌入式外壳把数组 / 对象类的字段值以 JSON 字符串放在隐藏域里提交，清洗前先还原。
-            $raw = Data::decode_embedded_values($raw, $sections);
-            $clean = Data::sanitize_by_sections($sections, $raw);
+            self::save_values($item_id, $id, $cfg, $raw);
+        }
+    }
 
-            // 写入该菜单项的 post_meta。
-            if ((isset($cfg['data_type']) ? $cfg['data_type'] : 'serialize') === 'direct') {
-                foreach ($clean as $k => $v) {
-                    update_post_meta($item_id, $k, $v);
-                }
-            } else {
-                update_post_meta($item_id, $id, $clean);
+    /** Shared by the native WP menu form and the Builder presentation. */
+    public static function save_values($item_id, $id, $cfg, $raw)
+    {
+        // 与渲染时同一套层级过滤：这一层没渲染出来的字段不参与清洗，否则会被空值覆盖。
+        $sections = self::sections_for_depth(isset($cfg['sections']) ? $cfg['sections'] : [], self::item_depth($item_id));
+        // 嵌入式外壳把数组 / 对象类的字段值以 JSON 字符串放在隐藏域里提交，清洗前先还原。
+        $raw = Data::decode_embedded_values($raw, $sections);
+        $clean = Data::sanitize_by_sections($sections, $raw);
+
+        // 写入该菜单项的 post_meta。
+        if ((isset($cfg['data_type']) ? $cfg['data_type'] : 'serialize') === 'direct') {
+            foreach ($clean as $k => $v) {
+                update_post_meta($item_id, $k, $v);
             }
+        } else {
+            $stored = get_post_meta($item_id, $id, true);
+            update_post_meta($item_id, $id, array_merge(is_array($stored) ? $stored : [], $clean));
         }
     }
 

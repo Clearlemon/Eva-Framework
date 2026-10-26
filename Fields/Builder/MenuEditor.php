@@ -55,6 +55,40 @@ class MenuEditor
         wp_send_json_success($data);
     }
 
+    /** 将已有且未使用的菜单绑定到空位置，不移动或覆盖其他位置的菜单。 */
+    public static function ajax_assign()
+    {
+        check_ajax_referer('eva_fw_guide', 'nonce');
+        self::authorize();
+        self::load_menu_api();
+
+        $location_id = isset($_POST['location_id']) && is_string($_POST['location_id']) ? sanitize_key(wp_unslash($_POST['location_id'])) : '';
+        $registered = get_registered_nav_menus();
+        if ($location_id === '' || !isset($registered[$location_id])) {
+            wp_send_json_error(['message' => '请选择有效的菜单位置。'], 400);
+        }
+        $menu_id = isset($_POST['menu_id']) && is_scalar($_POST['menu_id']) ? absint(wp_unslash($_POST['menu_id'])) : 0;
+        if (!$menu_id || !wp_get_nav_menu_object($menu_id)) {
+            wp_send_json_error(['message' => '所选菜单不存在，请刷新菜单列表。'], 400);
+        }
+
+        // 以提交时的实际分配为准，防止过期列表或直接请求绕过禁用状态。
+        $locations = get_nav_menu_locations();
+        if (!empty($locations[$location_id]) && wp_get_nav_menu_object($locations[$location_id])) {
+            wp_send_json_error(['message' => '这个位置已分配菜单，请刷新菜单列表。'], 409);
+        }
+        if (in_array($menu_id, array_map('absint', $locations), true)) {
+            wp_send_json_error(['message' => '这个菜单已用于其他位置，请刷新列表后选择未使用的菜单。'], 409);
+        }
+        $locations[$location_id] = $menu_id;
+        set_theme_mod('nav_menu_locations', $locations);
+        $data = self::payload($location_id, $menu_id);
+        if (is_wp_error($data)) {
+            wp_send_json_error(['message' => $data->get_error_message()], 400);
+        }
+        wp_send_json_success($data);
+    }
+
     public static function ajax_get()
     {
         check_ajax_referer('eva_fw_guide', 'nonce');
@@ -104,6 +138,16 @@ class MenuEditor
             wp_send_json_error(['message' => 'No menu is selected for this location.'], 400);
         }
 
+        $history_before = self::payload($location_id, $menu_id);
+        $restore_id = isset($_POST['history_restore_id']) ? sanitize_text_field(wp_unslash($_POST['history_restore_id'])) : '';
+        $history_restore = $restore_id !== '' ? SaveHistory::menu_snapshot($restore_id, $menu_id) : null;
+        if ($restore_id !== '' && !$history_restore) { wp_send_json_error(['message' => '历史已过期，请重新选择版本。'], 409); }
+        $history_by_id = [];
+        foreach ((array) ($history_restore['items'] ?? []) as $historic) { $history_by_id[absint($historic['id'])] = $historic; }
+        $history_missing = [];
+        $history_id_map = [];
+        $history_parent_links = [];
+
         $items_json = isset($_POST['items']) ? wp_unslash((string) $_POST['items']) : '[]';
         $items      = json_decode($items_json, true);
         if (! is_array($items) || count($items) > 500) {
@@ -128,12 +172,25 @@ class MenuEditor
         $removed_lookup = [];
         foreach ($removed_ids as $removed_id) {
             $removed_id = absint($removed_id);
+            if (!isset($current_by_id[$removed_id]) && isset($history_by_id[$removed_id])) { continue; }
             if (! $removed_id || ! isset($current_by_id[$removed_id]) || isset($removed_lookup[$removed_id])) {
                 wp_send_json_error(['message' => 'A menu item cannot be removed from this menu.'], 400);
             }
             $removed_lookup[$removed_id] = true;
         }
 
+        // Only IDs in this menu's server snapshot may be recreated. Reads never untrash or write posts.
+        foreach ($items as $item) {
+            $id = is_array($item) ? absint($item['id'] ?? 0) : 0;
+            if (!$id || isset($current_by_id[$id]) || !isset($history_by_id[$id])) { continue; }
+            $historic = $history_by_id[$id];
+            $current_by_id[$id] = (object) array_merge($historic, [
+                'ID' => $id, 'menu_item_parent' => $historic['parent'],
+                'post_status' => $historic['status'] ?? 'publish', 'xfn' => $historic['rel'] ?? '',
+                'classes' => preg_split('/\\s+/', trim($historic['classes'] ?? '')),
+            ]);
+            $history_missing[$id] = true;
+        }
         $submitted_ids = [];
         foreach ($items as $item) {
             if (! is_array($item)) {
@@ -173,13 +230,17 @@ class MenuEditor
         }
 
         $client_keys = [];
+        $field_containers = MenuFields::containers();
+        $custom_field_saves = [];
         foreach (array_values($items) as $position => $item) {
             if (! is_array($item)) {
                 continue;
             }
 
             $item_id = isset($item['id']) ? absint($item['id']) : 0;
+            $logical_id = $item_id;
             $current = $item_id > 0 && isset($current_by_id[$item_id]) ? $current_by_id[$item_id] : null;
+            if (isset($history_missing[$item_id])) { $item_id = 0; }
             $title = isset($item['title']) ? sanitize_text_field((string) $item['title']) : '';
             $requested_url = isset($item['url']) ? esc_url_raw((string) $item['url']) : '';
             $resource_type = isset($item['resource_type']) ? sanitize_key((string) $item['resource_type']) : '';
@@ -268,7 +329,7 @@ class MenuEditor
                 $removed_parent = $current_by_id[$parent_id] ?? null;
                 $parent_id = $removed_parent ? absint($removed_parent->menu_item_parent) : 0;
             }
-            if ($parent_id === $item_id || ($parent_id > 0 && ! isset($submitted_ids[$parent_id]))) {
+            if ($parent_id === $logical_id || ($parent_id > 0 && ! isset($submitted_ids[$parent_id]))) {
                 $parent_id = 0;
             }
 
@@ -287,7 +348,7 @@ class MenuEditor
                 'menu-item-type'        => $type,
                 'menu-item-title'       => $title,
                 'menu-item-url'         => $url,
-                'menu-item-description' => $current && isset($current->description) ? sanitize_text_field($current->description) : '',
+                'menu-item-description' => isset($item['description']) ? wp_kses_post($item['description']) : ($current && isset($current->description) ? wp_kses_post($current->description) : ''),
                 'menu-item-attr-title'  => $attr_title,
                 'menu-item-target'      => $target,
                 'menu-item-xfn'         => $rel,
@@ -301,14 +362,25 @@ class MenuEditor
             }
 
             $saved_id = absint($saved_id);
-            if (array_key_exists('icon', $item)) {
-                update_post_meta($saved_id, self::icon_meta_key(), \Eva\Framework\Admin\Fields\Icon::sanitize($item['icon']));
+            if ($history_restore) {
+                if ($logical_id > 0) { $history_id_map[$logical_id] = $saved_id; }
+                $history_parent_links[$saved_id] = $parent_id;
             }
+            if (isset($item['custom_fields']) && is_array($item['custom_fields'])) { $custom_field_saves[$saved_id] = $item['custom_fields']; }
             $client_key = isset($item['client_key']) ? sanitize_text_field((string) $item['client_key']) : '';
             if ($client_key !== '') {
                 $client_keys[$saved_id] = $client_key;
             }
         }
+
+        if ($history_restore) {
+            foreach ($history_parent_links as $saved_id => $old_parent) {
+                update_post_meta($saved_id, '_menu_item_menu_item_parent', $old_parent ? ($history_id_map[$old_parent] ?? 0) : 0);
+            }
+            clean_object_term_cache(array_keys($history_parent_links), 'nav_menu_item');
+        }
+
+        foreach ($custom_field_saves as $saved_id => $fields) { MenuFields::save($menu_id, $saved_id, $fields, $field_containers); }
 
         if ($removed_lookup && ! EMPTY_TRASH_DAYS) {
             wp_send_json_error(['message' => 'Trash is disabled, so menu items were not removed.'], 409);
@@ -340,8 +412,15 @@ class MenuEditor
             }
         }
         unset($saved_item);
+        if (!is_wp_error($history_before)) { SaveHistory::record_menu($history_before, $data); }
 
         wp_send_json_success($data);
+    }
+
+    public static function history_payload($location_id, $menu_id)
+    {
+        self::load_menu_api();
+        return self::payload($location_id, $menu_id);
     }
 
     private static function authorize()
@@ -351,17 +430,42 @@ class MenuEditor
         }
     }
 
-    /** Match the theme's existing menu icon field; other themes can supply their meta key. */
-    private static function icon_meta_key()
-    {
-        return (string) apply_filters('eva_builder_menu_icon_meta_key', 'custom_icon_picker');
-    }
-
     private static function load_menu_api()
     {
         if (! function_exists('get_registered_nav_menus') || ! function_exists('get_nav_menu_locations')) {
             require_once ABSPATH . WPINC . '/nav-menu.php';
         }
+    }
+
+    /** 包含空菜单和已使用菜单，已分配菜单仅供查看。 */
+    private static function menu_choices($registered, $assigned)
+    {
+        $usage = [];
+        foreach ($assigned as $location_id => $menu_id) {
+            $menu_id = absint($menu_id);
+            if ($menu_id) {
+                $usage[$menu_id][] = sanitize_text_field($registered[$location_id] ?? $location_id);
+            }
+        }
+        $menus = wp_get_nav_menus(['hide_empty' => false, 'orderby' => 'name']);
+        if (is_wp_error($menus)) {
+            return [];
+        }
+        $choices = [];
+        foreach ($menus as $menu) {
+            $id = absint($menu->term_id);
+            $locations = $usage[$id] ?? [];
+            $choices[] = [
+                'id'        => $id,
+                'name'      => sanitize_text_field($menu->name),
+                'locations' => $locations,
+                'disabled'  => !empty($locations),
+            ];
+        }
+        usort($choices, static function ($a, $b) {
+            return ($a['disabled'] <=> $b['disabled']) ?: strnatcasecmp($a['name'], $b['name']);
+        });
+        return $choices;
     }
 
     private static function payload($location_id, $menu_id_override = 0)
@@ -382,6 +486,7 @@ class MenuEditor
         }
 
         $items = [];
+        $field_containers = MenuFields::containers();
         if ($menu_id) {
             foreach ((array) wp_get_nav_menu_items($menu_id, [
                 'post_status' => 'publish,draft',
@@ -389,11 +494,13 @@ class MenuEditor
                 'order'       => 'ASC',
             ]) as $item) {
                 $classes = array_values(array_filter(array_map('sanitize_html_class', (array) ($item->classes ?? []))));
+                $custom_fields = MenuFields::values($item->ID, $field_containers);
                 $items[] = [
                     'id'          => absint($item->ID),
                     'parent'      => absint($item->menu_item_parent),
                     'title'       => sanitize_text_field((string) $item->title),
-                    'icon'        => \Eva\Framework\Admin\Fields\Icon::sanitize(get_post_meta($item->ID, self::icon_meta_key(), true)),
+                    'icon'        => MenuFields::icon($custom_fields, $field_containers),
+                    'custom_fields' => $custom_fields,
                     'url'         => esc_url_raw((string) $item->url),
                     'type'        => sanitize_key((string) $item->type),
                     'object'      => sanitize_key((string) $item->object),
@@ -405,7 +512,7 @@ class MenuEditor
                     'target'      => sanitize_text_field((string) ($item->target ?? '')),
                     'rel'         => sanitize_text_field((string) ($item->xfn ?? '')),
                     'classes'     => implode(' ', $classes),
-                    'description' => sanitize_text_field((string) ($item->description ?? '')),
+                    'description' => wp_kses_post((string) ($item->description ?? '')),
                 ];
             }
         }
@@ -438,8 +545,10 @@ class MenuEditor
             'menu_id'            => $menu_id,
             'menu_name'          => $menu && isset($menu->name) ? sanitize_text_field($menu->name) : '',
             'items'              => $items,
+            'menu_field_containers' => MenuFields::schema($field_containers),
             'locations'          => $locations_data,
             'menu_location_data' => $location_data,
+            'available_menus'    => self::menu_choices($registered, $assigned),
             'customizer_url'     => esc_url_raw(admin_url('customize.php?autofocus[panel]=nav_menus')),
         ];
     }

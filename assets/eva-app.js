@@ -433,6 +433,12 @@
 
       // 设置抽屉
       var settingsOpen = Vue.ref(false);
+      var settingsHost = Vue.shallowRef(null);
+      function setSettingsHost(element, active) {
+        if (active) { settingsHost.value = element; }
+        else if (!element || settingsHost.value === element) { settingsHost.value = null; }
+      }
+      Vue.provide('evaShellControls', Vue.reactive({ sidebarCollapsed: sidebarCollapsed, settingsOpen: settingsOpen, toggleSidebar: toggleSidebar, toggleSettings: toggleSettings, setSettingsHost: setSettingsHost }));
       function toggleSettings() {
         settingsOpen.value = !settingsOpen.value;
       }
@@ -1583,7 +1589,9 @@
       Vue.provide('evaFormContext', { optionId: optionId, model: model, errors: fieldErrors, savedSnapshot: savedSnapshot, searchTarget: accordionSearchTarget, clearError: function (path, descendants) {
         Object.keys(fieldErrors).forEach(function (key) { if (key === path || (descendants && key.indexOf(path + '/') === 0)) { delete fieldErrors[key]; } });
       } });
-      var isDirty = Vue.computed(function () { return JSON.stringify(model) !== savedSnapshot.value; });
+      var manualSaves = Vue.shallowReactive(new Map());
+      Vue.provide('evaManualSaves', manualSaves);
+      var isDirty = Vue.computed(function () { return JSON.stringify(model) !== savedSnapshot.value || Array.from(manualSaves.values()).some(function (participant) { return participant.isDirty(); }); });
       // 指南正文一次性平铺全部分组，锚点 id 沿用 eva-guide-<分组>-<小节>，
       // 这样 #eva-guide-fields-field-basic 之类的老链接仍然有效。
       var guideSections = [];
@@ -2101,13 +2109,14 @@
         var groups = saveGroups().filter(function (group) {
           return group.fieldIds.some(function (id) { return JSON.stringify(submitted[id]) !== JSON.stringify(baseline[id]); });
         });
-        if (!groups.length) { return; }
+        var participants = Array.from(manualSaves.values()).filter(function (participant) { return participant.isDirty(); });
+        if (!groups.length && !participants.length) { return; }
         saving.value = true;
         saveMsg.value = '保存中…';
         Clear_Field_Errors();
         var url = cfg.ajaxUrl || ((boot.adminUrl || '') + 'admin-ajax.php');
         // 同一外壳可展示多个容器，仅提交有修改的容器；每次请求仍独立校验和清洗。
-        Promise.all(groups.map(function (group) {
+        return Promise.all(groups.map(function (group) {
           var values = {};
           group.fieldIds.forEach(function (id) { values[id] = submitted[id]; });
           var body = 'action=eva_fw_save_options&nonce=' + encodeURIComponent(cfg.nonce || '') +
@@ -2121,12 +2130,15 @@
           }).then(function (r) { return r.json(); }).then(function (res) {
             return { group: group, response: res };
           }).catch(function () { return { group: group, response: null }; });
-        })).then(function (results) {
+        }).concat(participants.map(function (participant) {
+          return Promise.resolve().then(function () { return participant.save(); }).then(function () { return { manual: true }; }).catch(function (error) { return { manual: true, error: error }; });
+        }))).then(function (results) {
           saving.value = false;
           var invalid = {};
           var failed = [];
           var snapshot = JSON.parse(savedSnapshot.value);
           results.forEach(function (result) {
+            if (result.manual) { if (result.error) { failed.push(result.error.message || '菜单保存失败'); } return; }
             var res = result.response;
             if (!res || !res.success) {
               failed.push(res && res.data && res.data.msg ? res.data.msg : '请求失败');
@@ -2201,6 +2213,7 @@
         toggleUser: toggleUser,
         closeUser: closeUser,
         settingsOpen: settingsOpen,
+        settingsHost: settingsHost,
         toggleSettings: toggleSettings,
         closeSettings: closeSettings,
         fieldCodeOpen: fieldCodeOpen,
@@ -2498,8 +2511,9 @@
       '      </div>',
       '    </main>',
       '  </div>',
+      "<teleport :to=\"settingsHost || 'body'\" :disabled=\"!settingsHost\">",
       '  <div class="eva-drawer-mask" v-show="settingsOpen" @click="closeSettings"></div>',
-      '  <aside class="eva-drawer" :class="{ \'is-open\': settingsOpen }" role="dialog" :aria-label="t(\'settings\')">',
+      '  <aside id="eva-settings-drawer" class="eva-drawer" :class="{ \'is-open\': settingsOpen }" role="dialog" :aria-label="t(\'settings\')">',
       '    <div class="eva-drawer-head">',
       '      <div class="eva-drawer-titles"><i class="ri-settings-3-line"></i><span>{{ t(\'settings\') }}</span></div>',
       '      <button type="button" class="eva-drawer-close" :title="t(\'close\')" @click="closeSettings"><i class="ri-close-line"></i></button>',
@@ -2570,6 +2584,7 @@
       '      </div>',
       '    </div>',
       '  </aside>',
+      "</teleport>",
       '  <div class="eva-search-mask" v-show="searchOpen" @click="closeSearch"></div>',
       '  <div class="eva-search" v-show="searchOpen" role="dialog" aria-label="搜索">',
       '    <div class="eva-search-bar">',
