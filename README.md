@@ -1,6 +1,37 @@
 # Eva-Framework
 一个现代化、模块化且易扩展的 WordPress 设置框架，用于快速构建插件和主题的后台配置界面。
 
+独立安装并启用插件后，可在插件列表点击「设置」进入框架内置演示页，也可使用顶部工具栏的「Eva Framework」入口。主题实际设置页与演示页分别注册、分别保存。主题内嵌框架不自动加载演示。可通过 `eva_fw_demo_enabled` 过滤器关闭独立插件的默认演示，此时「设置」链接沿用已注册的实际设置容器。
+
+## 管理 / 设置菜单切换
+
+设置容器配置 `management_menu` 后，Logo 右侧显示切换按钮。切换只替换侧栏菜单，当前内容、设置草稿和页签保持原样，并在当前标签页中记住所选模式。
+
+```php
+'management_menu' => [
+    ['id' => 'cards', 'label' => '卡密管理', 'icon' => 'ri-key-2-line', 'url' => admin_url('admin.php?page=lf_card_manage')],
+    ['id' => 'demo', 'label' => '授权管理示例', 'icon' => 'ri-shield-keyhole-line', 'section' => 'admin-demo'],
+],
+```
+
+`url` 入口在新标签页打开；`section` 在当前 Eva 容器中打开已注册分区。`capability` 可设置单项权限，默认继承容器权限；`management_menu` 也可传入 callable，在输出页面时读取当前启用扩展等信息。没有可用管理菜单时隐藏按钮。
+
+## 菜单分组样式
+
+在原设置文件的父分区配置中使用 `menu_style`：`default`（默认）沿用原菜单；`heading` 将父分区显示为小号灰色标题，下方排列子菜单，不带父菜单图标和树状连接线。标题右侧箭头提示展开状态，点击或使用 Enter / 空格可折叠、展开。各分组可以混用，未填写时保持原样式。
+
+默认样式统一排列在上方，标题分组统一排列在下方；同一样式内部保留原有排序和子菜单关系，显式菜单和合并展示的容器也遵守此顺序。
+
+```php
+\Eva::createSection('Leantasy', [
+    'id' => 'Cms',
+    'title' => 'Cms模块',
+    'menu_style' => 'heading', // 改成 default 即恢复原样式。
+]);
+```
+
+使用 `createOptions` 的显式 `menu` 数组时，也可在对应菜单项上设置 `menu_style`。标题分组首次默认展开，随后在当前标签页中记住各组的折叠状态；折叠侧栏时用父图标和悬浮子菜单，窄屏下按分组横向排列。
+
 ## 手风琴字段
 
 「字段 → 手风琴折叠」按功能提供 10 个独立示例，每个示例只开启对应功能，并附有操作说明。配置集中在 `includes/demo-accordion.php`，由 `demo-options.php` 加载。

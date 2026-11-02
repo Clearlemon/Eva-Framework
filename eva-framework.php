@@ -170,4 +170,9 @@ add_action('eva_loaded', ['Eva\\Framework\\Builder\\NativeMenu', 'register'], 20
 add_action('eva_loaded', ['Eva\\Framework\\Builder\\NativeWidgets', 'register'], 20);
 do_action('eva_loaded');
 
-// Len 内嵌版本：由主题注册实际设置页，不加载演示容器。
+// 独立插件提供默认设置入口；主题内嵌时仍由主题注册实际设置页。
+$eva_fw_plugin_root = wp_normalize_path((string) realpath(WP_PLUGIN_DIR));
+if ($eva_fw_plugin_root !== '' && strpos(wp_normalize_path((string) realpath(__FILE__)), trailingslashit($eva_fw_plugin_root)) === 0) {
+    require_once EVA_FW_DIR . 'includes/plugin.php';
+}
+unset($eva_fw_plugin_root);

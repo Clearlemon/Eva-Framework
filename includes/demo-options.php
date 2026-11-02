@@ -82,6 +82,9 @@ if (! function_exists('eva_demo_image_select_options')) {
     'location'   => 'admin_bar',
     'standalone' => true,
     'subtitle'   => '轻量 · 现代 · 好看的 WordPress 设置框架',
+    'management_menu' => [
+        ['id' => 'authorization-demo', 'label' => '授权管理示例', 'icon' => 'ri-shield-keyhole-line', 'section' => 'admin-demo'],
+    ],
 ]);
 
 // 2) 左侧主菜单：展示通用字段与整页型组件（图标使用 Remix Icon）。
@@ -133,6 +136,15 @@ if (! function_exists('eva_demo_image_select_options')) {
 // 页面构建器与主题备份都是整页型大字段，作为 Eva Framework 菜单底部的独立入口。
 \Eva::addMenuItem('eva_demo', ['id' => 'field-builder', 'label' => ['zh' => '页面构建器', 'en' => 'Page Builder', 'ja' => 'ページビルダー', 'ko' => '페이지 빌더'], 'icon' => 'ri-layout-masonry-line']);
 \Eva::addMenuItem('eva_demo', ['id' => 'backup', 'label' => ['zh' => '主题备份', 'en' => 'Theme Backup', 'ja' => 'テーマバックアップ', 'ko' => '테마 백업'], 'icon' => 'ri-database-2-line']);
+\Eva::addMenuItem('eva_demo', ['id' => 'admin-demo', 'label' => '业务页面示例', 'icon' => 'ri-dashboard-line']);
+\Eva::createSection('eva_demo', [
+    'id' => 'admin-demo',
+    'title' => '业务页面示例',
+    'flush' => true,
+    'fields' => [
+        ['id' => 'admin_demo', 'type' => 'admin_demo', 'width' => 'full', 'save' => false],
+    ],
+]);
 
 // 3) 常规设置分组：演示 text / switcher / select（含分组+可搜索）/ textarea 等基础字段。
 \Eva::createSection('eva_demo', [

@@ -1,0 +1,178 @@
+/* Isolated, token-based business page preview. */
+#eva-app .eva-admin-demo {
+  --ad-gap: 16px; --ad-pad: 20px; --ad-small: 8px; --ad-control: 26px;
+  --ad-muted: color-mix(in srgb, var(--eva-text) 72%, var(--eva-surface));
+  --ad-success: color-mix(in srgb, var(--eva-success) 65%, var(--eva-text));
+  --ad-warning: color-mix(in srgb, var(--eva-warning) 65%, var(--eva-text));
+  --ad-danger: color-mix(in srgb, var(--eva-danger) 55%, var(--eva-text));
+  --ad-danger-soft: color-mix(in srgb, var(--eva-danger) 8%, var(--eva-surface));
+  --ad-primary-soft: color-mix(in srgb, var(--eva-primary) 12%, var(--eva-surface));
+  --ad-accent: color-mix(in srgb, var(--eva-accent) 65%, var(--eva-text));
+  --ad-primary-text: color-mix(in srgb, var(--eva-primary) 45%, var(--eva-text));
+  --ad-overlay: color-mix(in srgb, var(--eva-text) 28%, transparent);
+  max-width: 1560px; margin: 0 auto; padding: 24px; color: var(--eva-text); font-size: 13px; line-height: 1.5;
+}
+#eva-app .eva-admin-demo :is(h1,h2,h3,p,dl,dd) { margin: 0; }
+#eva-app .eva-admin-demo h1 { font-size: 24px; line-height: 1.5; letter-spacing: -.5px; }
+#eva-app .eva-admin-demo h2 { font-size: 15px; font-weight: 650; }
+#eva-app .eva-admin-demo h3 { font-size: 13px; font-weight: 600; }
+#eva-app .eva-admin-demo button { font-family: inherit; font-size: inherit; cursor: pointer; transition: background var(--eva-ease), color var(--eva-ease), border-color var(--eva-ease); }
+#eva-app .eva-admin-demo button:disabled { cursor: default; opacity: .45; }
+#eva-app .eva-admin-demo button:focus-visible { outline: 2px solid var(--eva-primary); outline-offset: 3px; }
+#eva-app .eva-admin-demo :is(.eva-ad-muted,dt,small) { color: var(--ad-muted); }
+#eva-app .eva-ad-heading { display: flex; justify-content: space-between; align-items: center; gap: var(--ad-gap); margin-bottom: var(--ad-gap); }
+#eva-app .eva-ad-heading p { color: var(--ad-muted); margin-top: 4px; }
+#eva-app .eva-ad-eyebrow { display: flex; align-items: center; gap: var(--ad-small); color: var(--ad-muted); font-size: 12px; margin-bottom: 4px; }
+#eva-app .eva-ad-eyebrow > span, #eva-app .eva-ad-demo-label { display: inline-flex; align-items: center; border-radius: var(--eva-radius); padding: 2px var(--ad-small); background: var(--ad-primary-soft); color: var(--ad-primary-text); font-size: 11px; }
+#eva-app .eva-ad-heading-actions { display: flex; gap: var(--ad-small); }
+#eva-app :is(.eva-ad-button,.eva-ad-icon) { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; gap: 4px; height: var(--ad-control); border: 1px solid var(--eva-border); border-radius: var(--eva-radius); background: var(--eva-surface); color: var(--eva-text); padding: 0 var(--ad-small); line-height: 1; }
+#eva-app .eva-ad-button.is-primary { background: var(--eva-primary); border-color: var(--eva-primary); color: var(--eva-on-primary); }
+#eva-app .eva-ad-button.is-primary:hover { background: var(--eva-primary-600); border-color: var(--eva-primary-600); }
+#eva-app .eva-ad-button:not(.is-primary):hover, #eva-app .eva-ad-icon:not(:disabled):hover { background: var(--eva-soft); border-color: color-mix(in srgb, var(--eva-text) 18%, var(--eva-border)); }
+#eva-app .eva-ad-icon { width: var(--ad-control); padding: 0; font-size: 16px; }
+#eva-app .eva-ad-text-button { display: inline-flex; align-items: center; gap: 4px; min-height: var(--ad-control); padding: 0 4px; border: 0; border-radius: var(--eva-radius); background: transparent; color: var(--ad-accent); }
+#eva-app .eva-ad-text-button:hover { background: var(--eva-soft); color: var(--eva-text); }
+#eva-app .eva-ad-notice { display: flex; align-items: center; gap: var(--ad-small); margin-bottom: var(--ad-pad); color: var(--ad-muted); font-size: 12px; }
+#eva-app .eva-ad-notice > i { font-size: 15px; color: var(--ad-accent); }
+#eva-app .eva-ad-stats { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: var(--ad-gap); margin-bottom: var(--ad-pad); }
+#eva-app .eva-ad-stat { display: flex; align-items: flex-start; gap: 12px; min-width: 0; padding: var(--ad-pad); border: 1px solid var(--eva-border); border-radius: var(--eva-radius); background: var(--eva-surface); color: var(--eva-text); text-align: left; box-shadow: var(--eva-shadow-card); }
+#eva-app .eva-ad-stat:hover, #eva-app .eva-ad-stat[aria-pressed="true"] { border-color: color-mix(in srgb,var(--eva-primary) 55%,var(--eva-border)); }
+#eva-app .eva-ad-stat-icon { display: grid; place-items: center; width: 36px; height: 36px; flex-shrink: 0; border-radius: var(--eva-radius); background: color-mix(in srgb,var(--eva-accent) 12%,var(--eva-surface)); color: var(--ad-accent); font-size: 20px; }
+#eva-app .eva-ad-stat.is-active .eva-ad-stat-icon { color: var(--ad-success); background: color-mix(in srgb,var(--eva-success) 10%,var(--eva-surface)); }
+#eva-app .eva-ad-stat.is-pending .eva-ad-stat-icon { color: var(--ad-warning); background: color-mix(in srgb,var(--eva-warning) 10%,var(--eva-surface)); }
+#eva-app .eva-ad-stat.is-flagged .eva-ad-stat-icon { color: var(--ad-danger); background: var(--ad-danger-soft); }
+#eva-app .eva-ad-stat-body { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 4px; }
+#eva-app .eva-ad-stat-body > strong { color: var(--eva-text); font-size: 28px; line-height: 1.25; font-variant-numeric: tabular-nums; font-weight: 650; }
+#eva-app .eva-ad-stat-body small { margin-left: 6px; font-size: 12px; font-weight: 400; }
+#eva-app .eva-ad-stat-body > .eva-ad-muted { font-size: 11px; }
+#eva-app .eva-ad-stat-arrow { color: var(--eva-text-mute); font-size: 16px; }
+#eva-app .eva-ad-panel { min-width: 0; background: var(--eva-surface); border: 1px solid var(--eva-border); border-radius: var(--eva-radius); box-shadow: var(--eva-shadow-card); }
+#eva-app .eva-ad-panel-head { display: flex; align-items: center; justify-content: space-between; gap: var(--ad-gap); padding: var(--ad-pad); }
+#eva-app .eva-ad-panel-head p { color: var(--ad-muted); font-size: 12px; margin-top: 4px; }
+#eva-app .eva-ad-panel-head h2 > span { color: var(--ad-muted); font-size: 12px; font-weight: 400; margin-left: var(--ad-small); }
+#eva-app .eva-ad-workspace { display: grid; grid-template-columns: minmax(0,1fr) 272px; align-items: start; gap: var(--ad-gap); }
+#eva-app .eva-ad-views { display: flex; gap: 4px; background: var(--eva-soft); padding: 3px; border: 1px solid var(--eva-border); border-radius: var(--eva-radius); }
+#eva-app .eva-ad-views .eva-ad-icon { border-color: transparent; background: transparent; color: var(--ad-muted); }
+#eva-app .eva-ad-views .eva-ad-icon.is-active { color: var(--ad-primary-text); background: var(--eva-surface); border-color: var(--eva-border); }
+#eva-app .eva-ad-toolbar { display: flex; flex-direction: column; gap: 12px; padding: 0 var(--ad-pad) var(--ad-gap); }
+#eva-app .eva-ad-filter-tabs { display: flex; gap: var(--ad-small); flex-wrap: wrap; }
+#eva-app .eva-ad-filter-tabs > button { display: flex; gap: 6px; align-items: center; height: var(--ad-control); padding: 0 var(--ad-small); border: 1px solid transparent; border-radius: var(--eva-radius); background: transparent; color: var(--ad-muted); }
+#eva-app .eva-ad-filter-tabs > button.is-active { color: var(--ad-primary-text); background: var(--ad-primary-soft); }
+#eva-app .eva-ad-filter-tabs > button > span { font-size: 11px; font-variant-numeric: tabular-nums; }
+#eva-app .eva-ad-search-row { display: flex; align-items: center; gap: var(--ad-small); }
+#eva-app .eva-ad-search { display: flex; align-items: center; gap: var(--ad-small); height: var(--ad-control); max-width: 320px; flex: 1; min-width: 0; padding: 0 var(--ad-small); border: 1px solid var(--eva-border); border-radius: var(--eva-radius); background: var(--eva-soft); color: var(--ad-muted); transition: border-color var(--eva-ease),box-shadow var(--eva-ease); }
+#eva-app .eva-ad-search input { width: 100%; min-width: 0; height: 100%; min-height: 0; padding: 0; border: 0; outline: none; box-shadow: none; background: transparent; color: var(--eva-text); font: inherit; }
+#eva-app .eva-ad-search input:focus { border: 0; box-shadow: none; outline: none; }
+#eva-app .eva-ad-search:focus-within { border-color: var(--eva-primary); box-shadow: 0 0 0 3px color-mix(in srgb,var(--eva-primary) 18%,transparent); }
+#eva-app .eva-ad-theme-filter { width: 130px; flex-shrink: 0; }
+#eva-app .eva-admin-demo .eva-select-trigger { box-sizing: border-box; min-height: var(--ad-control); height: var(--ad-control); padding: 0 var(--ad-small); border-radius: var(--eva-radius); background: var(--eva-soft); box-shadow: none; font-size: 13px; }
+#eva-app .eva-admin-demo .eva-select.is-open .eva-select-trigger, #eva-app .eva-admin-demo .eva-select-trigger:focus-visible { border-color: var(--eva-primary); box-shadow: 0 0 0 3px color-mix(in srgb,var(--eva-primary) 18%,transparent); }
+#eva-app .eva-ad-selection { display: flex; align-items: center; gap: 12px; padding: var(--ad-small) var(--ad-pad); background: var(--ad-primary-soft); color: var(--ad-primary-text); font-size: 12px; }
+#eva-app .eva-ad-table-scroll { width: 100%; overflow-x: auto; }
+#eva-app .eva-ad-table { border-collapse: collapse; width: 100%; min-width: 760px; text-align: left; font-size: 12px; }
+#eva-app .eva-ad-table :is(th,td) { height: 60px; padding: var(--ad-small) 12px; border-top: 1px solid var(--eva-border); vertical-align: middle; }
+#eva-app .eva-ad-table th { height: 36px; background: var(--eva-soft); color: var(--ad-muted); font-size: 11px; font-weight: 500; white-space: nowrap; }
+#eva-app .eva-ad-table :is(td,th):first-child { padding-left: var(--ad-pad); width: 40px; }
+#eva-app .eva-ad-table :is(td,th):last-child { padding-right: var(--ad-pad); }
+#eva-app .eva-ad-table tbody tr { transition: background var(--eva-ease); }
+#eva-app .eva-ad-table tbody tr:hover { background: var(--eva-soft); }
+#eva-app .eva-ad-table tr.is-selected { background: color-mix(in srgb,var(--eva-primary) 6%,var(--eva-surface)); }
+#eva-app .eva-ad-table .eva-ad-action-cell { text-align: right; white-space: nowrap; }
+#eva-app .eva-admin-demo input[type="checkbox"] { appearance: none; position: relative; width: 14px; height: 14px; margin: 0; vertical-align: middle; border: 1px solid var(--ad-muted); border-radius: var(--eva-radius); background: var(--eva-surface); cursor: pointer; }
+#eva-app .eva-admin-demo input[type="checkbox"]:is(:checked,:indeterminate) { background: var(--eva-primary); border-color: var(--eva-primary); }
+#eva-app .eva-admin-demo input[type="checkbox"]:checked::after { content: ''; position: absolute; left: 50%; top: 50%; width: 4px; height: 7px; border: solid var(--eva-on-primary); border-width: 0 2px 2px 0; transform: translate(-50%,-65%) rotate(45deg); }
+#eva-app .eva-admin-demo input[type="checkbox"]:indeterminate::after { content: ''; position: absolute; left: 50%; top: 50%; width: 7px; height: 2px; background: var(--eva-on-primary); transform: translate(-50%,-50%); }
+#eva-app .eva-admin-demo input[type="checkbox"]:focus-visible { outline: 2px solid var(--eva-primary); outline-offset: 3px; }
+#eva-app .eva-ad-site-cell { display: flex; align-items: center; gap: 10px; }
+#eva-app .eva-ad-site-icon { display: grid; place-items: center; flex-shrink: 0; width: 32px; height: 32px; border: 1px solid var(--eva-border); border-radius: var(--eva-radius); background: var(--eva-soft); color: var(--ad-accent); font-size: 18px; }
+#eva-app .eva-ad-site-cell strong { display: block; font-size: 12px; font-weight: 600; }
+#eva-app .eva-ad-site-cell small { display: block; font-size: 11px; margin-top: 3px; }
+#eva-app .eva-ad-cell-sub { display: block; font-size: 10px; margin-top: 3px; }
+#eva-app .eva-ad-theme-badge { display: inline-block; padding: 2px 6px; border-radius: var(--eva-radius); background: var(--eva-soft); color: var(--ad-muted); font-size: 11px; }
+#eva-app .eva-ad-status { display: inline-flex; align-items: center; flex-shrink: 0; gap: 4px; padding: 2px 6px; border-radius: var(--eva-radius); font-size: 11px; font-weight: 500; white-space: nowrap; }
+#eva-app .eva-ad-status.is-active { color: var(--ad-success); background: color-mix(in srgb,var(--eva-success) 9%,var(--eva-surface)); }
+#eva-app .eva-ad-status.is-pending { color: var(--ad-warning); background: color-mix(in srgb,var(--eva-warning) 10%,var(--eva-surface)); }
+#eva-app .eva-ad-status.is-flagged { color: var(--ad-danger); background: var(--ad-danger-soft); }
+#eva-app .eva-ad-date { color: var(--ad-muted); font-size: 11px; white-space: nowrap; }
+#eva-app .eva-ad-pagination { display: flex; align-items: center; justify-content: space-between; gap: var(--ad-small); padding: 12px var(--ad-pad); border-top: 1px solid var(--eva-border); color: var(--ad-muted); font-size: 11px; }
+#eva-app .eva-ad-pagination > div { display: flex; align-items: center; gap: var(--ad-small); }
+#eva-app .eva-ad-service { padding: var(--ad-pad); }
+#eva-app .eva-ad-service-mark { display: grid; place-items: center; width: 40px; height: 40px; border-radius: var(--eva-radius); color: var(--ad-accent); background: color-mix(in srgb,var(--eva-accent) 10%,var(--eva-surface)); font-size: 24px; margin-bottom: 12px; }
+#eva-app .eva-ad-service > p { color: var(--ad-muted); font-size: 12px; line-height: 1.8; margin: var(--ad-small) 0 12px; }
+#eva-app .eva-ad-service dl { display: grid; gap: 12px; border-top: 1px solid var(--eva-border); border-bottom: 1px solid var(--eva-border); padding: var(--ad-gap) 0; margin: var(--ad-gap) 0; }
+#eva-app .eva-ad-service dl > div { display: flex; justify-content: space-between; gap: var(--ad-small); font-size: 12px; }
+#eva-app .eva-ad-service-note { display: flex; align-items: flex-start; gap: var(--ad-small); color: var(--ad-muted); font-size: 12px; line-height: 1.8; }
+#eva-app .eva-ad-service-note > i { margin-top: 4px; color: var(--ad-accent); font-size: 16px; }
+#eva-app .eva-ad-site-section { margin-top: var(--ad-pad); }
+#eva-app .eva-ad-site-section > .eva-ad-panel-head { padding: 0 0 12px; }
+#eva-app .eva-ad-site-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: var(--ad-gap); }
+#eva-app .eva-ad-site-preview { min-width: 0; border: 1px solid var(--eva-border); border-radius: var(--eva-radius); background: var(--eva-surface); overflow: hidden; box-shadow: var(--eva-shadow-card); }
+#eva-app .eva-ad-mock { position: relative; padding: 10px 14px 0; height: 170px; overflow: hidden; background: color-mix(in srgb,var(--eva-accent) 8%,var(--eva-soft)); }
+#eva-app .eva-ad-mock.is-layout-1 { background: color-mix(in srgb,var(--eva-primary) 8%,var(--eva-soft)); }
+#eva-app .eva-ad-mock.is-layout-2 { background: color-mix(in srgb,var(--eva-success) 8%,var(--eva-soft)); }
+#eva-app .eva-ad-mock-bar { display: flex; align-items: center; gap: 4px; height: 20px; padding: 0 var(--ad-small); border-radius: var(--eva-radius) var(--eva-radius) 0 0; background: var(--eva-soft); border: 1px solid var(--eva-border); }
+#eva-app .eva-ad-mock-bar > span { width: 4px; height: 4px; background: color-mix(in srgb,var(--eva-text) 30%,var(--eva-surface)); }
+#eva-app .eva-ad-mock-bar > small { margin: 0 auto; font-size: 8px; }
+#eva-app .eva-ad-mock-page { min-height: 150px; background: var(--eva-surface); padding: 10px 12px; }
+#eva-app .eva-ad-mock-nav { display: flex; align-items: center; gap: var(--ad-small); font-size: 7px; color: var(--ad-muted); }
+#eva-app .eva-ad-mock-nav > b { margin-right: auto; color: var(--eva-text); font-size: 9px; }
+#eva-app .eva-ad-mock-hero { display: flex; align-items: center; justify-content: center; gap: var(--ad-small); height: 64px; margin-top: 10px; border-radius: var(--eva-radius); background: color-mix(in srgb,var(--eva-accent) 12%,var(--eva-soft)); color: var(--ad-accent); font-size: 9px; }
+#eva-app .eva-ad-mock-hero > i { font-size: 26px; }
+#eva-app .is-layout-1 .eva-ad-mock-hero { background: color-mix(in srgb,var(--eva-primary) 12%,var(--eva-soft)); color: var(--ad-primary-text); }
+#eva-app .is-layout-2 .eva-ad-mock-hero { background: color-mix(in srgb,var(--eva-success) 10%,var(--eva-soft)); color: var(--ad-success); }
+#eva-app .eva-ad-mock-lines { display: flex; gap: var(--ad-small); margin-top: var(--ad-small); }
+#eva-app .eva-ad-mock-lines > span { flex: 1; height: 25px; border-radius: var(--eva-radius); background: var(--eva-soft); }
+#eva-app .eva-ad-mock-label { position: absolute; bottom: var(--ad-small); right: var(--ad-small); padding: 2px 6px; border: 1px solid var(--eva-border); border-radius: var(--eva-radius); background: var(--eva-surface); color: var(--ad-muted); font-size: 9px; }
+#eva-app .eva-ad-preview-meta { display: flex; align-items: center; gap: var(--ad-small); padding: 12px 14px; }
+#eva-app .eva-ad-preview-meta > div { flex: 1; min-width: 0; }
+#eva-app .eva-ad-preview-meta p { color: var(--ad-muted); font-size: 11px; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; }
+#eva-app .eva-ad-record-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; padding: 0 var(--ad-pad) var(--ad-gap); }
+#eva-app .eva-ad-record-card { min-width: 0; padding: 12px; border: 1px solid var(--eva-border); border-radius: var(--eva-radius); }
+#eva-app .eva-ad-record-card > div { display: flex; align-items: center; justify-content: space-between; gap: var(--ad-small); margin-bottom: 12px; }
+#eva-app .eva-ad-record-card h3 { overflow-wrap: anywhere; }
+#eva-app .eva-ad-record-card > p { color: var(--ad-muted); font-size: 11px; margin-top: 4px; }
+#eva-app .eva-ad-record-card dl { display: grid; gap: var(--ad-small); margin: 12px 0; font-size: 11px; }
+#eva-app .eva-ad-record-card dl > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--ad-small); }
+#eva-app .eva-ad-empty { display: flex; align-items: center; flex-direction: column; gap: 12px; padding: 48px var(--ad-gap); text-align: center; }
+#eva-app .eva-ad-empty > i { font-size: 28px; color: var(--ad-muted); }
+#eva-app .eva-ad-empty > p { color: var(--ad-muted); font-size: 12px; }
+#eva-app .eva-ad-batch { margin-bottom: var(--ad-pad); padding: 0 var(--ad-pad) var(--ad-gap); }
+#eva-app .eva-ad-batch .eva-ad-panel-head { padding-left: 0; padding-right: 0; }
+#eva-app .eva-ad-batch > label { display: block; margin-bottom: var(--ad-small); font-size: 12px; color: var(--ad-muted); }
+#eva-app .eva-ad-batch > textarea { display: block; width: 100%; padding: var(--ad-small) 12px; min-height: 86px; border: 1px solid var(--eva-border); border-radius: var(--eva-radius); background: var(--eva-soft); color: var(--eva-text); font: inherit; line-height: 1.8; resize: vertical; }
+#eva-app .eva-ad-batch > textarea:focus { outline: none; border-color: var(--eva-primary); box-shadow: 0 0 0 3px color-mix(in srgb,var(--eva-primary) 18%,transparent); }
+#eva-app .eva-ad-batch > footer { display: flex; align-items: center; justify-content: space-between; gap: var(--ad-small); margin-top: 12px; }
+#eva-app .eva-ad-batch .eva-ad-error { color: var(--ad-danger); font-size: 12px; margin-top: var(--ad-small); }
+#eva-app .eva-ad-feedback { display: flex; align-items: center; gap: var(--ad-small); margin-bottom: var(--ad-gap); padding: var(--ad-small) 12px; border: 1px solid var(--eva-border); border-radius: var(--eva-radius); background: var(--eva-surface); color: var(--ad-success); }
+#eva-app .eva-ad-feedback > button { margin-left: auto; }
+#eva-app .eva-ad-overlay { position: fixed; z-index: 9000; inset: 0; display: flex; align-items: center; justify-content: center; padding: var(--ad-pad); background: var(--ad-overlay); }
+#eva-app .eva-ad-dialog { width: 400px; max-width: 100%; max-height: 90vh; overflow-y: auto; border: 1px solid var(--eva-border); border-radius: var(--eva-radius); background: var(--eva-surface); box-shadow: var(--eva-shadow-menu); }
+#eva-app .eva-ad-dialog > .eva-ad-panel-head { border-bottom: 1px solid var(--eva-border); }
+#eva-app .eva-ad-detail-title { display: flex; align-items: center; gap: 12px; padding: var(--ad-pad); }
+#eva-app .eva-ad-detail-title > div { flex: 1; min-width: 0; }
+#eva-app .eva-ad-detail-title p { color: var(--ad-muted); font-size: 12px; overflow-wrap: anywhere; }
+#eva-app .eva-ad-detail-list { padding: 0 var(--ad-pad) var(--ad-pad); }
+#eva-app .eva-ad-detail-list > div { display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid var(--eva-border); padding: 12px 0; font-size: 12px; }
+#eva-app .eva-ad-detail-list dd { text-align: right; overflow-wrap: anywhere; }
+#eva-app .eva-ad-dialog > footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px var(--ad-pad); border-top: 1px solid var(--eva-border); background: var(--eva-soft); color: var(--ad-muted); font-size: 11px; }
+@media (max-width: 1200px) {
+  #eva-app .eva-ad-workspace { grid-template-columns: minmax(0,1fr); }
+  #eva-app .eva-ad-service { display: none; }
+  #eva-app .eva-ad-stat { padding: var(--ad-gap); gap: var(--ad-small); }
+  #eva-app .eva-ad-stat-arrow { display: none; }
+}
+@media (max-width: 782px) {
+  #eva-app .eva-admin-demo { --ad-pad: 12px; --ad-gap: 12px; padding: 12px; }
+  #eva-app .eva-ad-heading { align-items: flex-start; flex-direction: column; }
+  #eva-app .eva-ad-heading h1 { font-size: 21px; }
+  #eva-app .eva-ad-stats { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  #eva-app .eva-ad-stat-body > strong { font-size: 24px; }
+  #eva-app .eva-ad-stat-icon { width: 28px; height: 28px; font-size: 16px; }
+  #eva-app .eva-ad-record-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  #eva-app .eva-ad-site-grid { grid-template-columns: minmax(0,1fr); }
+  #eva-app .eva-ad-pagination { flex-wrap: wrap; }
+  #eva-app .eva-ad-site-section > .eva-ad-panel-head { flex-wrap: wrap; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #eva-app .eva-admin-demo button, #eva-app .eva-ad-search, #eva-app .eva-ad-table tbody tr { transition: none; }
+}

@@ -1329,59 +1329,6 @@ body.eva-pb-resizing * {
   background: var(--eva-surface);
 }
 
-.eva-pb-pagebar {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  height: 48px;
-  padding: 0 18px;
-  border-bottom: 1px solid var(--eva-border);
-  background: var(--eva-surface);
-  color: var(--eva-text);
-  font-size: 12px;
-}
-
-.eva-pb-pagebar span {
-  color: var(--eva-text-sub);
-}
-
-.eva-pb-slot-tabs {
-  display: inline-flex;
-  min-width: 0;
-  align-items: center;
-  gap: 4px;
-  margin-left: 0;
-  overflow-x: auto;
-}
-
-.eva-pb-pagebar .eva-pb-slot-tabs button {
-  width: auto;
-  min-width: max-content;
-  padding: 0 10px;
-  border: 1px solid var(--eva-border);
-  border-radius: 999px;
-  background: var(--eva-soft);
-  color: var(--eva-text-sub);
-  cursor: pointer;
-  font-size: 11.5px;
-}
-
-.eva-pb-pagebar .eva-pb-slot-tabs button.is-active {
-  border-color: color-mix(in srgb, var(--eva-primary) 55%, var(--eva-surface));
-  background: color-mix(in srgb, var(--eva-primary) 7%, var(--eva-surface));
-  color: var(--eva-primary-600);
-  font-weight: 700;
-}
-
-.eva-pb-pagebar button {
-  width: 26px;
-  height: 26px;
-  border: 0;
-  border-radius: 6px;
-  background: var(--eva-soft);
-  color: var(--eva-text-sub);
-}
-
 .eva-pb-canvas {
   position: relative;
   align-items: stretch;
@@ -2966,7 +2913,7 @@ body.eva-menu-dragging * {
 .eva-pb-menu-submenu-row:hover { background: var(--eva-soft); }
 .eva-pb-menu-submenu-row .eva-pb-menu-editor-icon { width: 18px; height: 18px; font-size: 17px; }
 .eva-pb-menu-submenu-label { flex: 1; min-width: 0; min-height: 29px; overflow: hidden; padding: 4px 0; border: 0; background: transparent; color: var(--eva-text); font: inherit; font-size: 12px; text-align: left; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
-.eva-pb-menu-submenu-next { display: grid; flex: none; width: 18px; height: 28px; place-items: center; padding: 0; border: 0; border-radius: 4px; background: transparent; color: var(--eva-text-sub); font-size: 16px; cursor: pointer; }
+.eva-pb-menu-submenu-next { display: grid; box-sizing: border-box; flex: none; align-self: center; width: 22px; height: 22px; min-height: 22px; place-items: center; padding: 0; border: 0; border-radius: 4px; background: transparent; color: var(--eva-text-sub); font-size: 16px; line-height: 1; cursor: pointer; }
 .eva-pb-menu-submenu-next:hover { color: var(--eva-primary); background: var(--eva-primary-050); }
 .eva-pb-menu-submenu-empty { margin: 0; padding: 16px 10px; color: var(--eva-text-sub); font-size: 12px; line-height: 1.6; }
 .eva-pb-menu-submenu-footer { display: flex; flex: none; gap: 8px; padding: 10px 14px; border-top: 1px solid var(--eva-border); }
@@ -3068,8 +3015,6 @@ body.eva-menu-dragging * {
 .eva-pb-menu-actions-popover, .eva-pb-menu-edit-popover { border-color: color-mix(in srgb, var(--eva-primary) 22%, var(--eva-border)); }
 
 /* Each settings entry opens only its own WordPress-style control. */
-.eva-pb-menu-wp-select { box-sizing: border-box; width: 100%; min-height: 36px; padding: 6px 10px; border: 1px solid var(--eva-border); border-radius: 7px; background: var(--eva-surface); color: var(--eva-text); font: inherit; }
-.eva-pb-menu-wp-select:focus-visible { outline: 2px solid var(--eva-primary); outline-offset: 1px; }
 .eva-pb-menu-wp-checkbox { display: flex; align-items: center; gap: 8px; color: var(--eva-text); font-size: 12px; }
 .eva-pb-menu-wp-checkbox input { accent-color: var(--eva-primary); }
 
@@ -3342,3 +3287,59 @@ body.eva-menu-dragging * {
 .eva-pb-menu-registered-field .eva-image-select-grid { gap: 8px; }
 .eva-pb-menu-edit-popover .eva-pb-menu-editor-field > textarea { box-sizing: border-box; width: 100%; min-height: 96px; padding: 8px 10px; resize: vertical; border: 1px solid var(--eva-border); border-radius: 6px; background: var(--eva-surface); color: var(--eva-text); font: inherit; }
 .eva-pb-menu-edit-popover .eva-pb-menu-editor-field > textarea:focus { border-color: var(--eva-primary); outline: none; }
+
+/* A child item's editor can return to the submenu view that opened it. */
+.eva-pb-menu-actions-popover > header .eva-pb-menu-actions-back { display: flex; align-items: center; gap: 6px; min-height: 28px; margin: -2px -4px 5px; padding: 4px; border: 0; border-bottom: 1px solid var(--eva-border); border-radius: 0; background: transparent; color: var(--eva-primary); font: inherit; text-align: left; cursor: pointer; }
+.eva-pb-menu-actions-popover > header .eva-pb-menu-actions-back span { color: inherit; font-size: 12px; }
+.eva-pb-menu-actions-back i { font-size: 15px; }
+.eva-pb-menu-actions-back:hover { background: var(--eva-primary-050); }
+.eva-pb-menu-actions-back:focus-visible { outline: 2px solid var(--eva-primary); outline-offset: 2px; }
+.eva-pb-menu-edit-popover .eva-pb-menu-editor-back { margin-right: 5px; color: var(--eva-primary); }
+
+/* ui-style-guard: framework controls, 26px single-line height and token-based flat styling. */
+#eva-app .eva-pb { --eva-pb-control-height: 26px; --eva-pb-control-padding: 8px; }
+#eva-app .eva-pb :is(.eva-pb-menu-location-card, .eva-pb-menu-edit-popover, .eva-pb-menu-add-panel) { --eva-radius: 5px; }
+#eva-app .eva-pb :is(.eva-pb-menu-location-card, .eva-pb-menu-edit-popover, .eva-pb-menu-add-panel) :is(input:not([type]), input[type="text"], input[type="url"], input[type="email"], input[type="search"], input[type="number"], input[type="tel"], input[type="password"], .eva-select:not(.is-multiple) > .eva-select-trigger) {
+  box-sizing: border-box; width: 100%; max-width: 100%; height: var(--eva-pb-control-height); min-height: var(--eva-pb-control-height);
+  margin: 0; padding: 0 var(--eva-pb-control-padding); border: 1px solid var(--eva-border); border-radius: var(--eva-radius);
+  background: var(--eva-soft); color: var(--eva-text); box-shadow: none; font-family: inherit; font-size: 13px; font-weight: 400; line-height: 1.5;
+  transition: border-color var(--eva-ease), background var(--eva-ease), box-shadow var(--eva-ease);
+}
+#eva-app .eva-pb :is(.eva-pb-menu-location-card, .eva-pb-menu-edit-popover, .eva-pb-menu-add-panel) :is(input:not([type]), input[type="text"], input[type="url"], input[type="email"], input[type="search"], input[type="number"], input[type="tel"], input[type="password"], .eva-select-trigger):focus,
+#eva-app .eva-pb :is(.eva-pb-menu-location-card, .eva-pb-menu-edit-popover, .eva-pb-menu-add-panel) .eva-select.is-open > .eva-select-trigger {
+  outline: none; border-color: var(--eva-primary); background: var(--eva-surface); box-shadow: 0 0 0 3px color-mix(in srgb, var(--eva-primary) 18%, transparent);
+}
+#eva-app .eva-pb :is(.eva-pb-menu-location-card, .eva-pb-menu-edit-popover, .eva-pb-menu-add-panel) .eva-select-search { padding: 4px var(--eva-pb-control-padding); }
+#eva-app .eva-pb :is(.eva-pb-menu-location-card, .eva-pb-menu-edit-popover, .eva-pb-menu-add-panel) .eva-select-search-input,
+#eva-app .eva-pb :is(.eva-pb-menu-location-card, .eva-pb-menu-edit-popover, .eva-pb-menu-add-panel) .eva-select-search-input:focus {
+  padding: 0; border: 0; border-radius: 0; background: transparent; outline: none; box-shadow: none;
+}
+#eva-app .eva-pb :is(.eva-pb-menu-location-card, .eva-pb-menu-edit-popover, .eva-pb-menu-add-panel) .eva-select-option { min-height: var(--eva-pb-control-height); padding: 3px var(--eva-pb-control-padding); border-radius: var(--eva-radius); font-size: 13px; }
+#eva-app .eva-pb :is(.eva-pb-menu-location-card, .eva-pb-menu-edit-popover, .eva-pb-menu-add-panel) .eva-select-panel { border-radius: var(--eva-radius); }
+#eva-app .eva-pb :is(.eva-pb-menu-name-field, .eva-pb-menu-editor-list, .eva-pb-menu-actions-popover, .eva-pb-menu-edit-popover, .eva-pb-menu-add-panel) { border-radius: var(--eva-radius); }
+#eva-app .eva-pb .eva-pb-menu-name-field { box-shadow: none; }
+#eva-app .eva-pb .eva-pb-menu-edit-popover { box-shadow: var(--eva-shadow-card); }
+#eva-app .eva-pb .eva-pb-menu-edit-body { gap: 12px; padding: 12px; }
+#eva-app .eva-pb .eva-pb-menu-editor-field { gap: 8px; }
+#eva-app .eva-pb .eva-pb-menu-edit-popover .eva-pb-menu-editor-field { font-size: 13px; }
+#eva-app .eva-pb .eva-pb-menu-edit-popover > footer { padding: 8px 12px; background: var(--eva-surface); }
+#eva-app .eva-pb .eva-pb-menu-edit-popover > footer > button {
+  height: var(--eva-pb-control-height); min-height: var(--eva-pb-control-height); padding: 0 var(--eva-pb-control-padding); border-radius: var(--eva-radius); background: var(--eva-primary); color: var(--eva-on-primary); box-shadow: none;
+  transition: background var(--eva-ease), border-color var(--eva-ease);
+}
+#eva-app .eva-pb .eva-pb-menu-edit-popover > footer > button:hover { background: var(--eva-primary-600); border-color: var(--eva-primary-600); }
+#eva-app .eva-pb .eva-pb-menu-edit-popover > footer > button:focus-visible { outline: 2px solid var(--eva-primary); outline-offset: 2px; }
+#eva-app .eva-pb .eva-pb-menu-edit-popover .eva-pb-menu-editor-field > textarea { border-radius: var(--eva-radius); background: var(--eva-soft); font-size: 13px; transition: border-color var(--eva-ease), box-shadow var(--eva-ease); }
+#eva-app .eva-pb .eva-pb-menu-edit-popover .eva-pb-menu-editor-field > textarea:focus { border-color: var(--eva-primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--eva-primary) 18%, transparent); }
+#eva-app .eva-pb .eva-pb-menu-edit-popover:has(.eva-select.is-open),
+#eva-app .eva-pb .eva-pb-menu-edit-popover:has(.eva-select.is-open) .eva-pb-menu-edit-body { overflow: visible; }
+#eva-app .eva-pb .eva-pb-menu-add-search { height: var(--eva-pb-control-height); min-height: var(--eva-pb-control-height); padding: 0 var(--eva-pb-control-padding); border-radius: var(--eva-radius); background: var(--eva-soft); }
+#eva-app .eva-pb .eva-pb-menu-add-search input,
+#eva-app .eva-pb .eva-pb-menu-add-search input:focus { height: 100%; min-height: 0; padding: 0; border: 0; border-radius: 0; background: transparent; outline: none; box-shadow: none; }
+#eva-app .eva-pb .eva-pb-menu-add-search:focus-within { border-color: var(--eva-primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--eva-primary) 18%, transparent); }
+#eva-app .eva-pb .eva-pb-menu-registered-field .eva-icon-control { gap: 8px; }
+#eva-app .eva-pb .eva-pb-menu-registered-field :is(.eva-icon-preview, .eva-icon-open, .eva-icon-reset) { box-sizing: border-box; height: var(--eva-pb-control-height); min-height: var(--eva-pb-control-height); border-radius: var(--eva-radius); box-shadow: none; }
+@media (max-width: 782px) {
+  #eva-app .eva-pb .eva-pb-menu-edit-body { padding: 8px; }
+  #eva-app .eva-pb .eva-pb-menu-edit-popover > footer { gap: 8px; padding: 8px; }
+}

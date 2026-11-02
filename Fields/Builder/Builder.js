@@ -275,6 +275,7 @@
         menuEditorRemovedIds: [],
         menuDeleteRequest: null,
         menuActionKey: '',
+        menuSubmenuReturn: null,
         menuActionStatus: '',
         menuEditOpen: false,
         menuEditSetting: 'title',
@@ -1330,6 +1331,8 @@
         this.closeMenuItemEditor(false);
         var trigger = this._menuActionsTrigger;
         this.menuActionKey = '';
+        this.menuSubmenuReturn = null;
+        this._menuSubmenuReturnAnchor = null;
         this._menuActionsTrigger = null;
         if (this._menuActionsOutside) { document.removeEventListener('pointerdown', this._menuActionsOutside, true); }
         if (this._menuActionsKey) { document.removeEventListener('keydown', this._menuActionsKey); }
@@ -1355,6 +1358,7 @@
           return;
         }
         if (event.key === 'Escape' && this.menuEditOpen) { event.preventDefault(); this.closeMenuItemEditor(); return; }
+        if (this.menuSubmenuReturn && (event.key === 'Escape' || event.key === 'ArrowLeft')) { event.preventDefault(); event.stopPropagation(); this.returnToMenuSubmenu(); return; }
         if (event.key === 'Escape' || event.key === 'Tab') {
           if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); }
           this.closeMenuActions();
@@ -1453,7 +1457,12 @@
           { id: 'description', label: '描述', icon: 'ri-file-text-line' }
         ];
         if (item && item.type === 'custom') { advanced.unshift({ id: 'url', label: 'URL', icon: 'ri-link' }); }
-        return native.concat(this.menuEditorCustomSettings(item), advanced);
+        return native.concat(advanced, this.menuEditorCustomSettings(item));
+      },
+      menuEditorSettingGroups: function () {
+        var groups = [[], []];
+        this.menuEditorSettings().forEach(function (setting) { groups[setting.field ? 1 : 0].push(setting); });
+        return groups.filter(function (group) { return group.length; });
       },
       menuEditorSettingLabel: function () {
         var setting = this.menuEditorSettings().find(function (entry) { return entry.id === this.menuEditSetting; }.bind(this));
@@ -2079,8 +2088,49 @@
       },
       editMenuSubmenuItem: function (item) {
         if (this.menuEditorItemHasChildren(item)) { this.enterMenuSubmenu(item); return; }
+        var list = this.$refs.menuSubmenuPanel && this.$refs.menuSubmenuPanel.querySelector('.eva-pb-menu-submenu-list');
+        var context = { path: this.menuSubmenuPath.slice(), anchorKey: this.menuSubmenuAnchorKey, query: this.menuSubmenuQuery, scrollTop: list ? list.scrollTop : 0, focusKey: this.menuEditorItemKey(item) };
+        var anchor = this._menuSubmenuAnchor;
         this.closeMenuSubmenu(false);
         this.selectMenuEditorItem(item, this.menuEditor.items.indexOf(item));
+        if (this.menuActionKey) { this.menuSubmenuReturn = context; this._menuSubmenuReturnAnchor = anchor; }
+      },
+      returnToMenuSubmenu: function () {
+        var context = this.menuSubmenuReturn, anchor = this._menuSubmenuReturnAnchor;
+        if (!context) { return; }
+        var path = [];
+        for (var i = 0; i < context.path.length; i += 1) {
+          var item = this.menuEditorFind(context.path[i]);
+          if (!item || this.menuEditorItemIsRemoved(item)) { break; }
+          path.push(context.path[i]);
+        }
+        this.closeMenuActions(false);
+        if (!path.length) { return; }
+        if (!anchor || !anchor.isConnected) {
+          var rows = this.$refs.menuEditorList && Array.from(this.$refs.menuEditorList.querySelectorAll('[data-menu-key]'));
+          var row = rows && rows.find(function (node) { return node.getAttribute('data-menu-key') === context.anchorKey; });
+          anchor = row && row.querySelector('.eva-pb-menu-item-open');
+        }
+        if (!anchor || !anchor.isConnected) { return; }
+        this.menuSubmenuPath = path;
+        this.menuSubmenuAnchorKey = context.anchorKey;
+        this.menuSubmenuQuery = path.length === context.path.length ? context.query : '';
+        this._menuSubmenuAnchor = anchor;
+        this.menuSubmenuOpen = true;
+        this.menuSubmenuPosition.ready = false;
+        this.$nextTick(function () {
+          if (!this.menuSubmenuOpen) { return; }
+          this.positionMenuSubmenuPanel(); this.startMenuAddTracking();
+          this.$nextTick(function () {
+            var panel = this.$refs.menuSubmenuPanel;
+            if (!this.menuSubmenuOpen || !panel) { return; }
+            var row = Array.from(panel.querySelectorAll('[data-submenu-key]')).find(function (node) { return node.getAttribute('data-submenu-key') === context.focusKey; });
+            var focus = row && row.querySelector('.eva-pb-menu-submenu-label') || this.$refs.menuSubmenuSearch;
+            if (focus) { focus.focus({ preventScroll: true }); }
+            var list = panel.querySelector('.eva-pb-menu-submenu-list');
+            if (list) { list.scrollTop = path.length === context.path.length ? context.scrollTop : 0; }
+          });
+        });
       },
       menuEditorItemHidden: function (item) {
         var parent = this.menuEditorFind(this.menuEditorScopeKey);
@@ -3072,14 +3122,14 @@
       "</transition>",
       "<transition v-bind=\"menuPopoverMotionProps\">",
       "    <aside v-if=\"moduleTab === 'menu' && menuActionItem && !leftCollapsed\" :key=\"menuActionKey\" ref=\"menuActionsPanel\" class=\"eva-pb-menu-actions-popover\" :style=\"menuActionsStyle()\" role=\"menu\" :id=\"menuAddId + '-actions'\" :aria-label=\"menuActionItem.title + '的操作'\">",
-      "      <header><span>菜单项操作</span><strong>{{ menuActionItem.title || \"未命名菜单项\" }}</strong></header>",
+      "<header><button v-if=\"menuSubmenuReturn\" type=\"button\" role=\"menuitem\" tabindex=\"-1\" class=\"eva-pb-menu-actions-back\" aria-label=\"返回上一级菜单\" @click=\"returnToMenuSubmenu\"><i class=\"ri-arrow-left-line\" aria-hidden=\"true\"></i><span>返回上一级菜单</span></button><span>菜单项操作</span><strong>{{ menuActionItem.title || '未命名菜单项' }}</strong></header>",
       "      <div class=\"eva-pb-menu-action-group\">",
       "        <button type=\"button\" role=\"menuitem\" tabindex=\"-1\" :disabled=\"!Number(menuActionItem.id)\" @click=\"runMenuAction('children')\"><i class=\"ri-folder-open-line is-amber\"></i><span>查看子菜单</span><i class=\"ri-arrow-right-s-line eva-pb-menu-action-arrow\"></i></button>",
       "        <a v-if=\"menuActionUrl(menuActionItem)\" role=\"menuitem\" tabindex=\"-1\" :href=\"menuActionUrl(menuActionItem)\" target=\"_blank\" rel=\"noopener noreferrer\" @click=\"closeMenuActions(false)\"><i class=\"ri-external-link-line\"></i><span>在新标签页打开</span></a>",
       "        <button v-else type=\"button\" role=\"menuitem\" tabindex=\"-1\" disabled><i class=\"ri-external-link-line\"></i><span>在新标签页打开</span></button>",
       "        <button type=\"button\" role=\"menuitem\" tabindex=\"-1\" :disabled=\"!menuActionUrl(menuActionItem)\" @click=\"runMenuAction('copy')\"><i class=\"ri-link\"></i><span>复制链接</span></button>",
       "      </div>",
-      "      <div v-for=\"(settings, groupIndex) in [menuEditorSettings().slice(0, 3), menuEditorSettings().slice(3)]\" :key=\"'menu-settings-' + groupIndex\" class=\"eva-pb-menu-action-group\">",
+      "      <div v-for=\"(settings, groupIndex) in menuEditorSettingGroups()\" :key=\"'menu-settings-' + groupIndex\" class=\"eva-pb-menu-action-group\">",
       "        <button v-for=\"setting in settings\" :key=\"setting.id\" :data-menu-setting=\"setting.id\" type=\"button\" role=\"menuitem\" tabindex=\"-1\" class=\"eva-pb-menu-action-edit\" :class=\"{ 'is-active': menuEditOpen && menuEditSetting === setting.id }\" aria-haspopup=\"dialog\" :aria-expanded=\"menuEditOpen && menuEditSetting === setting.id\" :aria-controls=\"menuAddId + '-edit'\" @click=\"openMenuEditorSetting(setting.id, $event)\" @keydown.right.prevent=\"openMenuEditorSetting(setting.id, $event)\"><i :class=\"setting.icon\" class=\"is-blue\"></i><span>{{ setting.label }}</span><i class=\"ri-arrow-right-s-line eva-pb-menu-action-arrow\"></i></button>",
       "      </div>",
       "      <div class=\"eva-pb-menu-action-group is-danger\"><button type=\"button\" role=\"menuitem\" tabindex=\"-1\" @click=\"runMenuAction('delete')\"><i class=\"ri-delete-bin-line\"></i><span>移入回收站</span></button></div>",
@@ -3091,11 +3141,11 @@
       "</transition>",
       "<transition v-bind=\"menuPopoverMotionProps\">",
       "    <aside v-if=\"moduleTab === 'menu' && menuEditOpen && menuEditorActiveItem && !leftCollapsed\" :key=\"menuEditorItemKey(menuEditorActiveItem) + '-' + menuEditSetting\" ref=\"menuItemEditor\" class=\"eva-pb-menu-edit-popover\" :style=\"menuItemEditorStyle()\" role=\"dialog\" :id=\"menuAddId + '-edit'\" :aria-labelledby=\"menuAddId + '-edit-title'\">",
-      "      <header class=\"eva-pb-menu-editor-details-head\"><div><small>{{ menuEditorActiveItem.title || '新菜单项' }}</small><strong :id=\"menuAddId + '-edit-title'\">{{ menuEditorSettingLabel() }}</strong></div><button type=\"button\" class=\"eva-pb-menu-editor-close\" aria-label=\"关闭菜单项编辑\" @click=\"closeMenuItemEditor\"><i class=\"ri-close-line\"></i></button></header>",
+      "<header class=\"eva-pb-menu-editor-details-head\"><button v-if=\"menuSubmenuReturn\" type=\"button\" class=\"eva-pb-menu-editor-close eva-pb-menu-editor-back\" aria-label=\"返回上一级菜单\" title=\"返回上一级菜单\" @click=\"returnToMenuSubmenu\"><i class=\"ri-arrow-left-line\" aria-hidden=\"true\"></i></button><div><small>{{ menuEditorActiveItem.title || '新菜单项' }}</small><strong :id=\"menuAddId + '-edit-title'\">{{ menuEditorSettingLabel() }}</strong></div><button type=\"button\" class=\"eva-pb-menu-editor-close\" aria-label=\"关闭菜单项编辑\" @click=\"closeMenuItemEditor\"><i class=\"ri-close-line\"></i></button></header>",
       "      <div class=\"eva-pb-menu-edit-body\">",
       "        <label v-if=\"menuEditSetting === 'title'\" class=\"eva-pb-menu-editor-field\">导航标签<input ref=\"menuItemTitle\" type=\"text\" v-model=\"menuEditorActiveItem.title\" @input=\"markMenuEditorDirty\" placeholder=\"输入导航标签\"></label>",
-      "        <label v-else-if=\"menuEditSetting === 'parent'\" class=\"eva-pb-menu-editor-field\">菜单父级<select class=\"eva-pb-menu-wp-select\" :value=\"String(menuEditorActiveItem.parent || 0)\" :disabled=\"menuEditorSaving\" @change=\"setMenuEditorParent(menuEditorActiveItem, $event.target.value)\"><option v-for=\"option in menuEditorParentOptions(menuEditorActiveItem)\" :key=\"option.value\" :value=\"option.value\">{{ option.label }}</option></select></label>",
-      "        <label v-else-if=\"menuEditSetting === 'order'\" class=\"eva-pb-menu-editor-field\">菜单排序<select class=\"eva-pb-menu-wp-select\" :value=\"menuEditorOrderValue(menuEditorActiveItem)\" :disabled=\"menuEditorSaving\" @change=\"setMenuEditorOrder(menuEditorActiveItem, $event.target.value)\"><option v-for=\"option in menuEditorOrderOptions(menuEditorActiveItem)\" :key=\"option.value\" :value=\"option.value\">{{ option.label }}</option></select></label>",
+      "<div v-else-if=\"menuEditSetting === 'parent'\" class=\"eva-pb-menu-editor-field\"><label>菜单父级</label><eva-select :motion=\"menuDropdownMotionProps\" :options=\"menuEditorParentOptions(menuEditorActiveItem)\" :model-value=\"String(menuEditorActiveItem.parent || 0)\" :disabled=\"menuEditorSaving\" @update:model-value=\"setMenuEditorParent(menuEditorActiveItem, $event)\"></eva-select></div>",
+      "<div v-else-if=\"menuEditSetting === 'order'\" class=\"eva-pb-menu-editor-field\"><label>菜单排序</label><eva-select :motion=\"menuDropdownMotionProps\" :options=\"menuEditorOrderOptions(menuEditorActiveItem)\" :model-value=\"menuEditorOrderValue(menuEditorActiveItem)\" :disabled=\"menuEditorSaving\" @update:model-value=\"setMenuEditorOrder(menuEditorActiveItem, $event)\"></eva-select></div>",
       "<div v-else-if=\"menuEditorCustomSetting()\" class=\"eva-pb-menu-editor-field eva-pb-menu-registered-field\"><label>{{ menuEditorSettingLabel() }}</label><eva-field :field=\"menuEditorCustomField(menuEditorCustomSetting())\" :model-value=\"menuEditorCustomValue(menuEditorActiveItem, menuEditorCustomSetting())\" @update:model-value=\"setMenuEditorCustomValue(menuEditorActiveItem, menuEditorCustomSetting(), $event)\"></eva-field><span v-if=\"menuEditorCustomSetting().field.desc\" class=\"eva-pb-menu-editor-hint\" v-html=\"tv(menuEditorCustomSetting().field.desc)\"></span></div>",
       "<label v-else-if=\"menuEditSetting === 'url' && menuEditorActiveItem.type === 'custom'\" class=\"eva-pb-menu-editor-field\">URL<input type=\"url\" v-model=\"menuEditorActiveItem.url\" @input=\"markMenuEditorDirty\"></label>",
       "        <label v-else-if=\"menuEditSetting === 'target'\" class=\"eva-pb-menu-wp-checkbox\"><input type=\"checkbox\" :checked=\"menuEditorActiveItem.target === '_blank'\" @change=\"menuEditorActiveItem.target = $event.target.checked ? '_blank' : ''; markMenuEditorDirty()\">在新标签页打开链接</label>",
@@ -3202,7 +3252,6 @@
       '    </aside>',
       "</transition>",
       '    <main class="eva-pb-stage">',
-      '      <div class="eva-pb-pagebar"><div class="eva-pb-slot-tabs"><button v-for="slot in slots()" :key="slot.id" type="button" :class="{ \'is-active\': currentSlotId() === slot.id }" @click="activeSlot = slot.id; selectedUid = \'\'">{{ tv(slot.label) }}</button></div></div>',
       '      <section class="eva-pb-canvas" :class="[\'is-\' + device, { \'is-preview\': usesSlots() }]" @click.self="selectedUid = \'\'" @dragover.prevent="onCanvasDragOver" @drop.prevent="onCanvasDrop">',
       '        <div v-if="usesSlots()" class="eva-pb-iframe-shell" :class="{ \'is-dragging\': draggingModule || draggingWidget }">',
       '          <iframe ref="previewFrame" class="eva-pb-iframe" :src="previewUrl()" @load="queuePreview(0)"></iframe>',

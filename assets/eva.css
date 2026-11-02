@@ -167,6 +167,21 @@
   color: var(--eva-primary);
 }
 
+/* Logo-side workspace switch changes navigation without replacing the open form. */
+#eva-app .eva-sb-logo .eva-logo-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#eva-app .eva-sb-mode-switch { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 26px; height: 26px; margin-left: auto; padding: 0; border: 1px solid var(--eva-border); border-radius: var(--eva-radius); background: var(--eva-soft); color: var(--eva-text); font: inherit; font-size: 14px; cursor: pointer; transition: color var(--eva-ease), background var(--eva-ease), border-color var(--eva-ease); }
+#eva-app .eva-sb-mode-switch:hover { border-color: var(--eva-primary); }
+#eva-app .eva-sb-mode-switch.is-management { background: color-mix(in srgb, var(--eva-primary) 12%, var(--eva-surface)); color: color-mix(in srgb, var(--eva-primary) 45%, var(--eva-text)); border-color: color-mix(in srgb, var(--eva-primary) 40%, var(--eva-border)); }
+#eva-app .eva-sb-mode-switch:focus-visible { outline: 2px solid var(--eva-primary); outline-offset: 2px; }
+#eva-app .eva-sb-workspace-caption { padding: 8px 10px 4px; color: color-mix(in srgb, var(--eva-text) 68%, var(--eva-surface)); font-size: 12px; }
+#eva-app .eva-sb-management-entry { width: 100%; border: 0; background: transparent; font-family: inherit; text-align: left; text-decoration: none; }
+#eva-app .eva-sb-management-entry:is(:hover,.is-active) { background: var(--eva-soft); color: var(--eva-text); }
+#eva-app .eva-sb-management-entry:focus-visible { outline: 2px solid var(--eva-primary); outline-offset: -2px; }
+#eva-app .eva-sb-management-external { margin-left: auto; font-size: 12px; opacity: .65; }
+#eva-app .eva-admin.is-collapsed .eva-sb-logo:has(.eva-sb-mode-switch) { flex-direction: column; gap: 8px; padding: 12px 8px; }
+#eva-app .eva-admin.is-collapsed .eva-sb-mode-switch { margin-left: 0; }
+#eva-app .eva-admin.is-collapsed :is(.eva-sb-workspace-caption,.eva-sb-management-external) { display: none; }
+
 /* 顶栏标题块：默认隐藏，仅移动端顶栏显示 */
 .eva-sb-title {
   display: none;
@@ -1592,6 +1607,32 @@ body.folded .eva-savebar {
 
 .eva-sb-group {
   position: relative;
+}
+
+/* Optional caption groups: small muted heading with directly accessible child menus. */
+#eva-app .eva-sb-group--heading {
+  --eva-heading-muted: color-mix(in srgb, var(--eva-text) 68%, var(--eva-surface));
+  --eva-heading-gap: 8px;
+}
+#eva-app .eva-sb-caption { color: var(--eva-heading-muted); font-size: 12px; font-weight: 600; line-height: 18px; }
+#eva-app .eva-sb-caption-toggle { display: flex; align-items: center; gap: var(--eva-heading-gap); width: 100%; min-height: 26px; margin: 0; padding: 4px 10px; border: 0; border-radius: var(--eva-radius); background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; transition: color var(--eva-ease), background var(--eva-ease); }
+#eva-app .eva-sb-caption-toggle:hover { color: var(--eva-text); background: var(--eva-soft); }
+#eva-app .eva-sb-caption-toggle:focus-visible { outline: 2px solid var(--eva-primary); outline-offset: -2px; }
+#eva-app .eva-sb-caption-toggle .eva-sb-arrow { font-size: 14px; }
+#eva-app .eva-sb-group--heading > .eva-sb-sub { gap: 2px; margin: 0 0 var(--eva-heading-gap); }
+#eva-app .eva-sb-group--heading .eva-sb-subitem { gap: var(--eva-heading-gap); min-height: 32px; padding: 6px 10px; border-radius: var(--eva-radius); color: var(--eva-text); font-size: 13px; font-weight: 500; line-height: 20px; }
+#eva-app .eva-sb-group--heading .eva-sb-subitem:is(:hover,.is-active) { background: var(--eva-soft); color: var(--eva-text); }
+#eva-app .eva-sb-group--heading .eva-sb-subitem:focus-visible { outline: 2px solid var(--eva-primary); outline-offset: -2px; }
+#eva-app .eva-admin.is-collapsed .eva-sb-caption { display: none; }
+@media (min-width: 783px) {
+  #eva-app .eva-admin:not(.is-collapsed) .eva-sb-group--heading { margin-block: var(--eva-heading-gap); padding-block: var(--eva-heading-gap); border-block: 1px solid var(--eva-border); }
+  #eva-app .eva-admin:not(.is-collapsed) .eva-sb-group--heading > .eva-sb-sub { margin-bottom: 0; }
+}
+@media (max-width: 782px) {
+  #eva-app .eva-sb-group--heading { display: flex; align-items: center; gap: 4px; }
+  #eva-app .eva-sb-caption { flex-shrink: 0; white-space: nowrap; }
+  #eva-app .eva-sb-group--heading > .eva-sb-sub { position: static; display: flex; flex-direction: row; align-items: center; gap: 4px; width: auto; max-width: none; margin: 0; padding: 0; border: 0; background: transparent; box-shadow: none; }
+  #eva-app .eva-sb-group--heading .eva-sb-subitem { flex-shrink: 0; white-space: nowrap; }
 }
 
 /* 置顶固定菜单（如《EVA框架使用指南》）：与下方常规菜单做一道分隔 */

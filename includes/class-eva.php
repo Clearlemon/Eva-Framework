@@ -918,9 +918,9 @@ if (! class_exists('Eva')) {
          */
         public static function get_by_slug($slug)
         {
-            // 线性查找 menu_slug 匹配的设置页（页数量很少，无需建索引）。
+            // 独立页会经 sanitize_key 转成小写，兼容旧框架保留大写的菜单标识。
             foreach (self::$options as $opt) {
-                if ($opt['menu_slug'] === $slug) {
+                if (strcasecmp((string) $opt['menu_slug'], (string) $slug) === 0) {
                     return $opt;
                 }
             }
@@ -1376,10 +1376,12 @@ if (! class_exists('Eva')) {
                 $values = array_merge($values, \Eva\Framework\Csf_Compat::values_to_eva($extra, self::get_values($embedded_id)));
                 $save_groups[] = ['optionId' => $embedded_id, 'fieldIds' => $field_ids($extra)];
             }
+            $menu       = self::order_menu_styles($menu);
             $sections   = self::prepare_sections($registered);
 
             return [
                 'menu'              => $menu,
+                'managementMenu'    => self::management_menu($opt, $registered),
                 'saveGroups'        => $save_groups,
                 'sections'          => $sections,
                 'optionId'          => $id,
@@ -1433,7 +1435,7 @@ if (! class_exists('Eva')) {
         public static function build_menu($opt, $sections)
         {
             if (! empty($opt['menu'])) {
-                return array_values($opt['menu']);
+                return self::order_menu_styles(array_values($opt['menu']));
             }
 
             $top      = [];
@@ -1447,6 +1449,7 @@ if (! class_exists('Eva')) {
                     'id'       => (string) $section['id'],
                     'label'    => isset($section['title']) ? $section['title'] : (string) $section['id'],
                     'icon'     => self::menu_icon(isset($section['icon']) ? $section['icon'] : ''),
+                    'menu_style' => ($section['menu_style'] ?? 'default') === 'heading' ? 'heading' : 'default',
                     'priority' => isset($section['priority']) ? (int) $section['priority'] : $order,
                 ];
                 $order++;
@@ -1483,7 +1486,46 @@ if (! class_exists('Eva')) {
                     $menu[] = $item;
                 }
             }
+            return self::order_menu_styles($menu);
+        }
+
+        /** 管理菜单仅作为导航，不参与设置表单和保存 schema。 */
+        private static function management_menu($opt, $sections)
+        {
+            $items = $opt['management_menu'] ?? [];
+            if (is_callable($items)) { $items = call_user_func($items, $opt); }
+            if (!is_array($items)) { return []; }
+            $section_ids = array_column($sections, 'id');
+            $menu = [];
+            foreach ($items as $index => $item) {
+                if (!is_array($item) || !current_user_can($item['capability'] ?? ($opt['capability'] ?? 'manage_options'))) { continue; }
+                $section = isset($item['section']) && in_array($item['section'], $section_ids, true) ? $item['section'] : '';
+                $url = isset($item['url']) ? esc_url_raw($item['url']) : '';
+                if ($section === '' && $url === '') { continue; }
+                $menu[] = [
+                    'id' => isset($item['id']) ? (string) $item['id'] : 'management-' . $index,
+                    'label' => $item['label'] ?? ($item['id'] ?? ''),
+                    'icon' => self::menu_icon($item['icon'] ?? ''),
+                    'section' => $section,
+                    'url' => $url,
+                ];
+            }
             return $menu;
+        }
+
+        /** 默认菜单置顶，标题分组置底；各样式内部沿用原有顺序及子菜单。 */
+        private static function order_menu_styles($menu)
+        {
+            $normal = [];
+            $headings = [];
+            foreach ($menu as $item) {
+                if (is_array($item) && ($item['menu_style'] ?? 'default') === 'heading') {
+                    $headings[] = $item;
+                } else {
+                    $normal[] = $item;
+                }
+            }
+            return array_merge($normal, $headings);
         }
 
         /**

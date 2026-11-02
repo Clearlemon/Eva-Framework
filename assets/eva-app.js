@@ -45,6 +45,7 @@
 
       var brand = cfg.brand || cfg.title || 'Eva';
       var adminUrl = boot.adminUrl || '';
+      var managementMenu = Array.isArray(cfg.managementMenu) ? cfg.managementMenu : [];
 
       // 菜单优先使用后端注册值；没有注册时给出兜底菜单，方便框架单独调试。
       var menu = (cfg.menu && cfg.menu.length) ? cfg.menu : [
@@ -95,6 +96,8 @@
         first = first.children[0];
       }
       var savedWorkspace = readWorkspaceState();
+      var sidebarMode = Vue.ref(savedWorkspace.sidebarMode === 'management' && managementMenu.length ? 'management' : 'settings');
+      function toggleSidebarMode() { sidebarMode.value = sidebarMode.value === 'settings' ? 'management' : 'settings'; }
       var initialPage = validWorkspacePage(savedWorkspace.active) ? savedWorkspace.active : (first ? first.id : '');
       var initialTabs = [];
       if (first) { initialTabs.push({ id: first.id, label: first.label, icon: first.icon, closable: false }); }
@@ -122,6 +125,12 @@
 
       // 保存每个可展开一级菜单的展开状态，key 为菜单 id。
       var openMenus = Vue.reactive(savedWorkspace.openMenus && typeof savedWorkspace.openMenus === 'object' ? savedWorkspace.openMenus : {});
+      // Caption groups start open and then reuse the saved per-group fold state.
+      menu.forEach(function (item) {
+        if (item.menu_style === 'heading' && item.children && item.children.length && !Object.prototype.hasOwnProperty.call(openMenus, item.id)) {
+          openMenus[item.id] = true;
+        }
+      });
       // 指南左栏目录的分组折叠状态，key 为分组 id；没记录过的一律算展开。
       var openGuideGroups = Vue.reactive(savedWorkspace.guideGroups && typeof savedWorkspace.guideGroups === 'object' ? savedWorkspace.guideGroups : {});
       function persistWorkspaceState() {
@@ -131,13 +140,15 @@
             activeTab: activeTab.value,
             tabs: tabs.map(function (tab) { return tab.id; }),
             openMenus: Object.assign({}, openMenus),
-            guideGroups: Object.assign({}, openGuideGroups)
+            guideGroups: Object.assign({}, openGuideGroups),
+            sidebarMode: sidebarMode.value
           }));
         } catch (e) {}
       }
       Vue.watch([
         active,
         activeTab,
+        sidebarMode,
         function () { return tabs.map(function (tab) { return tab.id; }); },
         function () { return Object.assign({}, openMenus); },
         function () { return Object.assign({}, openGuideGroups); }
@@ -1725,6 +1736,7 @@
       // 分组说明，不能因此把整页切换成 flush，否则字段标题、间距和栅格都会被压平。
       var isFlush = Vue.computed(function () {
         var s = currentSection.value;
+        if (s && s.flush === true) { return true; }
         var fields = (s && Array.isArray(s.fields)) ? s.fields : [];
         if (!fields.length) { return false; }
         if (fields.some(function (f) { return f.type === 'theme_backup' || f.type === 'builder'; })) { return true; }
@@ -2177,6 +2189,9 @@
         brand: brand,
         adminUrl: adminUrl,
         menu: menu,
+        managementMenu: managementMenu,
+        sidebarMode: sidebarMode,
+        toggleSidebarMode: toggleSidebarMode,
         searchOpen: searchOpen,
         searchQuery: searchQuery,
         searchInput: searchInput,
@@ -2287,28 +2302,30 @@
       '    <div class="eva-sb-logo">',
       '      <div class="eva-logo-box"><i class="ri-sparkling-2-fill"></i></div>',
       '      <span class="eva-logo-text">{{ brand }}</span>',
+      '      <button v-if="managementMenu.length" type="button" class="eva-sb-mode-switch" :class="{ \'is-management\': sidebarMode === \'management\' }" :aria-pressed="sidebarMode === \'management\'" :title="sidebarMode === \'settings\' ? \'切换到管理菜单\' : \'返回设置菜单\'" :aria-label="sidebarMode === \'settings\' ? \'切换到管理菜单\' : \'返回设置菜单\'" @click="toggleSidebarMode"><i :class="sidebarMode === \'settings\' ? \'ri-arrow-left-right-line\' : \'ri-apps-2-line\'" aria-hidden="true"></i></button>',
       '    </div>',
       '    <div class="eva-sb-title">',
       '      <span class="eva-eyebrow">Admin Console</span>',
       '      <span class="eva-h-title">{{ currentTitle }}</span>',
       '    </div>',
       '    <nav class="eva-sb-menu">',
-      '      <div v-show="guideVisible" class="eva-sb-group eva-sb-group--fixed">',
+      '      <div v-show="sidebarMode === \'settings\' && guideVisible" class="eva-sb-group eva-sb-group--fixed">',
       '        <div class="eva-sb-item" :class="{ \'is-active\': active === \'eva-guide\' }" @click="openGuide">',
       '          <i class="eva-sb-ico ri-book-open-line"></i>',
       '          <span class="eva-sb-label">{{ t(\'guide_menu\') }}</span>',
       '        </div>',
       '        <div class="eva-sb-tip">{{ t(\'guide_menu\') }}</div>',
       '      </div>',
-      '      <div v-for="m in menu" :key="m.id" class="eva-sb-group">',
-      '        <div class="eva-sb-item" :class="{ \'is-active\': m.id === active, \'is-open\': isOpen(m.id) }" @click="onMenuClick(m)">',
+      '      <div v-for="m in sidebarMode === \'settings\' ? menu : []" :key="m.id" class="eva-sb-group" :class="{ \'eva-sb-group--heading\': m.menu_style === \'heading\' }">',
+      '        <div v-if="m.menu_style === \'heading\'" class="eva-sb-caption" role="heading" aria-level="2"><button type="button" class="eva-sb-caption-toggle" :aria-expanded="hasChildren(m) ? isOpen(m.id) : undefined" :aria-controls="hasChildren(m) ? \'eva-sb-sub-\' + m.id : undefined" @click="onMenuClick(m)"><span>{{ tv(m.label) }}</span><i v-if="hasChildren(m)" class="eva-sb-arrow ri-arrow-down-s-line" :class="{ \'is-open\': isOpen(m.id) }" aria-hidden="true"></i></button></div>',
+      '        <div v-if="m.menu_style !== \'heading\' || sidebarCollapsed" class="eva-sb-item" :class="{ \'is-active\': m.id === active, \'is-open\': isOpen(m.id) }" role="button" tabindex="0" :aria-expanded="hasChildren(m) ? isOpen(m.id) : undefined" @click="onMenuClick(m)" @keydown.enter.prevent="onMenuClick(m)" @keydown.space.prevent="onMenuClick(m)">',
       '          <eva-icon class="eva-sb-ico" :icon="m.icon"></eva-icon>',
       '          <span class="eva-sb-label">{{ tv(m.label) }}</span>',
       '          <i v-if="hasChildren(m)" class="eva-sb-arrow ri-arrow-down-s-line" :class="{ \'is-open\': isOpen(m.id) }"></i>',
       '        </div>',
-      '        <div v-if="hasChildren(m)" v-show="isOpen(m.id)" class="eva-sb-sub">',
+      '        <div v-if="hasChildren(m)" v-show="isOpen(m.id)" class="eva-sb-sub" :id="\'eva-sb-sub-\' + m.id">',
       '          <div v-for="c in m.children" :key="c.id" class="eva-sb-subitem"',
-      '               :class="{ \'is-active\': c.id === active }" @click="openMenu(c.id)">',
+      '               :class="{ \'is-active\': c.id === active }" role="button" tabindex="0" :aria-current="c.id === active ? \'page\' : undefined" @click="openMenu(c.id)" @keydown.enter.prevent="openMenu(c.id)" @keydown.space.prevent="openMenu(c.id)">',
       '            <eva-icon class="eva-sb-subico" :icon="c.icon"></eva-icon>',
       '            <span>{{ tv(c.label) }}</span>',
       '          </div>',
@@ -2320,6 +2337,12 @@
       '            <eva-icon :icon="c.icon"></eva-icon><span>{{ tv(c.label) }}</span>',
       '          </div>',
       '        </div>',
+      '      </div>',
+      '      <div v-if="sidebarMode === \'management\'" class="eva-sb-workspace-caption">管理菜单</div>',
+      '      <div v-for="m in sidebarMode === \'management\' ? managementMenu : []" :key="\'manage-\' + m.id" class="eva-sb-group">',
+      '        <button v-if="m.section" type="button" class="eva-sb-item eva-sb-management-entry" :class="{ \'is-active\': m.section === active }" @click="openMenu(m.section)"><eva-icon class="eva-sb-ico" :icon="m.icon"></eva-icon><span class="eva-sb-label">{{ tv(m.label) }}</span></button>',
+      '        <a v-else class="eva-sb-item eva-sb-management-entry" :href="m.url" target="_blank" rel="noopener noreferrer" :title="tv(m.label) + \'（新标签页）\'"><eva-icon class="eva-sb-ico" :icon="m.icon"></eva-icon><span class="eva-sb-label">{{ tv(m.label) }}</span><i class="eva-sb-management-external ri-external-link-line" aria-hidden="true"></i></a>',
+      '        <div class="eva-sb-tip">{{ tv(m.label) }}</div>',
       '      </div>',
       '    </nav>',
       '    <div class="eva-sidebar-save">',
