@@ -2656,6 +2656,42 @@ if (! class_exists('Eva')) {
             return 'window.EvaIconSets = ' . wp_json_encode($sets, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) . ';';
         }
 
+        /**
+         * 内置入口的功能模块清单；后台、嵌入表单和独立页共用同一加载顺序。
+         * 模块放在 assets 下，避免被字段递归扫描器当成独立字段加载。
+         *
+         * @return array<string,string> script handle => 框架相对路径。
+         */
+        public static function script_modules($entry)
+        {
+            $groups = [
+                'builder' => [
+                    'runtime', 'state', 'history', 'motion', 'shell', 'preview',
+                    'widgets', 'menu-data', 'menu-actions', 'menu-items', 'menu-drag',
+                    'menu-panels', 'menu-resources', 'modules', 'drag', 'fields', 'template',
+                ],
+                'app' => [
+                    'iconfont', 'appearance', 'guide-content', 'guide-navigation', 'field-dependencies',
+                    'field-code', 'field-motion', 'save-options', 'template',
+                ],
+            ];
+            $scripts = [];
+            foreach ($groups[$entry] ?? [] as $name) {
+                $scripts['eva-' . $entry . '-' . $name] = 'assets/' . $entry . '/' . $name . '.js';
+            }
+            return $scripts;
+        }
+
+        /** 登记入口所需模块，返回完整依赖列表；保留入口原有 handle。 */
+        public static function enqueue_script_modules($entry, $dependencies)
+        {
+            foreach (self::script_modules($entry) as $handle => $relative) {
+                wp_enqueue_script($handle, EVA_FW_URL . $relative, $dependencies, self::asset_ver($relative), true);
+                $dependencies[] = $handle;
+            }
+            return $dependencies;
+        }
+
         /** 返回字段资源的新目录相对路径。 */
         public static function field_asset_rel($name, $extension)
         {
@@ -2713,6 +2749,11 @@ if (! class_exists('Eva')) {
                 EVA_FW_URL . 'assets/eva-app.js',
                 EVA_FW_URL . 'assets/eva-embed.js',
             ];
+            foreach (['builder', 'app'] as $entry) {
+                foreach (self::script_modules($entry) as $relative) {
+                    $list[] = EVA_FW_URL . $relative;
+                }
+            }
             // 追加所有字段脚本与样式。
             foreach (self::field_scripts() as $url) {
                 $list[] = $url;
@@ -2849,10 +2890,12 @@ if (! class_exists('Eva')) {
             // 字段脚本逐个登记，并累积为外壳依赖。
             foreach (self::field_scripts() as $name => $url) {
                 $handle = 'eva-field-' . $name;
-                wp_enqueue_script($handle, $url, ['eva-vue3', 'eva-api'], self::asset_ver(self::field_asset_rel($name, 'js')), true);
+                $field_dependencies = $name === 'Builder' ? self::enqueue_script_modules('builder', $deps) : ['eva-vue3', 'eva-api'];
+                wp_enqueue_script($handle, $url, $field_dependencies, self::asset_ver(self::field_asset_rel($name, 'js')), true);
                 $deps[] = $handle;
             }
             // 外壳脚本：依赖以上库与字段全部就绪。
+            $deps = self::enqueue_script_modules('app', $deps);
             wp_enqueue_script('eva-framework', EVA_FW_URL . 'assets/eva-app.js', $deps, self::asset_ver('assets/eva-app.js'), true);
             // 嵌入式容器（用户资料、文章/分类法/菜单等）没有 #eva-app，
             // 用独立运行时挂载 embed_markup 输出的 .eva-embed-root。

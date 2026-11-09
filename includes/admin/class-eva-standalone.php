@@ -264,7 +264,15 @@ class Standalone
         }
         // 字段脚本：一字段一目录，递归扫描（在 eva-app.js 之前）。
         foreach (\Eva::field_scripts() as $field_name => $field_url) {
+            if ($field_name === 'Builder') {
+                foreach (\Eva::script_modules('builder') as $relative) {
+                    echo '<script src="' . esc_url(EVA_FW_URL . $relative . '?ver=' . \Eva::asset_ver($relative)) . '"></script>';
+                }
+            }
             echo '<script src="' . esc_url($field_url . '?ver=' . \Eva::asset_ver(\Eva::field_asset_rel($field_name, 'js'))) . '"></script>';
+        }
+        foreach (\Eva::script_modules('app') as $relative) {
+            echo '<script src="' . esc_url(EVA_FW_URL . $relative . '?ver=' . \Eva::asset_ver($relative)) . '"></script>';
         }
         echo '<script src="' . esc_url($js) . '"></script>';
         // 外壳已就绪（Vue / UI 库 / 字段 / eva-app 都已输出）。整页型的自定义应用脚本挂这里，

@@ -248,10 +248,12 @@ class Admin
         $field_deps = $lib_deps;
         foreach ($scripts as $name => $field_url) {
             $handle = 'eva-field-' . $name;
-            wp_enqueue_script($handle, $field_url, ['eva-vue3', 'eva-api'], \Eva::asset_ver(\Eva::field_asset_rel($name, 'js')), true);
+            $dependencies = $name === 'Builder' ? \Eva::enqueue_script_modules('builder', $lib_deps) : ['eva-vue3', 'eva-api'];
+            wp_enqueue_script($handle, $field_url, $dependencies, \Eva::asset_ver(\Eva::field_asset_rel($name, 'js')), true);
             $field_deps[] = $handle;
         }
         // 外壳脚本：依赖以上所有，确保库与字段先就绪。
+        $field_deps = \Eva::enqueue_script_modules('app', $field_deps);
         wp_enqueue_script('eva-framework', EVA_FW_URL . 'assets/eva-app.js', $field_deps, \Eva::asset_ver('assets/eva-app.js'), true);
 
         // 应用 eva_{id}_args / eva_{id}_sections 过滤器后的配置；保存层（Data::ajax_save）用的是同一份。
