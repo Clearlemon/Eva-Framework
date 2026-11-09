@@ -218,6 +218,7 @@
         activePage: '',
         pageMenuOpen: false,
         draggingModule: '',
+        draggingUid: '',
         draggingMenuLocation: '',
         draggingSlot: '',
         previewTimer: null,
@@ -390,6 +391,8 @@
       document.addEventListener('mousemove', this._resizeMoveHandler);
       document.addEventListener('mouseup', this._resizeEndHandler);
       window.addEventListener('message', this.handlePreviewMessage);
+      document.addEventListener('keydown', this.cancelPreviewModuleDrag);
+      window.addEventListener('blur', this.cancelPreviewModuleDrag);
       this.$nextTick(function () {
         this.positionModuleTabIndicator(false);
         this._moduleTabLayout = function () { this.positionModuleTabIndicator(false); }.bind(this);
@@ -429,6 +432,9 @@
       document.removeEventListener('mousemove', this._resizeMoveHandler || this.onPanelResizeMove);
       document.removeEventListener('mouseup', this._resizeEndHandler || this.stopPanelResize);
       window.removeEventListener('message', this.handlePreviewMessage);
+      document.removeEventListener('keydown', this.cancelPreviewModuleDrag);
+      window.removeEventListener('blur', this.cancelPreviewModuleDrag);
+      this.onModuleDragEnd();
       document.body.classList.remove('eva-pb-resizing');
       if (this.previewTimer) {
         clearTimeout(this.previewTimer);
@@ -697,6 +703,10 @@
         if (event.origin !== window.location.origin || !event.data) { return; }
         var frame = this.$refs.previewFrame;
         if (!frame || event.source !== frame.contentWindow) { return; }
+        if (event.data.type === 'eva-builder-module-drag') {
+          this.handleModulePointerDrag(event.data);
+          return;
+        }
         if (event.data.type === 'eva-builder-preview-ready') {
           this.previewReady = true;
           this.queuePreview(0);
@@ -761,7 +771,8 @@
       },
       // 功能：生成预览工具条 HTML，先用于本地乐观预览，随后由 PHP 真实渲染替换。
       previewToolsHtml: function () {
-        return '<div class="eva-builder-preview-tools" aria-hidden="true">'
+        return '<button type="button" class="eva-builder-preview-drag-handle" data-eva-builder-drag-handle aria-label="拖动组件到其他插槽" title="拖动组件到其他插槽（Esc 取消）">⠿</button>'
+          + '<div class="eva-builder-preview-tools" role="group" aria-label="组件操作">'
           + '<button type="button" data-eva-builder-action="up">' + this.t('pb_move_up') + '</button>'
           + '<button type="button" data-eva-builder-action="down">' + this.t('pb_move_down') + '</button>'
           + '<button type="button" data-eva-builder-action="duplicate">' + this.t('pb_duplicate') + '</button>'
@@ -796,7 +807,12 @@
           var frame = this.$refs.previewFrame;
           try {
             var current = frame && frame.contentDocument && frame.contentDocument.querySelector('[data-eva-builder-module="' + uid + '"]');
-            if (current) { return current.outerHTML; }
+            if (current) {
+              if (!current.classList.contains('eva-builder-module-moving')) { return current.outerHTML; }
+              var stable = current.cloneNode(true);
+              stable.classList.remove('eva-builder-module-moving');
+              return stable.outerHTML;
+            }
           } catch (error) {}
         }
         return '<div class="eva-builder-preview-module is-pending" data-eva-builder-module="' + uid + '" data-eva-builder-type="' + type + '">'
@@ -841,6 +857,7 @@
           type: 'eva-builder-drag-state',
           active: !!active || !!this.draggingWidget,
           moduleType: this.draggingModule || '',
+          uid: this.draggingUid || '',
           slot: this.draggingSlot || '',
           menuLocation: this.draggingMenuLocation || '',
           widgetDragging: !!this.draggingWidget,
@@ -2595,6 +2612,7 @@
       },
       // 功能：开始从左侧模块库拖拽模块。
       onModuleDragStart: function (event, type) {
+        this.draggingUid = '';
         this.draggingMenuLocation = '';
         this.draggingSlot = '';
         this.draggingModule = type;
@@ -2606,6 +2624,7 @@
       },
       // 功能：拖拽结束后清理拖拽状态。
       onModuleDragEnd: function () {
+        this.draggingUid = '';
         this.draggingMenuLocation = '';
         this.draggingSlot = '';
         this.draggingModule = '';
@@ -2622,7 +2641,7 @@
         if (event.dataTransfer) {
           event.dataTransfer.dropEffect = 'copy';
         }
-        var location = this.draggingModule === 'wp_menu' ? this.previewMenuLocationAt(event) : '';
+        var location = !this.draggingUid && this.draggingModule === 'wp_menu' ? this.previewMenuLocationAt(event) : '';
         var target = this.draggingModule && !location ? this.previewModuleTargetAt(event) : null;
         var slot = target ? target.slot : '';
         if (location !== this.draggingMenuLocation || slot !== this.draggingSlot) {
@@ -2638,6 +2657,82 @@
         this.draggingMenuLocation = '';
         this.draggingWidgetArea = '';
         this.sendPreviewDragState(!!this.draggingModule);
+      },
+      // 预览中的独立手柄使用指针捕获，跨 iframe 拖动也不会落到组件按钮上。
+      handleModulePointerDrag: function (data) {
+        if (data.phase === 'start') {
+          var value = this.builderValue();
+          var item;
+          this.slots().some(function (slot) {
+            item = (value.slots[slot.id] || []).find(function (entry) { return entry.uid === data.uid; });
+            return !!item;
+          });
+          if (!item || this.draggingWidget) { return; }
+          // 手柄捕获期间不替换源节点；结束后再恢复未完成的实时预览。
+          this.previewSeq += 1;
+          if (this._previewController) { this._previewController.abort(); }
+          if (this.previewTimer) { clearTimeout(this.previewTimer); this.previewTimer = null; }
+          this.draggingUid = item.uid;
+          this.draggingModule = item.type;
+          this.draggingMenuLocation = '';
+          this.sendPreviewDragState(true);
+        }
+        if (!this.draggingUid || data.uid !== this.draggingUid) { return; }
+        var frame = this.$refs.previewFrame;
+        var point = null;
+        if (frame && Number.isFinite(data.x) && Number.isFinite(data.y) && frame.clientWidth && frame.clientHeight) {
+          var rect = frame.getBoundingClientRect();
+          point = { clientX: rect.left + data.x * rect.width / frame.clientWidth, clientY: rect.top + data.y * rect.height / frame.clientHeight };
+        }
+        if (data.phase === 'start' || data.phase === 'move') {
+          if (point) { this.onCanvasDragOver(point); }
+          return;
+        }
+        var uid = this.draggingUid;
+        var target = data.phase === 'drop' && point ? this.previewModuleTargetAt(point) : null;
+        this._previewDragClickUntil = Date.now() + 500;
+        this.onModuleDragEnd();
+        var moved = target && this.moveModuleToSlot(uid, target);
+        if (!moved) { this.queuePreview(); }
+      },
+      cancelPreviewModuleDrag: function (event) {
+        if (!this.draggingUid || (event.type === 'keydown' && event.key !== 'Escape')) { return; }
+        if (event.type === 'keydown') { event.preventDefault(); }
+        this._previewDragClickUntil = Date.now() + 500;
+        this.onModuleDragEnd();
+        this.queuePreview();
+      },
+      suppressPreviewDragClick: function (event) {
+        if (Date.now() < (this._previewDragClickUntil || 0)) { event.preventDefault(); event.stopPropagation(); }
+      },
+      // 一次性更新源区域和目标区域；移动保留原 uid、类型及全部配置。
+      moveModuleToSlot: function (uid, target) {
+        if (!target || !this.slots().some(function (slot) { return slot.id === target.slot; })) { return; }
+        var value = this.builderValue();
+        var source = this.slots().find(function (slot) { return (value.slots[slot.id] || []).some(function (item) { return item.uid === uid; }); });
+        if (!source) { return; }
+        var from = value.slots[source.id].slice();
+        var index = from.findIndex(function (item) { return item.uid === uid; });
+        var into = source.id === target.slot ? from : (value.slots[target.slot] || []).slice();
+        var at = Math.max(0, Math.min(target.index, into.length));
+        if (!Number.isFinite(at)) { return; }
+        var item = from.splice(index, 1)[0];
+        if (source.id === target.slot && index < at) { at -= 1; }
+        if (source.id === target.slot && index === at) { return; }
+        into.splice(at, 0, item);
+        value.slots[source.id] = from;
+        value.slots[target.slot] = into;
+        this.activeSlot = target.slot;
+        this.selectedUid = uid;
+        this.selectedStructureId = '';
+        this.rightTab = 'component';
+        this.previewSeq += 1;
+        var frame = this.$refs.previewFrame;
+        if (frame && frame.contentWindow) {
+          frame.contentWindow.postMessage({ type: 'eva-builder-module-move', uid: uid, slot: target.slot, index: at }, window.location.origin);
+        }
+        this.$emit('update:modelValue', value);
+        return true;
       },
       // 功能：读取拖拽中的模块类型。
       draggedModuleType: function (event) {
@@ -3276,7 +3371,7 @@
       '    </aside>',
       "</transition>",
       '    <main class="eva-pb-stage">',
-      '      <section class="eva-pb-canvas" :class="[\'is-\' + device, { \'is-preview\': usesSlots() }]" @click.self="selectedUid = \'\'" @dragover.prevent="onCanvasDragOver" @dragleave="onCanvasDragLeave" @drop.prevent="onCanvasDrop">',
+      '      <section class="eva-pb-canvas" :class="[\'is-\' + device, { \'is-preview\': usesSlots() }]" @click.capture="suppressPreviewDragClick" @click.self="selectedUid = \'\'" @dragover.prevent="onCanvasDragOver" @dragleave="onCanvasDragLeave" @drop.prevent="onCanvasDrop">',
       '        <div v-if="usesSlots()" class="eva-pb-iframe-shell" :class="{ \'is-dragging\': draggingModule || draggingWidget }">',
       '          <iframe ref="previewFrame" class="eva-pb-iframe" :src="previewUrl()" @load="queuePreview(0)"></iframe>',
       '        </div>',

@@ -111,10 +111,44 @@ body.eva-builder-preview .eva-builder-structure-selected { outline: 2px solid #1
 }
 
 .eva-builder-preview-module:hover > .eva-builder-preview-tools,
-.eva-builder-preview-module.is-selected > .eva-builder-preview-tools {
+.eva-builder-preview-module.is-selected > .eva-builder-preview-tools,
+.eva-builder-preview-module:focus-within > .eva-builder-preview-tools {
   opacity: 1;
   pointer-events: auto;
 }
+
+.eva-builder-preview-drag-handle {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 31;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: #111827;
+  color: #fff;
+  font: 700 22px/1 sans-serif;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.eva-builder-preview-module:is(:hover, :focus-within, .is-selected) > .eva-builder-preview-drag-handle {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.eva-builder-preview-drag-handle:focus-visible { outline: 2px solid #1687ff; outline-offset: 2px; }
+.eva-builder-preview-drag-handle:active { cursor: grabbing; }
+.eva-builder-module-moving { opacity: .65; }
+body.eva-builder-module-dragging { cursor: grabbing; user-select: none; }
+body.eva-builder-module-dragging .eva-builder-preview-tools { pointer-events: none; }
 
 .eva-builder-preview-tools button {
   min-width: 34px;

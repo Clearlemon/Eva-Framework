@@ -1808,7 +1808,8 @@ if (! class_exists('Eva')) {
             $type = isset($item['type']) ? sanitize_key((string) $item['type']) : '';
 
             return '<div class="eva-builder-preview-module" data-eva-builder-module="' . esc_attr($uid) . '" data-eva-builder-type="' . esc_attr($type) . '">'
-                . '<div class="eva-builder-preview-tools" aria-hidden="true">'
+                . '<button type="button" class="eva-builder-preview-drag-handle" data-eva-builder-drag-handle aria-label="拖动组件到其他插槽" title="拖动组件到其他插槽（Esc 取消）">⠿</button>'
+                . '<div class="eva-builder-preview-tools" role="group" aria-label="组件操作">'
                 . '<button type="button" data-eva-builder-action="up">上移</button>'
                 . '<button type="button" data-eva-builder-action="down">下移</button>'
                 . '<button type="button" data-eva-builder-action="duplicate">复制</button>'

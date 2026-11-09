@@ -4,8 +4,86 @@
   var menuState = { active: false, location: '', dragging: false, target: '' };
   var selectedStructure = '';
   var widgetState = { active: false, area: '', dragging: false, target: '' };
-  var slotState = { dragging: false, target: '', labels: {} };
+  var slotState = { dragging: false, target: '', uid: '', labels: {} };
   var appliedSlotHtml = new WeakMap();
+  var modulePointer = null;
+  var moduleScrollFrame = 0;
+  var suppressModuleClickUntil = 0;
+
+  function postModulePointer(phase, pointer) {
+    window.parent.postMessage({ type: 'eva-builder-module-drag', phase: phase, uid: pointer.uid, x: pointer.x, y: pointer.y }, window.location.origin);
+  }
+
+  function finishModulePointer(phase, notify) {
+    var pointer = modulePointer;
+    if (!pointer) { return; }
+    modulePointer = null;
+    cancelAnimationFrame(moduleScrollFrame);
+    moduleScrollFrame = 0;
+    if (pointer.active) { suppressModuleClickUntil = Date.now() + 500; }
+    if (pointer.handle.hasPointerCapture(pointer.id)) { pointer.handle.releasePointerCapture(pointer.id); }
+    if (notify && pointer.active) { postModulePointer(phase, pointer); }
+  }
+
+  function scrollModulePointer() {
+    moduleScrollFrame = 0;
+    var pointer = modulePointer;
+    if (!pointer || !pointer.active) { return; }
+    var page = document.scrollingElement;
+    if (page && pointer.x >= 0 && pointer.x <= window.innerWidth) {
+      var delta = pointer.y < 56 ? -Math.min(20, (56 - pointer.y) / 3) : (pointer.y > window.innerHeight - 56 ? Math.min(20, (pointer.y - window.innerHeight + 56) / 3) : 0);
+      var top = page.scrollTop;
+      if (delta) { page.scrollTop += delta; }
+      if (page.scrollTop !== top) { postModulePointer('move', pointer); }
+    }
+    moduleScrollFrame = requestAnimationFrame(scrollModulePointer);
+  }
+
+  document.addEventListener('pointerdown', function (event) {
+    var handle = event.target.closest('[data-eva-builder-drag-handle]');
+    var module = handle && handle.closest('[data-eva-builder-module]');
+    if (!module || event.button !== 0 || !event.isPrimary) { return; }
+    event.preventDefault();
+    event.stopPropagation();
+    finishModulePointer('cancel', true);
+    handle.focus({ preventScroll: true });
+    modulePointer = { id: event.pointerId, handle: handle, uid: module.getAttribute('data-eva-builder-module'), startX: event.clientX, startY: event.clientY, x: event.clientX, y: event.clientY, active: false };
+    handle.setPointerCapture(event.pointerId);
+  }, true);
+
+  document.addEventListener('pointermove', function (event) {
+    var pointer = modulePointer;
+    if (!pointer || event.pointerId !== pointer.id) { return; }
+    pointer.x = event.clientX;
+    pointer.y = event.clientY;
+    // 轻点手柄仍然只选中组件，移动超过 6px 才进入跨插槽拖动。
+    if (!pointer.active && Math.hypot(pointer.x - pointer.startX, pointer.y - pointer.startY) < 6) { return; }
+    event.preventDefault();
+    event.stopPropagation();
+    var phase = pointer.active ? 'move' : 'start';
+    pointer.active = true;
+    postModulePointer(phase, pointer);
+    if (!moduleScrollFrame) { moduleScrollFrame = requestAnimationFrame(scrollModulePointer); }
+  }, true);
+
+  document.addEventListener('pointerup', function (event) {
+    if (!modulePointer || event.pointerId !== modulePointer.id) { return; }
+    modulePointer.x = event.clientX;
+    modulePointer.y = event.clientY;
+    if (modulePointer.active) { event.preventDefault(); event.stopPropagation(); }
+    finishModulePointer('drop', true);
+  }, true);
+
+  function cancelModulePointer(event) {
+    if (modulePointer && (event.pointerId === undefined || event.pointerId === modulePointer.id)) { finishModulePointer('cancel', true); }
+  }
+  document.addEventListener('pointercancel', cancelModulePointer, true);
+  document.addEventListener('lostpointercapture', cancelModulePointer, true);
+  window.addEventListener('blur', cancelModulePointer);
+  window.addEventListener('pagehide', cancelModulePointer);
+  document.addEventListener('dragstart', function (event) {
+    if (event.target.closest('[data-eva-builder-module]')) { event.preventDefault(); }
+  }, true);
 
   // 空区域始终显示名称；当前命中区域与真正投放使用同一套坐标判定。
   function updateSlots() {
@@ -14,6 +92,9 @@
       var id = node.getAttribute('data-eva-builder-slot');
       node.setAttribute('data-eva-builder-slot-title', slotState.labels[id] || id);
       node.classList.toggle('eva-builder-slot-drop-target', slotState.dragging && id === slotState.target);
+    });
+    document.querySelectorAll('[data-eva-builder-module]').forEach(function (node) {
+      node.classList.toggle('eva-builder-module-moving', slotState.dragging && node.getAttribute('data-eva-builder-module') === slotState.uid);
     });
   }
 
@@ -108,12 +189,26 @@
 
   window.addEventListener('message', function (event) {
     if (event.origin !== window.location.origin || event.source !== window.parent || !event.data) { return; }
+    if (event.data.type === 'eva-builder-module-move') {
+      var destination = ensureSlot(event.data.slot);
+      var module = Array.from(document.querySelectorAll('[data-eva-builder-module]')).find(function (node) { return node.getAttribute('data-eva-builder-module') === event.data.uid; });
+      if (!destination || !module) { return; }
+      var source = module.closest('[data-eva-builder-slot]');
+      var siblings = Array.from(destination.children).filter(function (node) { return node !== module && node.hasAttribute('data-eva-builder-module'); });
+      destination.insertBefore(module, siblings[event.data.index] || null);
+      if (source) { appliedSlotHtml.delete(source); }
+      appliedSlotHtml.delete(destination);
+      updateSlots();
+      return;
+    }
     if (event.data.type === 'eva-builder-drag-state') {
       document.body.classList.toggle('eva-builder-is-dragging', !!event.data.active);
       slotState.dragging = !!event.data.active && !!event.data.moduleType && !event.data.widgetDragging;
       slotState.target = slotState.dragging ? String(event.data.slot || '') : '';
+      slotState.uid = slotState.dragging ? String(event.data.uid || '') : '';
+      if (!slotState.dragging && modulePointer && modulePointer.active) { finishModulePointer('cancel', false); }
       updateSlots();
-      menuState.dragging = !!event.data.active && event.data.moduleType === 'wp_menu';
+      menuState.dragging = !!event.data.active && event.data.moduleType === 'wp_menu' && !event.data.uid;
       menuState.target = menuState.dragging ? String(event.data.menuLocation || '') : '';
       updateMenuLocations();
       widgetState.dragging = !!event.data.widgetDragging;
@@ -161,6 +256,7 @@
   });
 
   document.addEventListener('click', function (event) {
+    if (Date.now() < suppressModuleClickUntil) { event.preventDefault(); event.stopImmediatePropagation(); return; }
     var widgetArea = event.target.closest('[data-eva-widget-area]');
     if (widgetArea && widgetState.active) {
       event.preventDefault();
@@ -187,6 +283,8 @@
     var actionButton = event.target.closest('[data-eva-builder-action]');
     var module = event.target.closest('[data-eva-builder-module]');
     if (!module) { return; }
+    // 原生控件继续交给组件；链接仍由编辑器拦截，避免离开预览页。
+    if (!actionButton && !event.target.closest('[data-eva-builder-drag-handle]') && event.target.closest('button, input, select, textarea, [role="button"], [contenteditable="true"]')) { return; }
     event.preventDefault();
     event.stopPropagation();
     var uid = module.getAttribute('data-eva-builder-module') || '';
@@ -199,6 +297,12 @@
   }, true);
 
   document.addEventListener('keydown', function (event) {
+    if (event.key === 'Escape' && modulePointer) {
+      event.preventDefault();
+      event.stopPropagation();
+      finishModulePointer('cancel', true);
+      return;
+    }
     var widgetArea = event.target.closest('[data-eva-widget-area]');
     if (widgetArea && widgetState.active && (event.key === 'Enter' || event.key === ' ')) {
       event.preventDefault();
