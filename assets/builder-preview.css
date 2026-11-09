@@ -34,14 +34,25 @@ body.admin-bar {
   min-width: 0;
 }
 
-.eva-builder-preview-slot:empty {
-  min-height: 96px;
-  outline: 1px dashed rgba(255, 63, 118, .35);
+body.eva-builder-preview [data-eva-builder-slot]:empty {
+  display: flex !important;
+  box-sizing: border-box;
+  min-height: 80px;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  border-radius: 8px;
+  outline: 1px dashed #328f77;
   outline-offset: -1px;
+  background-color: rgba(240, 250, 245, .92);
 }
 
-body.eva-builder-preview [data-eva-builder-slot]:empty {
-  display: none !important;
+body.eva-builder-preview [data-eva-builder-slot]:empty::before {
+  content: attr(data-eva-builder-slot-title) ' · 拖入组件';
+  color: #28745f;
+  font: 600 13px/1.6 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  text-align: center;
+  pointer-events: none;
 }
 
 .eva-builder-widget-area { min-width: 0; display: flex; flex-direction: column; gap: 13px; }
@@ -52,27 +63,23 @@ body.eva-builder-widget-dragging [data-eva-widget-area]:empty::before { content:
 body.eva-builder-widget-mode .eva-builder-widget-selected,
 body.eva-builder-widget-dragging .eva-builder-widget-drop-target { outline: 3px solid #1687ff; outline-offset: -3px; background: #1687ff0a; }
 
-body.eva-builder-preview.eva-builder-is-dragging [data-eva-builder-slot]:empty {
-  display: flex !important;
-  min-height: 80px;
-  align-items: center;
-  justify-content: center;
-  outline: 1px dashed rgba(255, 77, 127, .42);
-  outline-offset: -1px;
-}
-
-body.eva-builder-preview.eva-builder-is-dragging [data-eva-builder-slot]:empty::before {
-  content: attr(data-eva-builder-slot-title);
-  color: #ff4d7f;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-body.eva-builder-is-dragging [data-eva-builder-slot] {
-  outline: 2px dashed rgba(255, 77, 127, .55);
+body.eva-builder-preview.eva-builder-module-dragging [data-eva-builder-slot] {
+  outline: 2px dashed #328f77;
   outline-offset: -2px;
-  background-image: linear-gradient(rgba(255, 77, 127, .05), rgba(255, 77, 127, .05));
+  background-color: rgba(50, 143, 119, .08);
   transition: outline-color .16s ease, background-color .16s ease;
+}
+
+body.eva-builder-preview.eva-builder-module-dragging [data-eva-builder-slot].eva-builder-slot-drop-target {
+  outline: 3px solid #1687ff;
+  outline-offset: -3px;
+  background-color: rgba(224, 240, 255, .96);
+  box-shadow: inset 0 0 0 4px rgba(22, 135, 255, .12);
+}
+
+body.eva-builder-preview.eva-builder-module-dragging [data-eva-builder-slot].eva-builder-slot-drop-target:empty::before {
+  content: attr(data-eva-builder-slot-title) ' · 松开放入此处';
+  color: #075db5;
 }
 
 .eva-builder-preview-module {

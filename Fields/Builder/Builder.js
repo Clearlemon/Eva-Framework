@@ -219,6 +219,7 @@
         pageMenuOpen: false,
         draggingModule: '',
         draggingMenuLocation: '',
+        draggingSlot: '',
         previewTimer: null,
         previewReady: false,
         previewSeq: 0,
@@ -817,6 +818,7 @@
         frame.contentWindow.postMessage({
           type: 'eva-builder-preview-html',
           slots: slots || {},
+          slotLabels: this.slots().reduce(function (labels, slot) { labels[slot.id] = this.tv(slot.label); return labels; }.bind(this), {}),
           structures: structures || {},
           activeSlot: this.currentSlotId(),
           selectedUid: this.selectedUid || '',
@@ -831,6 +833,7 @@
           type: 'eva-builder-drag-state',
           active: !!active || !!this.draggingWidget,
           moduleType: this.draggingModule || '',
+          slot: this.draggingSlot || '',
           menuLocation: this.draggingMenuLocation || '',
           widgetDragging: !!this.draggingWidget,
           widgetArea: this.draggingWidgetArea || ''
@@ -2585,6 +2588,7 @@
       // 功能：开始从左侧模块库拖拽模块。
       onModuleDragStart: function (event, type) {
         this.draggingMenuLocation = '';
+        this.draggingSlot = '';
         this.draggingModule = type;
         if (event.dataTransfer) {
           event.dataTransfer.effectAllowed = 'copy';
@@ -2595,6 +2599,7 @@
       // 功能：拖拽结束后清理拖拽状态。
       onModuleDragEnd: function () {
         this.draggingMenuLocation = '';
+        this.draggingSlot = '';
         this.draggingModule = '';
         this.sendPreviewDragState(false);
       },
@@ -2610,10 +2615,21 @@
           event.dataTransfer.dropEffect = 'copy';
         }
         var location = this.draggingModule === 'wp_menu' ? this.previewMenuLocationAt(event) : '';
-        if (location !== this.draggingMenuLocation) {
+        var target = this.draggingModule && !location ? this.previewModuleTargetAt(event) : null;
+        var slot = target ? target.slot : '';
+        if (location !== this.draggingMenuLocation || slot !== this.draggingSlot) {
           this.draggingMenuLocation = location;
+          this.draggingSlot = slot;
           this.sendPreviewDragState(!!this.draggingModule);
         }
+      },
+      // 离开画布时立即清除投放高亮，避免取消或跨面板拖动残留目标。
+      onCanvasDragLeave: function (event) {
+        if (event.relatedTarget && event.currentTarget.contains(event.relatedTarget)) { return; }
+        this.draggingSlot = '';
+        this.draggingMenuLocation = '';
+        this.draggingWidgetArea = '';
+        this.sendPreviewDragState(!!this.draggingModule);
       },
       // 功能：读取拖拽中的模块类型。
       draggedModuleType: function (event) {
@@ -3252,7 +3268,7 @@
       '    </aside>',
       "</transition>",
       '    <main class="eva-pb-stage">',
-      '      <section class="eva-pb-canvas" :class="[\'is-\' + device, { \'is-preview\': usesSlots() }]" @click.self="selectedUid = \'\'" @dragover.prevent="onCanvasDragOver" @drop.prevent="onCanvasDrop">',
+      '      <section class="eva-pb-canvas" :class="[\'is-\' + device, { \'is-preview\': usesSlots() }]" @click.self="selectedUid = \'\'" @dragover.prevent="onCanvasDragOver" @dragleave="onCanvasDragLeave" @drop.prevent="onCanvasDrop">',
       '        <div v-if="usesSlots()" class="eva-pb-iframe-shell" :class="{ \'is-dragging\': draggingModule || draggingWidget }">',
       '          <iframe ref="previewFrame" class="eva-pb-iframe" :src="previewUrl()" @load="queuePreview(0)"></iframe>',
       '        </div>',

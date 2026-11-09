@@ -4,6 +4,17 @@
   var menuState = { active: false, location: '', dragging: false, target: '' };
   var selectedStructure = '';
   var widgetState = { active: false, area: '', dragging: false, target: '' };
+  var slotState = { dragging: false, target: '', labels: {} };
+
+  // 空区域始终显示名称；当前命中区域与真正投放使用同一套坐标判定。
+  function updateSlots() {
+    document.body.classList.toggle('eva-builder-module-dragging', slotState.dragging);
+    document.querySelectorAll('[data-eva-builder-slot]').forEach(function (node) {
+      var id = node.getAttribute('data-eva-builder-slot');
+      node.setAttribute('data-eva-builder-slot-title', slotState.labels[id] || id);
+      node.classList.toggle('eva-builder-slot-drop-target', slotState.dragging && id === slotState.target);
+    });
+  }
 
   var observedMenuLabels = new WeakSet();
   var menuLabelObserver = typeof ResizeObserver === 'function' ? new ResizeObserver(function (entries) {
@@ -98,6 +109,9 @@
     if (event.origin !== window.location.origin || event.source !== window.parent || !event.data) { return; }
     if (event.data.type === 'eva-builder-drag-state') {
       document.body.classList.toggle('eva-builder-is-dragging', !!event.data.active);
+      slotState.dragging = !!event.data.active && !!event.data.moduleType && !event.data.widgetDragging;
+      slotState.target = slotState.dragging ? String(event.data.slot || '') : '';
+      updateSlots();
       menuState.dragging = !!event.data.active && event.data.moduleType === 'wp_menu';
       menuState.target = menuState.dragging ? String(event.data.menuLocation || '') : '';
       updateMenuLocations();
@@ -119,6 +133,7 @@
       return;
     }
     if (event.data.type !== 'eva-builder-preview-html') { return; }
+    slotState.labels = event.data.slotLabels || {};
     var slots = event.data.slots || {};
     Object.keys(slots).forEach(function (slot) {
       var target = ensureSlot(slot);
@@ -137,6 +152,7 @@
     updateStructures();
     updateMenuLocations();
     updateWidgetAreas();
+    updateSlots();
   });
 
   document.addEventListener('click', function (event) {
@@ -199,6 +215,7 @@
     }
   });
 
+  updateSlots();
   updateStructures();
   window.parent && window.parent.postMessage({ type: 'eva-builder-preview-ready' }, window.location.origin);
 }());
