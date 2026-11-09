@@ -5,6 +5,7 @@
   var selectedStructure = '';
   var widgetState = { active: false, area: '', dragging: false, target: '' };
   var slotState = { dragging: false, target: '', labels: {} };
+  var appliedSlotHtml = new WeakMap();
 
   // 空区域始终显示名称；当前命中区域与真正投放使用同一套坐标判定。
   function updateSlots() {
@@ -138,7 +139,11 @@
     Object.keys(slots).forEach(function (slot) {
       var target = ensureSlot(slot);
       var html = slots[slot] || '';
-      if (target && target.innerHTML !== html) { target.innerHTML = html; }
+      // Vue/Flickity 会增强已渲染 DOM；相同服务端内容不能因此重复重建。
+      if (target && target.innerHTML !== html && appliedSlotHtml.get(target) !== html) {
+        target.innerHTML = html;
+        appliedSlotHtml.set(target, html);
+      }
     });
     var structures = event.data.structures || {};
     Object.keys(structures).forEach(function (id) {

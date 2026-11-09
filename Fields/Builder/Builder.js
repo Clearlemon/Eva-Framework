@@ -791,6 +791,14 @@
         var type = esc(item && item.type ? item.type : '');
         var label = esc(this.tv(this.moduleLabel(item.type)));
         var instant = this.renderInstantModule(item);
+        // 只有 PHP 渲染的已有模块保留当前画面，避免每次改字段都销毁并重建控件。
+        if (!instant) {
+          var frame = this.$refs.previewFrame;
+          try {
+            var current = frame && frame.contentDocument && frame.contentDocument.querySelector('[data-eva-builder-module="' + uid + '"]');
+            if (current) { return current.outerHTML; }
+          } catch (error) {}
+        }
         return '<div class="eva-builder-preview-module is-pending" data-eva-builder-module="' + uid + '" data-eva-builder-type="' + type + '">'
           + this.previewToolsHtml()
           + (instant || '<section class="eva-builder-preview-pending"><strong>' + label + '</strong><span>' + this.t('pb_rendering') + '</span></section>')

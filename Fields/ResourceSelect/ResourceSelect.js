@@ -42,15 +42,22 @@
       triggerLabel: function () { if (this.isMultiple) { return this.selected.length ? '' : text(this.field.placeholder || '请选择'); } return this.selected[0] ? this.selected[0].label : (this.values.length ? '#' + this.values[0] : text(this.field.placeholder || '请选择')); }
     },
     mounted: function () { document.addEventListener('mousedown', this.onDocDown, true); if (this.values.length) { this.fetchItems('', this.values.join(',')); } },
-    beforeUnmount: function () { document.removeEventListener('mousedown', this.onDocDown, true); if (this.timer) { clearTimeout(this.timer); } },
+    beforeUnmount: function () { document.removeEventListener('mousedown', this.onDocDown, true); this.cancelSearch(); },
     methods: {
       text: text,
       onDocDown: function (event) { if (this.open && this.$el && !this.$el.contains(event.target)) { this.close(); } },
       openMenu: function () { if (this.field.disabled) { return; } this.open = true; this.error = ''; var self = this; this.$nextTick(function () { if (self.$refs.search && self.$refs.search.focus) { self.$refs.search.focus(); } }); this.fetchItems('', this.values.join(',')); },
-      close: function () { this.open = false; this.query = ''; this.items = []; this.error = ''; },
+      cancelSearch: function () {
+        if (this.timer) { clearTimeout(this.timer); this.timer = null; }
+        this._searchSeq = (this._searchSeq || 0) + 1;
+        if (this._searchController) { this._searchController.abort(); this._searchController = null; }
+        this.loading = false;
+      },
+      close: function () { this.cancelSearch(); this.open = false; this.query = ''; this.items = []; this.error = ''; },
       clear: function () { if (this.field.disabled) { return; } this.selected = []; this.$emit('update:modelValue', this.returnItem ? null : (this.isMultiple ? [] : '')); },
-      onInput: function () { var self = this; if (this.timer) { clearTimeout(this.timer); } this.timer = setTimeout(function () { self.fetchItems(self.query, ''); }, 220); },
+      onInput: function () { this.cancelSearch(); this.items = []; this.error = ''; var self = this; this.timer = setTimeout(function () { self.timer = null; self.fetchItems(self.query, ''); }, 220); },
       fetchItems: function (query, include) {
+        this.cancelSearch();
         var q = String(query || '').trim();
         if (!include && q.length < this.minChars) { this.items = []; this.loading = false; return; }
         var url = cfg().ajaxUrl || ((window.EvaFW && window.EvaFW.adminUrl) ? window.EvaFW.adminUrl + 'admin-ajax.php' : '/wp-admin/admin-ajax.php');
@@ -59,11 +66,22 @@
         if (this.field.taxonomy) { params.set('taxonomy', normalizeTypes(this.field.taxonomy)); }
         if (this.field.role) { params.set('role', Array.isArray(this.field.role) ? this.field.role.join(',') : this.field.role); }
         if (include) { params.set('include', include); } else { params.set('q', q); }
-        var self = this; this.loading = true; this.error = '';
-        fetch(url + '?' + params.toString(), { credentials: 'same-origin' }).then(function (response) { return response.json(); }).then(function (result) {
-          var found = result && result.success && result.data && Array.isArray(result.data.items) ? result.data.items : [];
+        var self = this, seq = this._searchSeq;
+        var controller = typeof AbortController === 'function' ? new AbortController() : null;
+        this._searchController = controller; this.loading = true; this.error = '';
+        return fetch(url + '?' + params.toString(), { credentials: 'same-origin', signal: controller ? controller.signal : undefined }).then(function (response) {
+          if (!response.ok) { throw new Error('search_failed'); }
+          return response.json();
+        }).then(function (result) {
+          if (seq !== self._searchSeq) { return; }
+          if (!result || !result.success || !result.data || !Array.isArray(result.data.items)) { throw new Error('search_failed'); }
+          var found = result.data.items;
           if (include) { self.selected = self.sortItems(found, self.values); } else { self.items = found; }
-        }).catch(function () { self.error = '搜索失败'; }).then(function () { self.loading = false; });
+        }).catch(function (error) {
+          if (seq === self._searchSeq && error.name !== 'AbortError') { self.error = '搜索失败，请重试'; }
+        }).then(function () {
+          if (seq === self._searchSeq) { self.loading = false; self._searchController = null; }
+        });
       },
       sortItems: function (items, values) { return values.map(function (value) { return items.filter(function (item) { return String(item.value) === String(value); })[0] || null; }).filter(Boolean); },
       isSelected: function (item) { return this.values.indexOf(String(item.value)) !== -1; },
@@ -75,7 +93,7 @@
       dragStart: function (index) { if (this.canSort) { this.dragIndex = index; } },
       dropValue: function (index) { if (!this.canSort || this.dragIndex === null || this.dragIndex === index) { this.dragIndex = null; return; } var values = this.values.slice(); var selected = this.selected.slice(); var value = values.splice(this.dragIndex, 1)[0]; var item = selected.splice(this.dragIndex, 1)[0]; values.splice(index, 0, value); selected.splice(index, 0, item); this.dragIndex = null; this.selected = selected; this.$emit('update:modelValue', values); }
     },
-    template: "<div class=\"eva-resource-select\" :class=\"{'is-open':open,'is-disabled':field.disabled,'is-multiple':isMultiple}\"><div class=\"eva-resource-trigger-wrap\"><button type=\"button\" class=\"eva-resource-trigger\" :disabled=\"field.disabled\" @click=\"openMenu\"><span v-if=\"!isMultiple\" :class=\"{'is-placeholder':!selected.length && !values.length}\">{{triggerLabel}}</span><span v-else-if=\"!selected.length\" class=\"is-placeholder\">{{triggerLabel}}</span><span v-else class=\"eva-resource-tags\"><span v-for=\"(item,index) in selected\" :key=\"item.value\" class=\"eva-resource-tag\" :draggable=\"canSort\" @click.stop @dragstart=\"dragStart(index)\" @dragover.prevent @drop.stop=\"dropValue(index)\"><span>{{item.label}}</span><i class=\"ri-close-line\" @click.stop=\"removeValue(item.value)\"></i></span></span><i class=\"ri-search-line\"></i></button><button v-if=\"values.length && !field.disabled\" type=\"button\" class=\"eva-resource-clear\" aria-label=\"清空\" @click=\"clear\"><i class=\"ri-close-line\"></i></button></div><transition v-bind=\"field.motion || { css: false }\"><div v-show=\"open\" class=\"eva-resource-panel\"><div class=\"eva-resource-search\"><i class=\"ri-search-line\"></i><input ref=\"search\" type=\"text\" v-model=\"query\" :placeholder=\"text(field.search_placeholder || field.searchPlaceholder || '输入关键词搜索…')\" @input=\"onInput\"></div><transition v-bind=\"field.motion || { css: false }\" mode=\"out-in\"><div key=\"hint\" v-if=\"query.trim().length < minChars && !items.length\" class=\"eva-resource-empty\">至少输入 {{minChars}} 个字符</div><div key=\"loading\" v-else-if=\"loading\" class=\"eva-resource-empty\">搜索中…</div><div key=\"error\" v-else-if=\"error\" class=\"eva-resource-empty\">{{error}}</div><ul key=\"results\" v-else-if=\"items.length\" class=\"eva-resource-list\"><transition-group v-bind=\"field.motion || { css: false }\" :appear=\"!!field.motion\"><li data-menu-motion-row v-for=\"item in items\" :key=\"item.value\" :class=\"{'is-selected':isSelected(item)}\" @click=\"pick(item)\"><strong>{{item.label}}</strong><span>{{item.meta || item.type || resource}}</span></li></transition-group></ul><div key=\"empty\" v-else class=\"eva-resource-empty\">没有匹配结果</div></transition></div></transition></div>"
+    template: "<div class=\"eva-resource-select\" :class=\"{'is-open':open,'is-disabled':field.disabled,'is-multiple':isMultiple}\"><div class=\"eva-resource-trigger-wrap\"><button type=\"button\" class=\"eva-resource-trigger\" :disabled=\"field.disabled\" @click=\"openMenu\"><span v-if=\"!isMultiple\" :class=\"{'is-placeholder':!selected.length && !values.length}\">{{triggerLabel}}</span><span v-else-if=\"!selected.length\" class=\"is-placeholder\">{{triggerLabel}}</span><span v-else class=\"eva-resource-tags\"><span v-for=\"(item,index) in selected\" :key=\"item.value\" class=\"eva-resource-tag\" :draggable=\"canSort\" @click.stop @dragstart=\"dragStart(index)\" @dragover.prevent @drop.stop=\"dropValue(index)\"><span>{{item.label}}</span><i class=\"ri-close-line\" @click.stop=\"removeValue(item.value)\"></i></span></span><i class=\"ri-search-line\"></i></button><button v-if=\"values.length && !field.disabled\" type=\"button\" class=\"eva-resource-clear\" aria-label=\"清空\" @click=\"clear\"><i class=\"ri-close-line\"></i></button></div><transition v-bind=\"field.motion || { css: false }\"><div v-show=\"open\" class=\"eva-resource-panel\"><div class=\"eva-resource-search\"><i class=\"ri-search-line\"></i><input ref=\"search\" type=\"text\" v-model=\"query\" :placeholder=\"text(field.search_placeholder || field.searchPlaceholder || '输入关键词搜索…')\" @input=\"onInput\"></div><transition v-bind=\"field.motion || { css: false }\"><div key=\"hint\" v-if=\"query.trim().length < minChars && !items.length\" class=\"eva-resource-empty\">至少输入 {{minChars}} 个字符</div><div key=\"loading\" v-else-if=\"loading\" class=\"eva-resource-empty\">搜索中…</div><div key=\"error\" v-else-if=\"error\" class=\"eva-resource-empty\">{{error}}</div><ul key=\"results\" v-else-if=\"items.length\" class=\"eva-resource-list\"><transition-group v-bind=\"field.motion || { css: false }\" :appear=\"!!field.motion\"><li data-menu-motion-row v-for=\"item in items\" :key=\"item.value\" :class=\"{'is-selected':isSelected(item)}\" @click=\"pick(item)\"><strong>{{item.label}}</strong><span>{{item.meta || item.type || resource}}</span></li></transition-group></ul><div key=\"empty\" v-else class=\"eva-resource-empty\">没有匹配结果</div></transition></div></transition></div>"
   };
 
   window.EvaFields.resource_select = ResourceSelect;
