@@ -23,11 +23,13 @@
   window.EvaFields = window.EvaFields || {};
 
   // 读取 Eva 注入的展示配置。
-  function Cfg() { return (window.EvaFW && window.EvaFW.config) || {}; }
-
+  function Cfg() {
+    return window.EvaFW && window.EvaFW.config || {};
+  }
   window.EvaFields.theme_backup = {
     props: ['field', 'modelValue'],
     emits: ['update:modelValue'],
+
     // 功能：初始化组件响应式状态与对外数据。
     data: function () {
       return {
@@ -40,230 +42,441 @@
         backupItems: ['main'],
         // 上传恢复文件状态。
         pendingFile: null,
-        selectedFile: { name: '', size: '' },
+        selectedFile: {
+          name: '',
+          size: ''
+        },
         // 历史记录筛选状态。
         activeTab: 'all',
         searchKey: '',
         // 自动备份设置，接口返回后会覆盖这里的默认值。frequency 存中文值（后端契约）。
-        settings: { enabled: false, frequency: '每天', time: '00:00', keep: 5 },
+        settings: {
+          enabled: false,
+          frequency: '每天',
+          time: '00:00',
+          keep: 5
+        },
         bannerUrl: 'https://www.dmoe.cc/random.php'
       };
     },
     computed: {
+
       // 小时 / 分钟选项由计算属性生成，避免在 data 里维护重复数组。
-      hourOptions: function () { var a = []; for (var i = 0; i < 24; i++) { a.push(('0' + i).slice(-2)); } return a; },
+      hourOptions: function () {
+        var a = [];
+        for (var i = 0; i < 24; i++) {
+          a.push(('0' + i).slice(-2));
+        }
+        return a;
+      },
+
       // 功能：处理 minute Options 相关逻辑。
-      minuteOptions: function () { var a = []; for (var i = 0; i < 60; i++) { a.push(('0' + i).slice(-2)); } return a; },
+      minuteOptions: function () {
+        var a = [];
+        for (var i = 0; i < 60; i++) {
+          a.push(('0' + i).slice(-2));
+        }
+        return a;
+      },
       // 自动备份时间拆分为两个 eva-select（小时 + 分钟）编辑，最终仍写回 settings.time。
       hour: {
+
         // 功能：读写计算属性对应的外部状态。
-        get: function () { return ('0' + (parseInt((this.settings.time || '00:00').split(':')[0], 10) || 0)).slice(-2); },
+        get: function () {
+          return ('0' + (parseInt((this.settings.time || '00:00').split(':')[0], 10) || 0)).slice(-2);
+        },
+
         // 功能：读写计算属性对应的外部状态。
-        set: function (v) { var m = (this.settings.time || '00:00').split(':')[1] || '00'; this.settings.time = v + ':' + m; }
+        set: function (v) {
+          var m = (this.settings.time || '00:00').split(':')[1] || '00';
+          this.settings.time = v + ':' + m;
+        }
       },
       minute: {
+
         // 功能：读写计算属性对应的外部状态。
-        get: function () { return ('0' + (parseInt((this.settings.time || '00:00').split(':')[1], 10) || 0)).slice(-2); },
+        get: function () {
+          return ('0' + (parseInt((this.settings.time || '00:00').split(':')[1], 10) || 0)).slice(-2);
+        },
+
         // 功能：读写计算属性对应的外部状态。
-        set: function (v) { var h = (this.settings.time || '00:00').split(':')[0] || '00'; this.settings.time = h + ':' + v; }
+        set: function (v) {
+          var h = (this.settings.time || '00:00').split(':')[0] || '00';
+          this.settings.time = h + ':' + v;
+        }
       },
+
       // 接口返回的 card 聚合统计，模板中的统计卡都从这里派生。
-      card: function () { return (this.data && this.data.card) || {}; },
+      card: function () {
+        return this.data && this.data.card || {};
+      },
+
       // 功能：处理 latest 相关逻辑。
-      latest: function () { return this.card.latest || {}; },
+      latest: function () {
+        return this.card.latest || {};
+      },
+
       // 功能：处理 auto Card 相关逻辑。
-      autoCard: function () { return this.card.auto || {}; },
+      autoCard: function () {
+        return this.card.auto || {};
+      },
+
       // 功能：处理 available 相关逻辑。
-      available: function () { return this.card.available || {}; },
+      available: function () {
+        return this.card.available || {};
+      },
+
       // 功能：处理 list 相关逻辑。
-      list: function () { return (this.data && this.data.list) || []; },
+      list: function () {
+        return this.data && this.data.list || [];
+      },
+
       // 历史备份列表的展示增强：补充类型文案和备份内容标签（按当前语言翻译）。
       parsedList: function () {
         var self = this;
-        var typeMap = { main: self.t('bk_theme'), nav: self.t('bk_t_nav'), widgets: self.t('bk_t_widgets'), customizer: self.t('bk_t_customizer') };
+        var typeMap = {
+          main: self.t('bk_theme'),
+          nav: self.t('bk_t_nav'),
+          widgets: self.t('bk_t_widgets'),
+          customizer: self.t('bk_t_customizer')
+        };
         return this.list.map(function (item) {
           var items = item.items || [];
           return Object.assign({}, item, {
             typeLabel: item.type === 'automatic' ? self.t('bk_auto_created') : self.t('bk_manual_created'),
-            itemTypes: items.map(function (i) { return typeMap[i] || i; }).join('、')
+            itemTypes: items.map(function (i) {
+              return typeMap[i] || i;
+            }).join('、')
           });
         });
       },
+
       // 历史备份列表筛选：按 tab 区分全部/手动/自动，并按名称关键字过滤。
       filteredList: function () {
         var self = this;
         return this.parsedList.filter(function (item) {
-          var okTab = self.activeTab === 'all'
-            || (self.activeTab === 'manual' && item.type !== 'automatic')
-            || (self.activeTab === 'auto' && item.type === 'automatic');
-          var okKey = !self.searchKey || (item.name && String(item.name).indexOf(self.searchKey) !== -1);
+          var okTab = self.activeTab === 'all' || self.activeTab === 'manual' && item.type !== 'automatic' || self.activeTab === 'auto' && item.type === 'automatic';
+          var okKey = !self.searchKey || item.name && String(item.name).indexOf(self.searchKey) !== -1;
           return okTab && okKey;
         });
       },
+
       // 功能：处理 storage 相关逻辑。
-      storage: function () { return this.card.storage || {}; },
+      storage: function () {
+        return this.card.storage || {};
+      },
+
       // 功能：处理 trend 相关逻辑。
-      trend: function () { return this.card.trend || []; },
+      trend: function () {
+        return this.card.trend || [];
+      },
+
       // 功能：处理 counts 相关逻辑。
-      counts: function () { return this.card.counts || {}; },
+      counts: function () {
+        return this.card.counts || {};
+      },
+
       // 功能：处理 health 相关逻辑。
-      health: function () { return this.card.health || []; },
+      health: function () {
+        return this.card.health || [];
+      },
+
       // 功能：处理 queue 相关逻辑。
-      queue: function () { return this.card.queue || []; },
+      queue: function () {
+        return this.card.queue || [];
+      },
+
       // 功能：处理 activities 相关逻辑。
-      activities: function () { return this.card.activities || []; },
+      activities: function () {
+        return this.card.activities || [];
+      },
+
       // 功能：处理 latest Items Label 相关逻辑。
       latestItemsLabel: function () {
         var self = this;
-        var typeMap = { main: self.t('bk_theme'), nav: self.t('bk_t_nav'), widgets: self.t('bk_t_widgets'), customizer: self.t('bk_t_customizer') };
-        var items = (this.latest && this.latest.items) || [];
-        return items.length ? items.map(function (i) { return typeMap[i] || i; }).join('、') : '—';
+        var typeMap = {
+          main: self.t('bk_theme'),
+          nav: self.t('bk_t_nav'),
+          widgets: self.t('bk_t_widgets'),
+          customizer: self.t('bk_t_customizer')
+        };
+        var items = this.latest && this.latest.items || [];
+        return items.length ? items.map(function (i) {
+          return typeMap[i] || i;
+        }).join('、') : '—';
       },
+
       // 备份趋势折线图 polyline 坐标。只负责把接口数据转换成 SVG points 字符串。
       trendPoints: function () {
-        var t = this.trend; if (!t.length) { return ''; }
-        var max = 1; t.forEach(function (d) { if ((d.count || 0) > max) { max = d.count; } });
-        var w = 280, h = 70, n = t.length;
+        var t = this.trend;
+        if (!t.length) {
+          return '';
+        }
+        var max = 1;
+        t.forEach(function (d) {
+          if ((d.count || 0) > max) {
+            max = d.count;
+          }
+        });
+        var w = 280,
+          h = 70,
+          n = t.length;
         return t.map(function (d, i) {
-          var x = n > 1 ? (i / (n - 1)) * w : w / 2;
-          var y = h - ((d.count || 0) / max) * (h - 10) - 5;
+          var x = n > 1 ? i / (n - 1) * w : w / 2;
+          var y = h - (d.count || 0) / max * (h - 10) - 5;
           return Math.round(x) + ',' + Math.round(y);
         }).join(' ');
       },
+
       // 存储分布环形图中“自动备份”占比。
       distAuto: function () {
-        var m = this.counts.manual || 0, a = this.counts.automatic || 0, total = m + a;
+        var m = this.counts.manual || 0,
+          a = this.counts.automatic || 0,
+          total = m + a;
         return total ? Math.round(a / total * 100) : 0;
       },
+
       // 功能：处理 estimate 相关逻辑。
-      estimate: function () { return this.card.estimate || {}; }
+      estimate: function () {
+        return this.card.estimate || {};
+      }
     },
+
     // 功能：组件挂载后执行初始化和事件绑定。
-    mounted: function () { this.fetchData(); },
+    mounted: function () {
+      this.fetchData();
+    },
     methods: {
+
       // 全局 i18n 代理：模板与逻辑统一用 this.t('key')；内部读 EvaI18nState.lang，切换语言自动重渲染。
-      t: function (k) { return window.EvaI18n.t(k); },
+      t: function (k) {
+        return window.EvaI18n.t(k);
+      },
+
       // 把存储的中文频率值映射为当前语言显示（值不变、仅显示翻译）。
       freqLabel: function (v) {
-        var m = { '每天': 'bk_freq_day', '每周': 'bk_freq_week', '每月': 'bk_freq_month', '每季度': 'bk_freq_quarter' };
-        return m[v] ? this.t(m[v]) : (v || this.t('bk_freq_day'));
+        var m = {
+          '每天': 'bk_freq_day',
+          '每周': 'bk_freq_week',
+          '每月': 'bk_freq_month',
+          '每季度': 'bk_freq_quarter'
+        };
+        return m[v] ? this.t(m[v]) : v || this.t('bk_freq_day');
       },
+
       // 系统健康项：接口按中文返回，前端对已知固定值做映射翻译，未知值原样显示。
       healthName: function (v) {
-        var m = { '备份服务状态': 'bk_h_service', '存储空间状态': 'bk_h_storage', '数据库连接': 'bk_h_db', '文件系统权限': 'bk_h_fs' };
+        var m = {
+          '备份服务状态': 'bk_h_service',
+          '存储空间状态': 'bk_h_storage',
+          '数据库连接': 'bk_h_db',
+          '文件系统权限': 'bk_h_fs'
+        };
         return m[v] ? this.t(m[v]) : v;
       },
+
       // 功能：处理 health Label 相关逻辑。
       healthLabel: function (v) {
-        var m = { '正常': 'bk_h_normal', '良好': 'bk_good', '异常': 'bk_h_error', '警告': 'bk_h_warn' };
+        var m = {
+          '正常': 'bk_h_normal',
+          '良好': 'bk_good',
+          '异常': 'bk_h_error',
+          '警告': 'bk_h_warn'
+        };
         return m[v] ? this.t(m[v]) : v;
       },
+
       // 拉取完整备份面板数据，成功后同步自动备份设置；失败时只显示错误，不破坏旧数据。
       fetchData: function () {
-        var self = this; self.loading = true;
-        window.EvaApi.rest('lf/v2/backupData')
-          .then(function (r) { return r.data; })
-          .then(function (j) {
-            self.data = (j && j[0]) ? j[0] : { card: {}, list: [], auto: {} };
-            var a = self.data.auto || {};
-            self.settings = {
-              enabled: !!a.enabled,
-              frequency: a.frequency || '每天',
-              time: a.time || '00:00',
-              keep: (a.keep != null ? a.keep : 5)
-            };
-            self.error = '';
-          })
-          .catch(function (e) { self.error = self.t('bk_read_fail') + (e && e.message ? e.message : e); })
-          .then(function () { self.loading = false; });
+        var self = this;
+        self.loading = true;
+        window.EvaApi.rest('lf/v2/backupData').then(function (r) {
+          return r.data;
+        }).then(function (j) {
+          self.data = j && j[0] ? j[0] : {
+            card: {},
+            list: [],
+            auto: {}
+          };
+          var a = self.data.auto || {};
+          self.settings = {
+            enabled: !!a.enabled,
+            frequency: a.frequency || '每天',
+            time: a.time || '00:00',
+            keep: a.keep != null ? a.keep : 5
+          };
+          self.error = '';
+        }).catch(function (e) {
+          self.error = self.t('bk_read_fail') + (e && e.message ? e.message : e);
+        }).then(function () {
+          self.loading = false;
+        });
       },
+
       // 主题备份适配器保持原有存储，所有写入通过带 nonce 的 REST 完成。
       post: function (action, payload) {
-        var path = 'eva/v1/integrations/lentasy/backups', method = 'POST', data = payload;
-        if (action === 'delete_backup') { path += '/' + encodeURIComponent(payload.id); method = 'DELETE'; }
-        else if (action === 'restore_backup') path += '/' + encodeURIComponent(payload.id) + '/restore';
-        else if (action === 'save_auto_backup_settings') path += '/schedule';
-        else if (action === 'restore_backup_from_file') { path += '/restore'; data = new FormData(); data.append('backup_file', payload.backup_file); }
-        else if (action !== 'create_backup') return Promise.reject(new Error('Unknown backup operation'));
-        return window.EvaApi.rest(path, { method: method, data: data, timeout: 60000 }).then(function (response) { return { success: true, data: response.data }; });
+        var path = 'eva/v1/integrations/lentasy/backups',
+          method = 'POST',
+          data = payload;
+        if (action === 'delete_backup') {
+          path += '/' + encodeURIComponent(payload.id);
+          method = 'DELETE';
+        } else if (action === 'restore_backup') path += '/' + encodeURIComponent(payload.id) + '/restore';else if (action === 'save_auto_backup_settings') path += '/schedule';else if (action === 'restore_backup_from_file') {
+          path += '/restore';
+          data = new FormData();
+          data.append('backup_file', payload.backup_file);
+        } else if (action !== 'create_backup') return Promise.reject(new Error('Unknown backup operation'));
+        return window.EvaApi.rest(path, {
+          method: method,
+          data: data,
+          timeout: 60000
+        }).then(function (response) {
+          return {
+            success: true,
+            data: response.data
+          };
+        });
       },
+
       // 创建手动备份；成功后刷新面板数据，失败时在页面顶部显示错误。
       createBackup: function () {
         var self = this;
-        this.post('create_backup', { name: this.backupName || this.t('bk_unnamed'), items: this.backupItems })
-          .then(function (res) {
-            if (res && res.success) { self.backupName = ''; self.fetchData(); }
-            else { self.error = self.t('bk_backup_fail') + ((res && res.data && res.data.message) || (res && res.data) || self.t('bk_unknown')); }
-          })
-          .catch(function (e) { self.error = self.t('bk_backup_fail') + e; });
+        this.post('create_backup', {
+          name: this.backupName || this.t('bk_unnamed'),
+          items: this.backupItems
+        }).then(function (res) {
+          if (res && res.success) {
+            self.backupName = '';
+            self.fetchData();
+          } else {
+            self.error = self.t('bk_backup_fail') + (res && res.data && res.data.message || res && res.data || self.t('bk_unknown'));
+          }
+        }).catch(function (e) {
+          self.error = self.t('bk_backup_fail') + e;
+        });
       },
+
       // 把字节数格式化为适合 UI 展示的 B / KB / MB。
       formatSize: function (bytes) {
-        if (bytes === null || bytes === undefined || bytes === '') { return ''; }
-        if (bytes < 1024) { return bytes + ' B'; }
-        if (bytes < 1048576) { return (bytes / 1024).toFixed(1) + ' KB'; }
+        if (bytes === null || bytes === undefined || bytes === '') {
+          return '';
+        }
+        if (bytes < 1024) {
+          return bytes + ' B';
+        }
+        if (bytes < 1048576) {
+          return (bytes / 1024).toFixed(1) + ' KB';
+        }
         return (bytes / 1048576).toFixed(1) + ' MB';
       },
+
       // 记录用户选择的本地备份文件，真正上传在 startRestore 中进行。
       handleFileUpload: function (e) {
         var file = e.target.files && e.target.files[0];
-        if (!file) { return; }
+        if (!file) {
+          return;
+        }
         this.pendingFile = file;
-        this.selectedFile = { name: file.name, size: this.formatSize(file.size) };
+        this.selectedFile = {
+          name: file.name,
+          size: this.formatSize(file.size)
+        };
       },
+
       // 从本地上传文件恢复。恢复是破坏性操作，必须二次确认。
       startRestore: function () {
         var self = this;
-        if (!self.pendingFile) { return; }
-        if (!window.confirm(self.t('bk_confirm_restore_file'))) { return; }
-        self.post('restore_backup_from_file', { backup_file: self.pendingFile })
-          .then(function (res) {
-            if (res && res.success) { window.alert(self.t('bk_restore_ok')); self.clearSelected(); self.fetchData(); }
-            else { self.error = self.t('bk_restore_fail') + ((res && res.data) || self.t('bk_unknown')); }
-          })
-          .catch(function () { self.error = self.t('bk_req_fail'); });
+        if (!self.pendingFile) {
+          return;
+        }
+        if (!window.confirm(self.t('bk_confirm_restore_file'))) {
+          return;
+        }
+        self.post('restore_backup_from_file', {
+          backup_file: self.pendingFile
+        }).then(function (res) {
+          if (res && res.success) {
+            window.alert(self.t('bk_restore_ok'));
+            self.clearSelected();
+            self.fetchData();
+          } else {
+            self.error = self.t('bk_restore_fail') + (res && res.data || self.t('bk_unknown'));
+          }
+        }).catch(function () {
+          self.error = self.t('bk_req_fail');
+        });
       },
+
       // 功能：清空 clear Selected 相关状态。
       clearSelected: function () {
         this.pendingFile = null;
-        this.selectedFile = { name: '', size: '' };
+        this.selectedFile = {
+          name: '',
+          size: ''
+        };
       },
+
       // 下载备份文件：接口返回 blob 后临时创建 <a download> 触发浏览器下载。
       downloadBackup: function (id, name) {
         var self = this;
-        window.EvaApi.rest('lf/v2/downloadBackup', { params: { id: id }, responseType: 'blob' })
-          .then(function (r) { return r.data; })
-          .then(function (blob) {
-            var link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = (name + '_' + id || self.t('bk_backup_noun')) + '.json';
-            document.body.appendChild(link); link.click(); document.body.removeChild(link);
-            URL.revokeObjectURL(link.href);
-          })
-          .catch(function () { window.alert(self.t('bk_download_fail')); });
+        window.EvaApi.rest('lf/v2/downloadBackup', {
+          params: {
+            id: id
+          },
+          responseType: 'blob'
+        }).then(function (r) {
+          return r.data;
+        }).then(function (blob) {
+          var link = document.createElement('a');
+          link.href = URL.createObjectURL(blob);
+          link.download = (name + '_' + id || self.t('bk_backup_noun')) + '.json';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(link.href);
+        }).catch(function () {
+          window.alert(self.t('bk_download_fail'));
+        });
       },
+
       // 从历史备份恢复。恢复成功后不强制刷新页面，避免打断用户继续查看。
       restoreBackup: function (id, name) {
         var self = this;
-        if (!window.confirm(self.t('bk_confirm_restore_1') + name + self.t('bk_confirm_restore_2'))) { return; }
-        this.post('restore_backup', { id: id })
-          .then(function (res) {
-            if (res && res.success) { window.alert(self.t('bk_restore_ok')); }
-            else { self.error = self.t('bk_restore_fail') + ((res && res.message) || self.t('bk_unknown')); }
-          })
-          .catch(function () { self.error = self.t('bk_restore_req_fail'); });
+        if (!window.confirm(self.t('bk_confirm_restore_1') + name + self.t('bk_confirm_restore_2'))) {
+          return;
+        }
+        this.post('restore_backup', {
+          id: id
+        }).then(function (res) {
+          if (res && res.success) {
+            window.alert(self.t('bk_restore_ok'));
+          } else {
+            self.error = self.t('bk_restore_fail') + (res && res.message || self.t('bk_unknown'));
+          }
+        }).catch(function () {
+          self.error = self.t('bk_restore_req_fail');
+        });
       },
+
       // 删除历史备份。删除成功后刷新列表和统计卡。
       deleteBackup: function (id, name) {
         var self = this;
-        if (!window.confirm(self.t('bk_confirm_delete_1') + name + self.t('bk_confirm_delete_2'))) { return; }
-        this.post('delete_backup', { id: id })
-          .then(function (res) {
-            if (res && res.success) { self.fetchData(); }
-            else { self.error = self.t('bk_delete_fail') + ((res && res.message) || ''); }
-          })
-          .catch(function () { self.error = self.t('bk_delete_req_fail'); });
+        if (!window.confirm(self.t('bk_confirm_delete_1') + name + self.t('bk_confirm_delete_2'))) {
+          return;
+        }
+        this.post('delete_backup', {
+          id: id
+        }).then(function (res) {
+          if (res && res.success) {
+            self.fetchData();
+          } else {
+            self.error = self.t('bk_delete_fail') + (res && res.message || '');
+          }
+        }).catch(function () {
+          self.error = self.t('bk_delete_req_fail');
+        });
       },
+
       // 保存自动备份设置，并刷新接口返回的最新状态。
       saveSettings: function () {
         var self = this;
@@ -272,12 +485,16 @@
           frequency: this.settings.frequency,
           time: this.settings.time,
           keep: this.settings.keep
-        })
-          .then(function (res) {
-            if (res && res.success) { window.alert(self.t('bk_save_ok')); self.fetchData(); }
-            else { self.error = self.t('bk_save_fail') + ((res && res.data) || self.t('bk_unknown')); }
-          })
-          .catch(function () { self.error = self.t('bk_req_fail'); });
+        }).then(function (res) {
+          if (res && res.success) {
+            window.alert(self.t('bk_save_ok'));
+            self.fetchData();
+          } else {
+            self.error = self.t('bk_save_fail') + (res && res.data || self.t('bk_unknown'));
+          }
+        }).catch(function () {
+          self.error = self.t('bk_req_fail');
+        });
       }
     },
     template: [

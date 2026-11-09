@@ -1,70 +1,301 @@
 /** Authorization workspace preview. All mutations are component-local; no API or storage. */
 (function () {
   'use strict';
+
   window.EvaFields = window.EvaFields || {};
+
   function rows() {
     var names = ['青柠的日常', '晴空放映室', '森屿手记', '星河档案', '晚风书屋', '一间工作室', '云间笔记', '微光收藏', '夏日来信', '北岛见闻', '拾光相册', '小满生活', '漫游指南', '南风杂志', '月亮电台', '山海随笔'];
     return names.map(function (name, i) {
-      return { id: 1024 + i, user: ['clearlemon', 'haruka', 'forest', 'stella'][i % 4], userId: 100 + i, name: name,
+      return {
+        id: 1024 + i,
+        user: ['clearlemon', 'haruka', 'forest', 'stella'][i % 4],
+        userId: 100 + i,
+        name: name,
         domain: ['lime', 'sky', 'forest', 'stella', 'breeze', 'studio', 'cloud', 'glimmer', 'summer', 'island', 'photo', 'life', 'travel', 'south', 'moon', 'sea'][i] + '.example',
-        theme: i % 3 === 0 ? 'Len' : 'Lentasy', status: i === 3 || i === 11 ? 'flagged' : i % 4 === 2 ? 'pending' : 'active',
-        ip: '192.0.2.' + (10 + i), date: '2026-10-' + String(26 - i).padStart(2, '0'), code: 'DEMO-' + (1024 + i) + '-PREVIEW' };
+        theme: i % 3 === 0 ? 'Len' : 'Lentasy',
+        status: i === 3 || i === 11 ? 'flagged' : i % 4 === 2 ? 'pending' : 'active',
+        ip: '192.0.2.' + (10 + i),
+        date: '2026-10-' + String(26 - i).padStart(2, '0'),
+        code: 'DEMO-' + (1024 + i) + '-PREVIEW'
+      };
     });
   }
   window.EvaFields.admin_demo = {
     props: ['field', 'modelValue'],
+
     data: function () {
-      return { records: rows(), search: '', status: 'all', theme: 'all', view: 'table', page: 1, selected: [], batchOpen: false,
-        batchText: '', batchError: '', message: '', detailId: null, returnFocus: null,
-        themeOptions: { all: '全部主题', Lentasy: 'Lentasy', Len: 'Len' },
-        statusNames: { all: '全部授权', active: '正常授权', pending: '待激活', flagged: '异常记录' } };
+      return {
+        records: rows(),
+        search: '',
+        status: 'all',
+        theme: 'all',
+        view: 'table',
+        page: 1,
+        selected: [],
+        batchOpen: false,
+        batchText: '',
+        batchError: '',
+        message: '',
+        detailId: null,
+        returnFocus: null,
+        themeOptions: {
+          all: '全部主题',
+          Lentasy: 'Lentasy',
+          Len: 'Len'
+        },
+        statusNames: {
+          all: '全部授权',
+          active: '正常授权',
+          pending: '待激活',
+          flagged: '异常记录'
+        }
+      };
     },
     computed: {
-      counts: function () { var c = { all: this.records.length, active: 0, pending: 0, flagged: 0 }; this.records.forEach(function (r) { c[r.status]++; }); return c; },
-      stats: function () { return [
-        { key: 'all', label: '授权总数', icon: 'ri-shield-keyhole-line', note: '当前全部授权记录' },
-        { key: 'active', label: '正常授权', icon: 'ri-checkbox-circle-line', note: '站点授权状态正常' },
-        { key: 'pending', label: '待激活', icon: 'ri-time-line', note: '等待站点完成激活' },
-        { key: 'flagged', label: '异常记录', icon: 'ri-error-warning-line', note: '需要进一步核查' }
-      ]; },
-      filtered: function () { var self = this, q = this.search.trim().toLowerCase(); return this.records.filter(function (r) {
-        return (self.status === 'all' || r.status === self.status) && (self.theme === 'all' || r.theme === self.theme) &&
-          (!q || [r.domain, r.name, r.user, String(r.id), String(r.userId)].join(' ').toLowerCase().includes(q));
-      }); },
-      pages: function () { return Math.max(1, Math.ceil(this.filtered.length / 6)); },
-      visible: function () { return this.filtered.slice((this.page - 1) * 6, this.page * 6); },
-      allSelected: function () { var self = this; return !!this.visible.length && this.visible.every(function (r) { return self.selected.includes(r.id); }); },
-      someSelected: function () { var self = this; return !this.allSelected && this.visible.some(function (r) { return self.selected.includes(r.id); }); },
-      detail: function () { var id = this.detailId; return this.records.find(function (r) { return r.id === id; }); },
-      sites: function () { return this.records.slice(0, 3); }
-    },
-    watch: { search: function () { this.page = 1; }, status: function () { this.page = 1; }, theme: function () { this.page = 1; } },
-    methods: {
-      reset: function () { this.closeDetail(); this.records = rows(); this.search = ''; this.status = 'all'; this.theme = 'all'; this.page = 1; this.selected = []; this.batchOpen = false; this.batchText = ''; this.batchError = ''; this.message = '演示数据已重置。'; },
-      selectPage: function (checked) { var ids = this.visible.map(function (r) { return r.id; }); this.selected = checked ? Array.from(new Set(this.selected.concat(ids))) : this.selected.filter(function (id) { return !ids.includes(id); }); },
-      activateSelected: function () { var ids = this.selected; this.records.forEach(function (r) { if (ids.includes(r.id)) { r.status = 'active'; } }); this.message = '已在演示中启用 ' + ids.length + ' 条授权。'; this.selected = []; this.page = Math.min(this.page, this.pages); },
-      clearFilters: function () { this.search = ''; this.status = 'all'; this.theme = 'all'; },
-      addBatch: function () {
-        var lines = this.batchText.trim().split(/\r?\n/).filter(function (line) { return line.trim(); });
-        if (!lines.length || lines.length > 50) { this.batchError = '请填写 1–50 行授权数据。'; return; }
-        var next = [], max = Math.max.apply(null, this.records.map(function (r) { return r.id; }));
-        for (var i = 0; i < lines.length; i++) {
-          var p = lines[i].split('|').map(function (s) { return s.trim(); });
-          var ip = p[2] && p[2].split('.');
-          if (p.length !== 4 || !/^[1-9]\d*$/.test(p[0]) || !['Len', 'Lentasy'].includes(p[1]) || !ip || ip.length !== 4 || !ip.every(function (v) { return /^\d{1,3}$/.test(v) && Number(v) <= 255; }) || !/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/i.test(p[3])) {
-            this.batchError = '第 ' + (i + 1) + ' 行格式不正确，请检查用户ID、主题、IPv4 和域名。'; return;
-          }
-          if (this.records.concat(next).some(function (r) { return r.domain.toLowerCase() === p[3].toLowerCase(); })) { this.batchError = '第 ' + (i + 1) + ' 行域名已存在。'; return; }
-          next.push({ id: max + i + 1, userId: Number(p[0]), user: 'user_' + p[0], name: '新授权站点', theme: p[1], ip: p[2], domain: p[3].toLowerCase(), status: 'pending', date: new Date().toISOString().slice(0, 10), code: 'DEMO-' + (max + i + 1) + '-PREVIEW' });
-        }
-        this.records = next.concat(this.records); this.clearFilters(); this.page = 1; this.batchText = ''; this.batchError = ''; this.batchOpen = false; this.message = '已添加 ' + next.length + ' 条演示授权，刷新页面后恢复。';
+
+      counts: function () {
+        var c = {
+          all: this.records.length,
+          active: 0,
+          pending: 0,
+          flagged: 0
+        };
+        this.records.forEach(function (r) {
+          c[r.status]++;
+        });
+        return c;
       },
-      fillExample: function () { this.batchText = '128|Lentasy|192.0.2.80|new-site.example\n129|Len|192.0.2.81|another-site.example'; this.batchError = ''; },
-      openBatch: function () { this.batchOpen = !this.batchOpen; if (this.batchOpen) { this.$nextTick(function () { this.$refs.batchInput.focus(); }); } },
-      openDetail: function (row, event) { this.returnFocus = event.currentTarget; this.detailId = row.id; this.$nextTick(function () { this.$refs.detailClose.focus(); }); },
-      closeDetail: function () { this.detailId = null; var target = this.returnFocus; this.returnFocus = null; if (target && target.isConnected) { this.$nextTick(function () { target.focus(); }); } },
-      toggleDetail: function () { this.detail.status = this.detail.status === 'active' ? 'pending' : 'active'; this.message = '授权状态已在演示中更新。'; this.page = Math.min(this.page, this.pages); },
-      trapFocus: function (event) { if (event.key === 'Escape') { event.preventDefault(); this.closeDetail(); } else if (event.key === 'Tab') { var list = Array.from(this.$refs.dialog.querySelectorAll('button:not(:disabled), [href], input, textarea')); var first = list[0], last = list[list.length - 1]; if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); } else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); } } }
+
+      stats: function () {
+        return [{
+          key: 'all',
+          label: '授权总数',
+          icon: 'ri-shield-keyhole-line',
+          note: '当前全部授权记录'
+        }, {
+          key: 'active',
+          label: '正常授权',
+          icon: 'ri-checkbox-circle-line',
+          note: '站点授权状态正常'
+        }, {
+          key: 'pending',
+          label: '待激活',
+          icon: 'ri-time-line',
+          note: '等待站点完成激活'
+        }, {
+          key: 'flagged',
+          label: '异常记录',
+          icon: 'ri-error-warning-line',
+          note: '需要进一步核查'
+        }];
+      },
+
+      filtered: function () {
+        var self = this,
+          q = this.search.trim().toLowerCase();
+        return this.records.filter(function (r) {
+          return (self.status === 'all' || r.status === self.status) && (self.theme === 'all' || r.theme === self.theme) && (!q || [r.domain, r.name, r.user, String(r.id), String(r.userId)].join(' ').toLowerCase().includes(q));
+        });
+      },
+
+      pages: function () {
+        return Math.max(1, Math.ceil(this.filtered.length / 6));
+      },
+
+      visible: function () {
+        return this.filtered.slice((this.page - 1) * 6, this.page * 6);
+      },
+
+      allSelected: function () {
+        var self = this;
+        return !!this.visible.length && this.visible.every(function (r) {
+          return self.selected.includes(r.id);
+        });
+      },
+
+      someSelected: function () {
+        var self = this;
+        return !this.allSelected && this.visible.some(function (r) {
+          return self.selected.includes(r.id);
+        });
+      },
+
+      detail: function () {
+        var id = this.detailId;
+        return this.records.find(function (r) {
+          return r.id === id;
+        });
+      },
+
+      sites: function () {
+        return this.records.slice(0, 3);
+      }
+    },
+    watch: {
+
+      search: function () {
+        this.page = 1;
+      },
+
+      status: function () {
+        this.page = 1;
+      },
+
+      theme: function () {
+        this.page = 1;
+      }
+    },
+    methods: {
+
+      reset: function () {
+        this.closeDetail();
+        this.records = rows();
+        this.search = '';
+        this.status = 'all';
+        this.theme = 'all';
+        this.page = 1;
+        this.selected = [];
+        this.batchOpen = false;
+        this.batchText = '';
+        this.batchError = '';
+        this.message = '演示数据已重置。';
+      },
+
+      selectPage: function (checked) {
+        var ids = this.visible.map(function (r) {
+          return r.id;
+        });
+        this.selected = checked ? Array.from(new Set(this.selected.concat(ids))) : this.selected.filter(function (id) {
+          return !ids.includes(id);
+        });
+      },
+
+      activateSelected: function () {
+        var ids = this.selected;
+        this.records.forEach(function (r) {
+          if (ids.includes(r.id)) {
+            r.status = 'active';
+          }
+        });
+        this.message = '已在演示中启用 ' + ids.length + ' 条授权。';
+        this.selected = [];
+        this.page = Math.min(this.page, this.pages);
+      },
+
+      clearFilters: function () {
+        this.search = '';
+        this.status = 'all';
+        this.theme = 'all';
+      },
+
+      addBatch: function () {
+        var lines = this.batchText.trim().split(/\r?\n/).filter(function (line) {
+          return line.trim();
+        });
+        if (!lines.length || lines.length > 50) {
+          this.batchError = '请填写 1–50 行授权数据。';
+          return;
+        }
+        var next = [],
+          max = Math.max.apply(null, this.records.map(function (r) {
+            return r.id;
+          }));
+        for (var i = 0; i < lines.length; i++) {
+          var p = lines[i].split('|').map(function (s) {
+            return s.trim();
+          });
+          var ip = p[2] && p[2].split('.');
+          if (p.length !== 4 || !/^[1-9]\d*$/.test(p[0]) || !['Len', 'Lentasy'].includes(p[1]) || !ip || ip.length !== 4 || !ip.every(function (v) {
+            return /^\d{1,3}$/.test(v) && Number(v) <= 255;
+          }) || !/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/i.test(p[3])) {
+            this.batchError = '第 ' + (i + 1) + ' 行格式不正确，请检查用户ID、主题、IPv4 和域名。';
+            return;
+          }
+          if (this.records.concat(next).some(function (r) {
+            return r.domain.toLowerCase() === p[3].toLowerCase();
+          })) {
+            this.batchError = '第 ' + (i + 1) + ' 行域名已存在。';
+            return;
+          }
+          next.push({
+            id: max + i + 1,
+            userId: Number(p[0]),
+            user: 'user_' + p[0],
+            name: '新授权站点',
+            theme: p[1],
+            ip: p[2],
+            domain: p[3].toLowerCase(),
+            status: 'pending',
+            date: new Date().toISOString().slice(0, 10),
+            code: 'DEMO-' + (max + i + 1) + '-PREVIEW'
+          });
+        }
+        this.records = next.concat(this.records);
+        this.clearFilters();
+        this.page = 1;
+        this.batchText = '';
+        this.batchError = '';
+        this.batchOpen = false;
+        this.message = '已添加 ' + next.length + ' 条演示授权，刷新页面后恢复。';
+      },
+
+      fillExample: function () {
+        this.batchText = '128|Lentasy|192.0.2.80|new-site.example\n129|Len|192.0.2.81|another-site.example';
+        this.batchError = '';
+      },
+
+      openBatch: function () {
+        this.batchOpen = !this.batchOpen;
+        if (this.batchOpen) {
+          this.$nextTick(function () {
+            this.$refs.batchInput.focus();
+          });
+        }
+      },
+
+      openDetail: function (row, event) {
+        this.returnFocus = event.currentTarget;
+        this.detailId = row.id;
+        this.$nextTick(function () {
+          this.$refs.detailClose.focus();
+        });
+      },
+
+      closeDetail: function () {
+        this.detailId = null;
+        var target = this.returnFocus;
+        this.returnFocus = null;
+        if (target && target.isConnected) {
+          this.$nextTick(function () {
+            target.focus();
+          });
+        }
+      },
+
+      toggleDetail: function () {
+        this.detail.status = this.detail.status === 'active' ? 'pending' : 'active';
+        this.message = '授权状态已在演示中更新。';
+        this.page = Math.min(this.page, this.pages);
+      },
+
+      trapFocus: function (event) {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          this.closeDetail();
+        } else if (event.key === 'Tab') {
+          var list = Array.from(this.$refs.dialog.querySelectorAll('button:not(:disabled), [href], input, textarea'));
+          var first = list[0],
+            last = list[list.length - 1];
+          if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last.focus();
+          } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
+          }
+        }
+      }
     },
     template: `
 <div class="eva-admin-demo">

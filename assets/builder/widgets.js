@@ -4,18 +4,22 @@
   var cfg = runtime.config;
 
   runtime.widgets = {
+
     // 小工具页签只管理实际区域与内容，不提供原生区域的插入卡片。
     widgetAreaOptions: function () {
       return this.widgetAreas.map(function (area) { return { value: area.id, label: area.name }; });
     },
+
     selectedWidgetArea: function () {
       return this.widgetAreas.find(function (area) { return area.id === this.widgetArea; }.bind(this)) || null;
     },
+
     sendPreviewWidgetState: function () {
       var frame = this.$refs.previewFrame;
       if (!frame || !frame.contentWindow) { return; }
       frame.contentWindow.postMessage({ type: 'eva-builder-widget-state', active: this.moduleTab === 'widgets', area: this.widgetArea || '' }, window.location.origin);
     },
+
     onWidgetDragStart: function (event, operation, id) {
       if (this.widgetsSaving || this.widgetsLoading || !this.widgetAreas.length) { event.preventDefault(); return; }
       this.draggingModule = '';
@@ -28,11 +32,13 @@
       }
       this.sendPreviewDragState(true);
     },
+
     onWidgetDragEnd: function () {
       this.draggingWidget = null;
       this.draggingWidgetArea = '';
       this.sendPreviewDragState(false);
     },
+
     previewWidgetAreaAt: function (event) {
       var frame = this.$refs.previewFrame;
       if (!frame || !event) { return ''; }
@@ -45,11 +51,13 @@
         return this.widgetAreas.some(function (area) { return area.id === id; }) ? id : '';
       } catch (error) { return ''; }
     },
+
     dropWidget: function (area, before) {
       var dragged = this.draggingWidget;
       this.onWidgetDragEnd();
       if (dragged && area) { return this.changeWidget(dragged.operation, dragged.id, area, before || ''); }
     },
+
     moveWidget: function (item, direction) {
       var area = this.selectedWidgetArea();
       if (!area) { return; }
@@ -58,6 +66,7 @@
       var before = direction < 0 ? area.items[at - 1].id : ((area.items[at + 2] || {}).id || '');
       return this.changeWidget('move', item.id, area.id, before);
     },
+
     changeWidget: function (operation, id, area, before) {
       if (this.widgetsSaving || this.widgetsLoading || !cfg.restActions || !this.widgetAreas.some(function (entry) { return entry.id === area; })) { return Promise.resolve(); }
       this.widgetsSaving = true;
@@ -86,6 +95,7 @@
         if (!this._widgetsDisposed) { this.widgetsError = error.message || '小工具保存失败，请重试。'; this.widgetsStatus = ''; }
       }.bind(this)).finally(function () { if (!this._widgetsDisposed) { this.widgetsSaving = false; } }.bind(this));
     },
+
     loadWidgets: function () {
       if (this.widgetsLoading || this.widgetsSaving) { return; }
       if (!cfg.restActions) { this.widgetsError = '小工具读取接口不可用。'; return; }

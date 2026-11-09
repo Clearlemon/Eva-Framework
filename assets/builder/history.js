@@ -5,6 +5,7 @@
   var clone = runtime.clone;
 
   runtime.history = {
+
     openSaveHistory: function () {
       this.closeMenuLocations(false); this.closeMenuActions(false); this.closeMenuAddPanel(false); this.closeMenuSubmenu(false);
       this.historyOpen = true; this.historyNotice = '';
@@ -12,6 +13,7 @@
       this.loadSaveHistory();
       this.$nextTick(function () { if (this.$refs.historyPanel) { this.$refs.historyPanel.focus({ preventScroll: true }); } });
     },
+
     closeSaveHistory: function (restoreFocus) {
       this.historyOpen = false; this.historyRestoreConfirm = false;
       this._historySeq = (this._historySeq || 0) + 1;
@@ -19,6 +21,7 @@
       document.removeEventListener('keydown', this.historyKeyDown);
       if (restoreFocus !== false) { this.$nextTick(function () { if (this.$refs.historyTrigger) { this.$refs.historyTrigger.focus({ preventScroll: true }); } }); }
     },
+
     historyKeyDown: function (event) {
       if (!this.historyOpen || this.historyRestoreConfirm) { return; }
       if (event.key === 'Escape') { event.preventDefault(); this.closeSaveHistory(); return; }
@@ -29,6 +32,7 @@
       var at = nodes.indexOf(document.activeElement), next = at < 0 ? (event.shiftKey ? nodes.length - 1 : 0) : (at + (event.shiftKey ? -1 : 1) + nodes.length) % nodes.length;
       event.preventDefault(); nodes[next].focus();
     },
+
     loadSaveHistory: function (id) {
       if (!cfg.restActions || !this.historyOptionId) { this.historyError = '当前构建器不支持保存历史。'; return; }
       if (this._historyController) { this._historyController.abort(); }
@@ -50,11 +54,13 @@
         if (seq === this._historySeq) { this.historyLoading = false; this.historyDetailLoading = false; this._historyController = null; }
       }.bind(this));
     },
+
     historyTime: function (entry) {
       if (!entry.timestamp) { return entry.time || ''; }
       var date = new Date(entry.timestamp * 1000), pad = function (n) { return String(n).padStart(2, '0'); };
       return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate()) + ' ' + pad(date.getHours()) + ':' + pad(date.getMinutes()) + ':' + pad(date.getSeconds());
     },
+
     historyPreviewRows: function () {
       var detail = this.historyDetail;
       if (!detail) { return []; }
@@ -77,6 +83,7 @@
         return { label: labels[key], value: String(text).slice(0, 60) };
       });
     },
+
     restoreSaveHistory: function () {
       var detail = this.historyDetail;
       this.historyRestoreConfirm = false;

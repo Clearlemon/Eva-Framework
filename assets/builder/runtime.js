@@ -17,12 +17,15 @@
       var created = !script;
       if (!script) { script = document.createElement('script'); script.src = url; script.async = true; }
       var timer = window.setTimeout(function () { finish(new Error('GSAP load timed out')); }, 8000);
+
       function finish(error) {
         window.clearTimeout(timer);
         script.removeEventListener('load', loaded); script.removeEventListener('error', failed);
         if (error) { if (created) { script.remove(); } reject(error); } else { resolve(window.gsap); }
       }
+
       function loaded() { finish(window.gsap ? null : new Error('GSAP unavailable')); }
+
       function failed() { finish(new Error('GSAP load failed')); }
       script.addEventListener('load', loaded, { once: true }); script.addEventListener('error', failed, { once: true });
       if (created) { document.head.appendChild(script); }
@@ -35,11 +38,13 @@
   function menuReducedMotion() {
     return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   }
+
   function clearMenuMotion(el) {
     ['opacity', 'transform', 'willChange', 'pointerEvents'].forEach(function (name) { el.style[name] = ''; });
     el.inert = false;
     if (el.classList.contains('eva-pb-tab-content')) { ['position', 'top', 'left', 'width'].forEach(function (name) { el.style[name] = ''; }); }
   }
+
   function stopMenuMotion(el, clear) {
     var state = el && el._evaMenuMotion;
     if (state) {
@@ -52,6 +57,7 @@
     }
     if (el && clear) { clearMenuMotion(el); }
   }
+
   function runModuleTabMotion(owner, el, done, entering, options) {
     options = options || {};
     stopMenuMotion(el, false);
@@ -59,6 +65,7 @@
     el._evaMenuMotion = state;
     owner._menuMotionElements = owner._menuMotionElements || new Set();
     owner._menuMotionElements.add(el);
+
     function finish() {
       if (state.cancelled || el._evaMenuMotion !== state) { return; }
       stopMenuMotion(el, true);

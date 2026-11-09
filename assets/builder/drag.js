@@ -4,6 +4,7 @@
 
 
   runtime.drag = {
+
     // 功能：开始从左侧模块库拖拽模块。
     onModuleDragStart: function (event, type) {
       this.draggingUid = '';
@@ -16,6 +17,7 @@
         event.dataTransfer.setData('application/x-eva-module', type);
       }
     },
+
     // 功能：拖拽结束后清理拖拽状态。
     onModuleDragEnd: function () {
       this.draggingUid = '';
@@ -24,6 +26,7 @@
       this.draggingModule = '';
       this.sendPreviewDragState(false);
     },
+
     // 功能：拖入画布时标记为复制操作。
     onCanvasDragOver: function (event) {
       if (this.draggingWidget) {
@@ -44,6 +47,7 @@
         this.sendPreviewDragState(!!this.draggingModule);
       }
     },
+
     // 离开画布时立即清除投放高亮，避免取消或跨面板拖动残留目标。
     onCanvasDragLeave: function (event) {
       if (event.relatedTarget && event.currentTarget.contains(event.relatedTarget)) { return; }
@@ -52,6 +56,7 @@
       this.draggingWidgetArea = '';
       this.sendPreviewDragState(!!this.draggingModule);
     },
+
     // 预览中的独立手柄使用指针捕获，跨 iframe 拖动也不会落到组件按钮上。
     handleModulePointerDrag: function (data) {
       if (data.phase === 'start') {
@@ -89,6 +94,7 @@
       var moved = target && this.moveModuleToSlot(uid, target);
       if (!moved) { this.queuePreview(); }
     },
+
     cancelPreviewModuleDrag: function (event) {
       if (!this.draggingUid || (event.type === 'keydown' && event.key !== 'Escape')) { return; }
       if (event.type === 'keydown') { event.preventDefault(); }
@@ -96,9 +102,11 @@
       this.onModuleDragEnd();
       this.queuePreview();
     },
+
     suppressPreviewDragClick: function (event) {
       if (Date.now() < (this._previewDragClickUntil || 0)) { event.preventDefault(); event.stopPropagation(); }
     },
+
     // 一次性更新源区域和目标区域；移动保留原 uid、类型及全部配置。
     moveModuleToSlot: function (uid, target) {
       if (!target || !this.slots().some(function (slot) { return slot.id === target.slot; })) { return; }
@@ -128,6 +136,7 @@
       this.$emit('update:modelValue', value);
       return true;
     },
+
     // 功能：读取拖拽中的模块类型。
     draggedModuleType: function (event) {
       if (event && event.dataTransfer) {
@@ -135,6 +144,7 @@
       }
       return this.draggingModule;
     },
+
     // 功能：拖入实际命中的区域；无 iframe 的画布仍加入当前列表。
     onCanvasDrop: function (event) {
       if (this.draggingWidget) { this.dropWidget(this.previewWidgetAreaAt(event)); return; }
@@ -157,6 +167,7 @@
       }
       this.onModuleDragEnd();
     },
+
     // 功能：把左侧模块拖到指定插入点。
     onInsertDrop: function (event, index) {
       if (this.draggingWidget) { this.onWidgetDragEnd(); return; }

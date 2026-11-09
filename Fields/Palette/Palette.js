@@ -18,6 +18,7 @@
     props: ['field', 'modelValue'],
     emits: ['update:modelValue'],
     computed: {
+
       // 功能：把两种 options 写法统一成 [{ key, colors, label }]。
       items: function () {
         var options = this.field.options && typeof this.field.options === 'object' ? this.field.options : {};
@@ -32,13 +33,16 @@
           };
         });
       },
+
       current: function () {
         return this.modelValue == null ? '' : String(this.modelValue);
       }
     },
     methods: {
+
       // 功能：处理 tv 相关逻辑。
       tv: function (value) { return window.EvaI18n.tv(value); },
+
       // 功能：选中一套配色；clearable 时再点一次取消。
       pick: function (item) {
         if (this.field.disabled) { return; }

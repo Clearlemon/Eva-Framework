@@ -4,9 +4,11 @@
   var hasOwn = runtime.hasOwn;
 
   runtime.menuItems = {
+
     menuEditorItemKey: function (item, index) {
       return item && item.client_key ? item.client_key : (item && item.id ? 'item-' + item.id : 'new-' + index);
     },
+
     menuEditorItemType: function (item) {
       if (!item) { return '菜单项'; }
       if (item.type === 'custom') { return '自定义链接'; }
@@ -15,6 +17,7 @@
       if (item.type === 'post_type_archive') { return '内容归档'; }
       return '菜单项';
     },
+
     menuEditorCustomSettings: function (item) {
       item = item || this.menuActionItem || this.menuEditorActiveItem;
       if (!item || !this.menuEditor) { return []; }
@@ -34,16 +37,20 @@
       }.bind(this));
       return entries;
     },
+
     menuEditorCustomSetting: function () {
       return this.menuEditorCustomSettings(this.menuEditorActiveItem).find(function (entry) { return entry.id === this.menuEditSetting; }.bind(this));
     },
+
     menuEditorCustomField: function (setting) {
       return Object.assign({}, setting.field, { picker_portal: true });
     },
+
     menuEditorCustomValue: function (item, setting) {
       var values = item.custom_fields && item.custom_fields[setting.container] || {};
       return hasOwn(values, setting.field.id) ? values[setting.field.id] : (setting.field.default !== undefined ? setting.field.default : '');
     },
+
     setMenuEditorCustomValue: function (item, setting, value) {
       if (!item.custom_fields) { item.custom_fields = {}; }
       if (!item.custom_fields[setting.container]) { item.custom_fields[setting.container] = {}; }
@@ -51,6 +58,7 @@
       if (setting.field.type === 'icon') { item.icon = String(value || ''); }
       this.markMenuEditorDirty();
     },
+
     menuEditorSettings: function () {
       var item = this.menuActionItem || this.menuEditorActiveItem;
       var native = [
@@ -68,20 +76,24 @@
       if (item && item.type === 'custom') { advanced.unshift({ id: 'url', label: 'URL', icon: 'ri-link' }); }
       return native.concat(advanced, this.menuEditorCustomSettings(item));
     },
+
     menuEditorSettingGroups: function () {
       var groups = [[], []];
       this.menuEditorSettings().forEach(function (setting) { groups[setting.field ? 1 : 0].push(setting); });
       return groups.filter(function (group) { return group.length; });
     },
+
     menuEditorSettingLabel: function () {
       var setting = this.menuEditorSettings().find(function (entry) { return entry.id === this.menuEditSetting; }.bind(this));
       return setting ? setting.label : '导航标签';
     },
+
     openMenuEditorSetting: function (setting, event) {
       var item = this.menuActionItem;
       if (!item || this.menuEditorItemIsRemoved(item)) { return; }
       this.selectMenuEditorItem(item, this.menuEditor.items.indexOf(item), event && event.currentTarget, setting);
     },
+
     menuEditorIcon: function (item) {
       var setting = this.menuEditorCustomSettings(item).find(function (entry) { return entry.field.type === 'icon'; });
       var icon = setting ? this.menuEditorCustomValue(item, setting) : '';
@@ -91,12 +103,14 @@
       if (item && item.type === 'taxonomy') { return 'ri-folder-line'; }
       return item && item.type === 'post_type' ? 'ri-article-line' : 'ri-link';
     },
+
     menuEditorIconSymbol: function (item) {
       var icon = this.menuEditorIcon(item);
       if (icon.charAt(0) === '#') { return icon; }
       var symbol = document.getElementById(icon);
       return symbol && String(symbol.tagName).toLowerCase() === 'symbol' ? '#' + icon : '';
     },
+
     menuEditorIsDescendant: function (item, parentId) {
       if (!Number(parentId)) { return false; }
       var items = this.menuEditor.items || [], id = Number(item.parent || 0), seen = {};
@@ -108,12 +122,14 @@
       }
       return false;
     },
+
     menuEditorOrderValue: function (item) {
       if (!item) { return ''; }
       var siblings = this.menuEditorChildren(Number(item.parent || 0));
       var index = siblings.indexOf(item);
       return index < 0 ? '' : String(index + 1);
     },
+
     menuEditorOrderOptions: function (item) {
       if (!item) { return []; }
       var siblings = this.menuEditorChildren(Number(item.parent || 0));
@@ -121,6 +137,7 @@
         return { value: String(index + 1), label: '第 ' + (index + 1) + ' 个，共 ' + siblings.length + ' 个' };
       });
     },
+
     setMenuEditorOrder: function (item, value) {
       if (!item || this.menuEditorSaving || this.menuEditorItemIsRemoved(item)) { return; }
       var siblings = this.menuEditorChildren(Number(item.parent || 0));
@@ -129,6 +146,7 @@
       // 与 WordPress 一致：菜单排序仅计算同级项，并携带整棵子菜单一起移动。
       this.moveMenuEditorBlock(this.menuEditorItemKey(item), this.menuEditorItemKey(siblings[position - 1]), position - 1 < current ? 'before' : 'after');
     },
+
     menuEditorParentOptions: function (item) {
       var options = [{ value: '0', label: '无父级' }];
       (this.menuEditor.items || []).forEach(function (entry) {
@@ -138,6 +156,7 @@
       }.bind(this));
       return options;
     },
+
     setMenuEditorParent: function (item, value) {
       if (!item || this.menuEditorSaving || this.menuEditorItemIsRemoved(item) || Number(item.parent || 0) === Number(value)) { return; }
       var parent = Number(value) > 0 ? (this.menuEditor.items || []).find(function (entry) { return Number(entry.id) === Number(value); }) : null;
@@ -168,21 +187,26 @@
       }
       return depth;
     },
+
     menuEditorIndent: function (item) {
       var depth = this.menuEditorItemDepth(item);
       return Math.max(0, depth - 1) * 10 + 'px';
     },
+
     menuEditorFind: function (key) {
       if (!key || !this.menuEditor) { return null; }
       return (this.menuEditor.items || []).find(function (item, index) { return this.menuEditorItemKey(item, index) === key && !this.menuEditorItemIsRemoved(item); }.bind(this)) || null;
     },
+
     menuEditorChildren: function (parentId) {
       return (this.menuEditor && this.menuEditor.items || []).filter(function (item) { return Number(item.parent || 0) === Number(parentId || 0) && !this.menuEditorItemIsRemoved(item); }.bind(this));
     },
+
     menuEditorItemChildCount: function (item) {
       if (!item || !Number(item.id || 0) || !this.menuEditor || !Array.isArray(this.menuEditor.items)) { return 0; }
       return this.menuEditorChildren(item.id).length;
     },
+
     menuEditorItemHasChildren: function (item) {
       return this.menuEditorItemChildCount(item) > 0;
     },
@@ -191,6 +215,7 @@
       var parent = this.menuEditorFind(this.menuEditorScopeKey);
       return !item || Number(item.parent || 0) !== Number(parent ? parent.id : 0) || this.menuEditorItemIsRemoved(item);
     },
+
     selectMenuEditorItem: function (item, index, trigger, setting) {
       if (!item || this.menuEditorItemIsRemoved(item)) { return; }
       setting = this.menuEditorSettings().some(function (entry) { return entry.id === setting; }) ? setting : 'title';
@@ -220,6 +245,7 @@
         });
       });
     },
+
     positionMenuItemEditor: function () {
       if (!this.menuEditOpen) { return; }
       var trigger = this._menuEditTrigger || this.$refs.menuActionsPanel;
@@ -229,10 +255,12 @@
       var position = limit && this.menuFloatingPosition(trigger, 320, Math.min(limit.height, panel ? panel.scrollHeight + 2 : 240), 260);
       if (position) { position.height = limit.height; this.menuEditPosition = position; } else { this.closeMenuItemEditor(false); }
     },
+
     menuItemEditorStyle: function () {
       var p = this.menuEditPosition;
       return { left: p.left + 'px', top: p.top + 'px', width: p.width + 'px', maxHeight: p.height + 'px', visibility: p.ready ? 'visible' : 'hidden', '--eva-menu-anchor-y': p.arrow + 'px', '--eva-menu-anchor-gap': p.gap + 'px' };
     },
+
     closeMenuItemEditor: function (restoreFocus) {
       var trigger = this._menuEditTrigger;
       this.menuEditOpen = false;
@@ -240,6 +268,7 @@
       this._menuEditTrigger = null;
       if (restoreFocus !== false && trigger && trigger.isConnected) { trigger.focus({ preventScroll: true }); }
     },
+
     moveMenuEditorItem: function (index, delta) {
       if (!this.menuEditor || !Array.isArray(this.menuEditor.items)) { return; }
       var next = index + delta;
@@ -250,6 +279,7 @@
       this.menuEditor.items = items;
       this.markMenuEditorDirty();
     },
+
     addCustomMenuItem: function () {
       if (!this.menuEditor || !Number(this.menuEditor.menu_id || 0)) { return; }
       var key = 'new-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7);
@@ -258,10 +288,12 @@
       this.markMenuEditorDirty();
       this.menuEditorStatus = '填写名称和链接后，点击左下角保存';
     },
+
     menuEditorItemIsRemoved: function (item) {
       var id = Number(item && item.id || 0);
       return id > 0 && this.menuEditorRemovedIds.indexOf(id) !== -1;
     },
+
     removeMenuEditorItem: function (index) {
       if (!this.menuEditor || !Array.isArray(this.menuEditor.items)) { return; }
       var item = this.menuEditor.items[index];
@@ -273,6 +305,7 @@
       }
       this.deleteMenuEditorItem(index);
     },
+
     confirmMenuEditorRemoval: function () {
       var request = this.menuDeleteRequest;
       this.menuDeleteRequest = null;
@@ -280,6 +313,7 @@
       var index = this.menuEditor.items.findIndex(function (item) { return Number(item.id || 0) === request.itemId; });
       if (index !== -1) { this.deleteMenuEditorItem(index); }
     },
+
     deleteMenuEditorItem: function (index) {
       if (!this.menuEditor || !Array.isArray(this.menuEditor.items)) { return; }
       var item = this.menuEditor.items[index];

@@ -1,22 +1,106 @@
-(function(){
+(function () {
   'use strict';
-  window.EvaFields=window.EvaFields||{};
-  window.EvaFields.repeater={
-    props:['field','modelValue'],emits:['update:modelValue'],data:function(){return{collapsed:{}};},
-    computed:{fields:function(){return this.field.fields||this.field.items||[];},rows:function(){return Array.isArray(this.modelValue)?this.modelValue:[];},minRows:function(){return Math.max(0,Number(this.field.min||0));},maxRows:function(){return Math.max(this.minRows,Number(this.field.max||50));}},
-    methods:{
-      tv:function(v){return window.EvaI18n.tv(v);},
-      rowTitle:function(row,index){var key=this.field.title_field||this.field.titleField;return key&&row&&row[key]?String(row[key]):this.tv(this.field.item_title||this.field.itemTitle||'项目')+' '+(index+1);},
-      valueFor:function(row,child){return window.EvaAdvanced.value(window.EvaAdvanced.object(row),child);},
-      emitRows:function(rows){this.$emit('update:modelValue',rows);},
-      add:function(){if(this.field.disabled||this.rows.length>=this.maxRows){return;}this.emitRows(this.rows.concat([window.EvaAdvanced.defaults(this.fields)]));},
-      remove:function(index){if(this.field.disabled||this.rows.length<=this.minRows){return;}var next=this.rows.slice();next.splice(index,1);this.emitRows(next);},
-      duplicate:function(index){if(this.field.disabled||this.rows.length>=this.maxRows){return;}var next=this.rows.slice();next.splice(index+1,0,window.EvaAdvanced.clone(this.rows[index]));this.emitRows(next);},
-      move:function(index,delta){if(this.field.disabled){return;}var target=index+delta;if(target<0||target>=this.rows.length){return;}var next=this.rows.slice(),item=next.splice(index,1)[0];next.splice(target,0,item);this.emitRows(next);},
-      updateChild:function(index,child,value){var next=this.rows.map(function(row){return Object.assign({},window.EvaAdvanced.object(row));});next[index][child.id]=value;this.emitRows(next);},
-      toggle:function(index){this.collapsed[index]=!this.collapsed[index];},col:window.EvaAdvanced.width
+
+  window.EvaFields = window.EvaFields || {};
+  window.EvaFields.repeater = {
+    props: ['field', 'modelValue'],
+    emits: ['update:modelValue'],
+
+    data: function () {
+      return {
+        collapsed: {}
+      };
     },
-    template:[
+    computed: {
+
+      fields: function () {
+        return this.field.fields || this.field.items || [];
+      },
+
+      rows: function () {
+        return Array.isArray(this.modelValue) ? this.modelValue : [];
+      },
+
+      minRows: function () {
+        return Math.max(0, Number(this.field.min || 0));
+      },
+
+      maxRows: function () {
+        return Math.max(this.minRows, Number(this.field.max || 50));
+      }
+    },
+    methods: {
+
+      tv: function (v) {
+        return window.EvaI18n.tv(v);
+      },
+
+      rowTitle: function (row, index) {
+        var key = this.field.title_field || this.field.titleField;
+        return key && row && row[key] ? String(row[key]) : this.tv(this.field.item_title || this.field.itemTitle || '项目') + ' ' + (index + 1);
+      },
+
+      valueFor: function (row, child) {
+        return window.EvaAdvanced.value(window.EvaAdvanced.object(row), child);
+      },
+
+      emitRows: function (rows) {
+        this.$emit('update:modelValue', rows);
+      },
+
+      add: function () {
+        if (this.field.disabled || this.rows.length >= this.maxRows) {
+          return;
+        }
+        this.emitRows(this.rows.concat([window.EvaAdvanced.defaults(this.fields)]));
+      },
+
+      remove: function (index) {
+        if (this.field.disabled || this.rows.length <= this.minRows) {
+          return;
+        }
+        var next = this.rows.slice();
+        next.splice(index, 1);
+        this.emitRows(next);
+      },
+
+      duplicate: function (index) {
+        if (this.field.disabled || this.rows.length >= this.maxRows) {
+          return;
+        }
+        var next = this.rows.slice();
+        next.splice(index + 1, 0, window.EvaAdvanced.clone(this.rows[index]));
+        this.emitRows(next);
+      },
+
+      move: function (index, delta) {
+        if (this.field.disabled) {
+          return;
+        }
+        var target = index + delta;
+        if (target < 0 || target >= this.rows.length) {
+          return;
+        }
+        var next = this.rows.slice(),
+          item = next.splice(index, 1)[0];
+        next.splice(target, 0, item);
+        this.emitRows(next);
+      },
+
+      updateChild: function (index, child, value) {
+        var next = this.rows.map(function (row) {
+          return Object.assign({}, window.EvaAdvanced.object(row));
+        });
+        next[index][child.id] = value;
+        this.emitRows(next);
+      },
+
+      toggle: function (index) {
+        this.collapsed[index] = !this.collapsed[index];
+      },
+      col: window.EvaAdvanced.width
+    },
+    template: [
       '<div class="eva-repeater" :class="{\'is-disabled\':field.disabled}">',
       '<div v-if="!rows.length" class="eva-repeater-empty"><i class="ri-stack-line"></i><span>{{tv(field.empty_text||\'暂无项目\')}}</span></div>',
       '<section v-for="(row,index) in rows" :key="index" class="eva-repeater-item">',

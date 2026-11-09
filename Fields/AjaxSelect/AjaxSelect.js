@@ -18,12 +18,12 @@
 
   // 功能：处理 Cfg 相关逻辑。
   function Cfg() {
-    return (window.EvaFW && window.EvaFW.config) || {};
+    return window.EvaFW && window.EvaFW.config || {};
   }
 
   // 功能：处理 Tv 相关逻辑。
   function Tv(value) {
-    return window.EvaI18n && window.EvaI18n.tv ? window.EvaI18n.tv(value) : (value || '');
+    return window.EvaI18n && window.EvaI18n.tv ? window.EvaI18n.tv(value) : value || '';
   }
 
   // 功能：处理 Post Type Param 相关逻辑。
@@ -33,10 +33,10 @@
     }
     return postType || 'post,page';
   }
-
   window.EvaFields.ajax_select = {
     props: ['field', 'modelValue'],
     emits: ['update:modelValue'],
+
     // 功能：初始化组件响应式状态与对外数据。
     data: function () {
       return {
@@ -51,10 +51,12 @@
       };
     },
     computed: {
+
       // 功能：处理 min Chars 相关逻辑。
       minChars: function () {
         return Math.max(0, parseInt(this.field.min_chars || this.field.minChars || 2, 10) || 0);
       },
+
       // 功能：处理 value Label 相关逻辑。
       valueLabel: function () {
         if (this.isMultiple) {
@@ -63,20 +65,24 @@
         if (this.selected[0] && this.selected[0].label) {
           return this.selected[0].label;
         }
-        return this.modelValue ? ('#' + this.modelValue) : Tv(this.field.placeholder || '请选择');
+        return this.modelValue ? '#' + this.modelValue : Tv(this.field.placeholder || '请选择');
       },
+
       // 功能：判断 is Placeholder 状态。
       isPlaceholder: function () {
         return this.isMultiple ? !this.values.length : !this.modelValue;
       },
+
       // 功能：判断 is Multiple 状态。
       isMultiple: function () {
         return this.field.multiple === true || this.field.multiple === 'true';
       },
+
       // 功能：判断 can Sort 状态。
       canSort: function () {
         return this.isMultiple && (this.field.sortable === true || this.field.sortable === 'true');
       },
+
       // 功能：处理 values 相关逻辑。
       values: function () {
         if (this.isMultiple) {
@@ -85,6 +91,7 @@
         return this.modelValue ? [String(this.modelValue)] : [];
       }
     },
+
     // 功能：组件挂载后执行初始化和事件绑定。
     mounted: function () {
       document.addEventListener('mousedown', this.onDocDown, true);
@@ -92,6 +99,7 @@
         this.fetchItems('', this.values.join(','));
       }
     },
+
     // 功能：组件销毁前清理事件、计时器或临时状态。
     beforeUnmount: function () {
       document.removeEventListener('mousedown', this.onDocDown, true);
@@ -101,15 +109,19 @@
     },
     methods: {
       Tv: Tv,
+
       // 功能：处理 on Doc Down 相关逻辑。
       onDocDown: function (e) {
         if (this.open && this.$el && !this.$el.contains(e.target)) {
           this.close();
         }
       },
+
       // 功能：打开 open Menu 相关界面或状态。
       openMenu: function () {
-        if (this.field.disabled) { return; }
+        if (this.field.disabled) {
+          return;
+        }
         this.open = true;
         this.error = '';
         var self = this;
@@ -119,6 +131,7 @@
           }
         });
       },
+
       // 功能：关闭 close 相关界面或状态。
       close: function () {
         this.open = false;
@@ -126,12 +139,16 @@
         this.items = [];
         this.error = '';
       },
+
       // 功能：清空 clear 相关状态。
       clear: function () {
-        if (this.field.disabled) { return; }
+        if (this.field.disabled) {
+          return;
+        }
         this.selected = [];
         this.$emit('update:modelValue', this.isMultiple ? [] : '');
       },
+
       // 功能：处理 on Input 相关逻辑。
       onInput: function () {
         var self = this;
@@ -142,6 +159,7 @@
           self.fetchItems(self.query, 0);
         }, 220);
       },
+
       // 功能：处理 fetch Items 相关逻辑。
       fetchItems: function (query, includeId) {
         var q = (query || '').trim();
@@ -150,7 +168,6 @@
           this.loading = false;
           return;
         }
-
         var params = new URLSearchParams();
         params.set('action', 'eva_fw_search_posts');
         params.set('nonce', Cfg().nonce || '');
@@ -161,26 +178,23 @@
         } else {
           params.set('q', q);
         }
-
         var self = this;
         this.loading = true;
         this.error = '';
-        window.EvaApi.action(params)
-          .then(function (res) {
-            var items = (res && res.success && res.data && Array.isArray(res.data.items)) ? res.data.items : [];
-            if (includeId) {
-              self.selected = self.sortItemsByValues(items, String(includeId).split(','));
-            } else {
-              self.items = items;
-            }
-          })
-          .catch(function () {
-            self.error = '搜索失败';
-          })
-          .then(function () {
-            self.loading = false;
-          });
+        window.EvaApi.action(params).then(function (res) {
+          var items = res && res.success && res.data && Array.isArray(res.data.items) ? res.data.items : [];
+          if (includeId) {
+            self.selected = self.sortItemsByValues(items, String(includeId).split(','));
+          } else {
+            self.items = items;
+          }
+        }).catch(function () {
+          self.error = '搜索失败';
+        }).then(function () {
+          self.loading = false;
+        });
       },
+
       // 功能：处理 pick 相关逻辑。
       pick: function (item) {
         if (this.isMultiple) {
@@ -192,7 +206,9 @@
             this.selected.push(item);
           } else {
             values.splice(index, 1);
-            this.selected = this.selected.filter(function (selected) { return String(selected.value) !== value; });
+            this.selected = this.selected.filter(function (selected) {
+              return String(selected.value) !== value;
+            });
           }
           this.$emit('update:modelValue', values);
           return;
@@ -201,22 +217,32 @@
         this.$emit('update:modelValue', item.value);
         this.close();
       },
+
       // 功能：判断 is Selected 状态。
       isSelected: function (item) {
         return this.values.indexOf(String(item.value)) !== -1;
       },
+
       // 功能：移除 remove Value 对应条目。
       removeValue: function (value) {
         var stringValue = String(value);
-        var values = this.values.filter(function (item) { return item !== stringValue; });
-        this.selected = this.selected.filter(function (item) { return String(item.value) !== stringValue; });
+        var values = this.values.filter(function (item) {
+          return item !== stringValue;
+        });
+        this.selected = this.selected.filter(function (item) {
+          return String(item.value) !== stringValue;
+        });
         this.$emit('update:modelValue', values);
       },
+
       // 功能：处理 drag Start 相关逻辑。
       dragStart: function (index) {
-        if (!this.canSort) { return; }
+        if (!this.canSort) {
+          return;
+        }
         this.dragIndex = index;
       },
+
       // 功能：处理 drop Value 相关逻辑。
       dropValue: function (index) {
         if (!this.canSort || this.dragIndex === null || this.dragIndex === index) {
@@ -233,11 +259,16 @@
         this.selected = selected;
         this.$emit('update:modelValue', values);
       },
+
       // 功能：处理 sort Items By Values 相关逻辑。
       sortItemsByValues: function (items, values) {
         return values.map(function (value) {
-          return items.filter(function (item) { return String(item.value) === String(value); })[0] || null;
-        }).filter(function (item) { return !!item; });
+          return items.filter(function (item) {
+            return String(item.value) === String(value);
+          })[0] || null;
+        }).filter(function (item) {
+          return !!item;
+        });
       }
     },
     template: [

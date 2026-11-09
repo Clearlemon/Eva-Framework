@@ -1,19 +1,71 @@
-(function(){
+(function () {
   'use strict';
-  window.EvaFields=window.EvaFields||{};
-  window.EvaFields.typography={
-    props:['field','modelValue'],emits:['update:modelValue'],
-    computed:{
-      value:function(){return window.EvaAdvanced.object(this.modelValue);},
-      fonts:function(){return window.EvaAdvanced.options(this.field.fonts||this.field.options,{
-        'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif':'系统默认',
-        'Arial, sans-serif':'Arial','"Helvetica Neue", Helvetica, sans-serif':'Helvetica Neue','Georgia, serif':'Georgia','"Times New Roman", serif':'Times New Roman','ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace':'Monospace'
-      });},
-      colorField:function(){return{type:'color',alpha:this.field.alpha!==false,presets:this.field.presets||[],placeholder:'#111827'};},
-      fontOptions:function(){var self=this;return this.fonts.map(function(item){return{value:item.value,label:self.tv(item.label)};});}
+
+  window.EvaFields = window.EvaFields || {};
+  window.EvaFields.typography = {
+    props: ['field', 'modelValue'],
+    emits: ['update:modelValue'],
+    computed: {
+
+      value: function () {
+        return window.EvaAdvanced.object(this.modelValue);
+      },
+
+      fonts: function () {
+        return window.EvaAdvanced.options(this.field.fonts || this.field.options, {
+          'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif': '系统默认',
+          'Arial, sans-serif': 'Arial',
+          '"Helvetica Neue", Helvetica, sans-serif': 'Helvetica Neue',
+          'Georgia, serif': 'Georgia',
+          '"Times New Roman", serif': 'Times New Roman',
+          'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace': 'Monospace'
+        });
+      },
+
+      colorField: function () {
+        return {
+          type: 'color',
+          alpha: this.field.alpha !== false,
+          presets: this.field.presets || [],
+          placeholder: '#111827'
+        };
+      },
+
+      fontOptions: function () {
+        var self = this;
+        return this.fonts.map(function (item) {
+          return {
+            value: item.value,
+            label: self.tv(item.label)
+          };
+        });
+      }
     },
-    methods:{tv:function(v){return window.EvaI18n.tv(v);},visible:function(name){var snake='show_'+name,camel='show'+name.split('_').map(function(part){return part.charAt(0).toUpperCase()+part.slice(1);}).join('');return this.field[snake]!==false&&this.field[camel]!==false;},get:function(key,fallback){return this.value[key]!==undefined?this.value[key]:fallback;},set:function(key,value){var next=Object.assign({},this.value);next[key]=value;this.$emit('update:modelValue',next);}},
-    template:[
+    methods: {
+
+      tv: function (v) {
+        return window.EvaI18n.tv(v);
+      },
+
+      visible: function (name) {
+        var snake = 'show_' + name,
+          camel = 'show' + name.split('_').map(function (part) {
+            return part.charAt(0).toUpperCase() + part.slice(1);
+          }).join('');
+        return this.field[snake] !== false && this.field[camel] !== false;
+      },
+
+      get: function (key, fallback) {
+        return this.value[key] !== undefined ? this.value[key] : fallback;
+      },
+
+      set: function (key, value) {
+        var next = Object.assign({}, this.value);
+        next[key] = value;
+        this.$emit('update:modelValue', next);
+      }
+    },
+    template: [
       '<div class="eva-advanced-card eva-typography"><div class="eva-advanced-grid">',
       '<label v-if="visible(\'family\')" class="eva-advanced-control eva-advanced-col-6"><span>字体</span><eva-select :options="fontOptions" :model-value="get(\'family\',\'\')" :disabled="field.disabled" @update:model-value="set(\'family\',$event)"></eva-select></label>',
       '<label v-if="visible(\'size\')" class="eva-advanced-control eva-advanced-col-3"><span>字号</span><div class="eva-advanced-number"><input type="number" min="0" step="0.1" :value="get(\'size\',\'\')" :disabled="field.disabled" @input="set(\'size\',$event.target.value)"><eva-select :options="{px:\'px\',rem:\'rem\',em:\'em\',\'%\':\'%\',vw:\'vw\'}" :model-value="get(\'size_unit\',\'px\')" :disabled="field.disabled" @update:model-value="set(\'size_unit\',$event)"></eva-select></div></label>',

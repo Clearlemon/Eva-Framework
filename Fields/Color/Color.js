@@ -9,7 +9,9 @@
     props: ['field', 'modelValue'],
     emits: ['update:modelValue'],
     methods: {
+
       tv: function (value) { return window.EvaI18n.tv(value); },
+
       tt: function (key) { return window.EvaI18n.t(key); }
     },
     template:

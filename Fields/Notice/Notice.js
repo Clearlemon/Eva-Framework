@@ -45,6 +45,7 @@
       props: ['field', 'modelValue'],
       emits: ['update:modelValue'],
       computed: {
+
         body: function () { return Body_Of(this.field); }
       },
       template: '<div class="' + className + '" v-html="body"></div>'
@@ -55,11 +56,14 @@
     props: ['field', 'modelValue'],
     emits: ['update:modelValue'],
     computed: {
+
       body: function () { return Body_Of(this.field); },
+
       style: function () {
         var style = String((this.field && this.field.style) || 'normal').toLowerCase();
         return STYLES.indexOf(style) !== -1 ? style : 'normal';
       },
+
       icon: function () {
         var icon = this.field ? this.field.icon : '';
         if (icon === false || icon === 'false') { return ''; }

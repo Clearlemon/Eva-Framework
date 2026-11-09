@@ -4,6 +4,7 @@
 
 
   runtime.menuPanels = {
+
     menuAddGroups: function () {
       return [
         { id: 'custom', label: '自定义链接', icon: 'ri-link' },
@@ -13,6 +14,7 @@
         { id: 'post_tag', label: '标签', icon: 'ri-price-tag-3-line' }
       ];
     },
+
     openMenuAddPanel: function (parent) {
       this.closeMenuLocations(false);
       this.closeMenuActions(false);
@@ -35,6 +37,7 @@
         if (input) { input.focus({ preventScroll: true }); }
       }.bind(this));
     },
+
     toggleMenuLocations: function () {
       if (this.menuLocationsOpen) { this.closeMenuLocations(); return; }
       if (!this.menuEditor || !Number(this.menuEditor.menu_id)) { return; }
@@ -51,27 +54,34 @@
         if (first) { first.focus({ preventScroll: true }); }
       });
     },
+
     closeMenuLocations: function (restoreFocus) {
       this.menuLocationsOpen = false;
       this.menuLocationsPosition.ready = false;
       if (!this.menuAddOpen && !this.menuSubmenuOpen) { this.stopMenuAddTracking(); }
       if (restoreFocus !== false) { this.$nextTick(function () { if (this.$refs.menuLocationsTrigger) { this.$refs.menuLocationsTrigger.focus({ preventScroll: true }); } }); }
     },
+
     positionMenuLocations: function () {
       if (!this.menuLocationsOpen || !this.$refs.menuLocationsPanel || !this.$refs.menuLocationsTrigger) { return; }
       var count = this.menuEditor && this.menuEditor.locations ? this.menuEditor.locations.length : 0;
       var position = this.menuFloatingPosition(this.$refs.menuLocationsTrigger, 360, Math.min(650, 160 + count * 62), 280);
       if (position) { this.menuLocationsPosition = position; } else { this.closeMenuLocations(false); }
     },
+
     menuLocationsStyle: function () {
       var p = this.menuLocationsPosition;
       return { left: p.left + 'px', top: p.top + 'px', width: p.width + 'px', height: p.height + 'px', visibility: p.ready ? 'visible' : 'hidden', '--eva-menu-anchor-y': p.arrow + 'px', '--eva-menu-anchor-gap': p.gap + 'px' };
     },
+
     activeMenuAuxPanel: function () { return this.menuLocationsOpen ? this.$refs.menuLocationsPanel : (this.menuSubmenuOpen ? this.$refs.menuSubmenuPanel : this.$refs.menuAddPanel); },
+
     activeMenuAuxTrigger: function () { return this.menuLocationsOpen ? this.$refs.menuLocationsTrigger : (this.menuSubmenuOpen ? this._menuSubmenuAnchor : this.$refs.menuAddTrigger); },
+
     toggleMenuAddPanel: function () {
       if (this.menuAddOpen) { this.closeMenuAddPanel(); } else { this.openMenuAddPanel(); }
     },
+
     closeMenuAddPanel: function (restoreFocus) {
       this.menuAddOpen = false;
       this.menuAddPosition.ready = false;
@@ -79,9 +89,11 @@
       this.pauseMenuAddRequests();
       if (restoreFocus !== false) { this.$nextTick(function () { if (this.$refs.menuAddTrigger) { this.$refs.menuAddTrigger.focus({ preventScroll: true }); } }.bind(this)); }
     },
+
     toggleMenuAddGroup: function (type) {
       this.selectMenuAddType(type);
     },
+
     selectMenuAddType: function (type) {
       if (!this.menuAddGroups().some(function (group) { return group.id === type; })) { return; }
       this.menuAddType = type;
@@ -89,6 +101,7 @@
       this.menuAddExpanded[type] = true;
       if (type !== 'custom') { this.loadMenuAddItems(type); }
     },
+
     moveMenuAddType: function (delta) {
       var groups = this.menuAddFilteredGroups;
       if (!groups.length) { return; }
@@ -100,19 +113,23 @@
         if (button) { button.focus(); }
       }.bind(this));
     },
+
     menuAddTabIndex: function (type) {
       var groups = this.menuAddFilteredGroups;
       if (type === this.menuAddType) { return 0; }
       if (groups.some(function (group) { return group.id === this.menuAddType; }.bind(this))) { return -1; }
       return groups.length && groups[0].id === type ? 0 : -1;
     },
+
     menuAddDescription: function (type) {
       return type === 'custom' ? '添加任意站内或站外链接' : '选择' + this.menuAddGroups().find(function (group) { return group.id === type; }).label + '，添加到左侧菜单';
     },
+
     menuAddPanelStyle: function () {
       var p = this.menuAddPosition;
       return { left: p.left + 'px', top: p.top + 'px', width: p.width + 'px', height: p.height + 'px', visibility: p.ready ? 'visible' : 'hidden', '--eva-menu-anchor-y': p.arrow + 'px', '--eva-menu-anchor-gap': p.gap + 'px' };
     },
+
     menuFloatingPosition: function (trigger, desiredWidth, desiredHeight, minimumWidth) {
       var body = this.$el && this.$el.querySelector('.eva-pb-body');
       if (!trigger || !body) { return null; }
@@ -133,15 +150,18 @@
       var top = Math.max(topEdge, Math.min(center - 72, bottomEdge - height));
       return { left: left - bounds.left, top: top - bounds.top, width: width, height: height, arrow: Math.max(18, Math.min(center - top, height - 18)), gap: Math.max(8, side === 'right' ? left - anchor.right - 8 : anchor.left - left - width - 8), side: side, ready: true };
     },
+
     positionMenuAddPanel: function () {
       if (!this.menuAddOpen || !this.$refs.menuAddPanel || !this.$refs.menuAddTrigger) { return; }
       var position = this.menuFloatingPosition(this.$refs.menuAddTrigger, 427, 373, 280);
       if (position) { this.menuAddPosition = position; } else { this.closeMenuAddPanel(false); }
     },
+
     queueMenuAddPosition: function () {
       if ((!this.menuAddOpen && !this.menuSubmenuOpen && !this.menuLocationsOpen) || this._menuAddPositionFrame) { return; }
       this._menuAddPositionFrame = window.requestAnimationFrame(function () { this._menuAddPositionFrame = 0; this.positionMenuAddPanel(); this.positionMenuSubmenuPanel(); this.positionMenuLocations(); }.bind(this));
     },
+
     onMenuAddOutside: function (event) {
       if (!this.menuAddOpen && !this.menuSubmenuOpen && !this.menuLocationsOpen) { return; }
       var panel = this.activeMenuAuxPanel(), trigger = this.activeMenuAuxTrigger();
@@ -150,12 +170,14 @@
       this.closeMenuSubmenu(false);
       this.closeMenuLocations(false);
     },
+
     onMenuAddKeyDown: function (event) {
       if ((this.menuAddOpen || this.menuSubmenuOpen || this.menuLocationsOpen) && event.key === 'Escape' && !event.defaultPrevented) {
         event.preventDefault();
         if (this.menuLocationsOpen) { this.closeMenuLocations(); } else if (this.menuSubmenuOpen) { this.closeMenuSubmenu(); } else { this.closeMenuAddPanel(); }
       }
     },
+
     onMenuAddWindowBlur: function () {
       if (this._menuAddBlurTimer) { clearTimeout(this._menuAddBlurTimer); }
       this._menuAddBlurTimer = setTimeout(function () {
@@ -166,6 +188,7 @@
         }
       }.bind(this), 0);
     },
+
     startMenuAddTracking: function () {
       if (!this.$el || this._menuAddTracking || (!this.menuAddOpen && !this.menuSubmenuOpen && !this.menuLocationsOpen)) { return; }
       this._menuAddTracking = true;
@@ -185,6 +208,7 @@
         if (card) { this._menuAddResizeObserver.observe(card); }
       }
     },
+
     stopMenuAddTracking: function () {
       if (this._menuAddTracking) {
         document.removeEventListener('pointerdown', this._menuAddOutsideHandler, true);
@@ -219,6 +243,7 @@
         if (this.$refs.menuSubmenuSearch) { this.$refs.menuSubmenuSearch.focus({ preventScroll: true }); }
       }.bind(this));
     },
+
     enterMenuSubmenu: function (item) {
       if (!item || !Number(item.id) || this.menuEditorItemIsRemoved(item)) { return; }
       var key = this.menuEditorItemKey(item);
@@ -226,9 +251,11 @@
       this.menuSubmenuPath = this.menuSubmenuPath.concat(key);
       this.menuSubmenuQuery = '';
     },
+
     backMenuSubmenu: function () {
       if (this.menuSubmenuPath.length > 1) { this.menuSubmenuPath = this.menuSubmenuPath.slice(0, -1); this.menuSubmenuQuery = ''; }
     },
+
     closeMenuSubmenu: function (restoreFocus) {
       var anchor = this._menuSubmenuAnchor;
       this.menuSubmenuOpen = false;
@@ -239,6 +266,7 @@
       if (!this.menuAddOpen && !this.menuLocationsOpen) { this.stopMenuAddTracking(); }
       if (restoreFocus !== false && anchor) { this.$nextTick(function () { if (anchor.isConnected) { anchor.focus({ preventScroll: true }); } }); }
     },
+
     positionMenuSubmenuPanel: function () {
       if (!this.menuSubmenuOpen || !this.$refs.menuSubmenuPanel || !this._menuSubmenuAnchor) { return; }
       var parent = this.menuEditorFind(this.menuSubmenuPath[this.menuSubmenuPath.length - 1]);
@@ -248,10 +276,12 @@
       var position = this.menuFloatingPosition(anchor, 260, Math.min(600, Math.max(270, 180 + count * 34)), 240);
       if (position) { this.menuSubmenuPosition = position; } else { this.closeMenuSubmenu(false); }
     },
+
     menuSubmenuPanelStyle: function () {
       var p = this.menuSubmenuPosition;
       return { left: p.left + 'px', top: p.top + 'px', width: p.width + 'px', height: p.height + 'px', visibility: p.ready ? 'visible' : 'hidden', '--eva-menu-anchor-y': p.arrow + 'px', '--eva-menu-anchor-gap': p.gap + 'px' };
     },
+
     manageMenuSubmenu: function () {
       var parent = this.menuEditorFind(this.menuSubmenuPath[this.menuSubmenuPath.length - 1]);
       if (!parent) { return; }
@@ -259,6 +289,7 @@
       this.menuEditorSelectedItem = '';
       this.closeMenuSubmenu(false);
     },
+
     leaveMenuEditorScope: function () {
       var current = this.menuEditorFind(this.menuEditorScopeKey);
       var parent = current && Number(current.parent) > 0 ? (this.menuEditor.items || []).find(function (item) { return Number(item.id) === Number(current.parent); }) : null;
@@ -266,6 +297,7 @@
       this.menuEditorSelectedItem = '';
       this.closeMenuSubmenu(false);
     },
+
     editMenuSubmenuItem: function (item) {
       if (this.menuEditorItemHasChildren(item)) { this.enterMenuSubmenu(item); return; }
       var list = this.$refs.menuSubmenuPanel && this.$refs.menuSubmenuPanel.querySelector('.eva-pb-menu-submenu-list');
@@ -275,6 +307,7 @@
       this.selectMenuEditorItem(item, this.menuEditor.items.indexOf(item));
       if (this.menuActionKey) { this.menuSubmenuReturn = context; this._menuSubmenuReturnAnchor = anchor; }
     },
+
     returnToMenuSubmenu: function () {
       var context = this.menuSubmenuReturn, anchor = this._menuSubmenuReturnAnchor;
       if (!context) { return; }

@@ -1,11 +1,67 @@
-(function(){
+(function () {
   'use strict';
-  window.EvaFields=window.EvaFields||{};
-  window.EvaFields.border={
-    props:['field','modelValue'],emits:['update:modelValue'],
-    computed:{value:function(){return window.EvaAdvanced.object(this.modelValue);},width:function(){return window.EvaAdvanced.object(this.value.width);},radius:function(){return window.EvaAdvanced.object(this.value.radius);},colorField:function(){return{type:'color',alpha:true,presets:this.field.presets||[]};}},
-    methods:{visible:function(name){var snake='show_'+name,camel='show'+name.split('_').map(function(part){return part.charAt(0).toUpperCase()+part.slice(1);}).join('');return this.field[snake]!==false&&this.field[camel]!==false;},get:function(key,fallback){return this.value[key]!==undefined?this.value[key]:fallback;},set:function(key,value){var next=Object.assign({},this.value);next[key]=value;this.$emit('update:modelValue',next);},setPart:function(group,key,value){var next=Object.assign({},this.value),current=Object.assign({},window.EvaAdvanced.object(next[group])),linkKey=group==='width'?'linked_width':'linked_radius';current[key]=value;if(next[linkKey]){Object.keys(current).forEach(function(k){current[k]=value;});}next[group]=current;this.$emit('update:modelValue',next);}},
-    template:[
+
+  window.EvaFields = window.EvaFields || {};
+  window.EvaFields.border = {
+    props: ['field', 'modelValue'],
+    emits: ['update:modelValue'],
+    computed: {
+
+      value: function () {
+        return window.EvaAdvanced.object(this.modelValue);
+      },
+
+      width: function () {
+        return window.EvaAdvanced.object(this.value.width);
+      },
+
+      radius: function () {
+        return window.EvaAdvanced.object(this.value.radius);
+      },
+
+      colorField: function () {
+        return {
+          type: 'color',
+          alpha: true,
+          presets: this.field.presets || []
+        };
+      }
+    },
+    methods: {
+
+      visible: function (name) {
+        var snake = 'show_' + name,
+          camel = 'show' + name.split('_').map(function (part) {
+            return part.charAt(0).toUpperCase() + part.slice(1);
+          }).join('');
+        return this.field[snake] !== false && this.field[camel] !== false;
+      },
+
+      get: function (key, fallback) {
+        return this.value[key] !== undefined ? this.value[key] : fallback;
+      },
+
+      set: function (key, value) {
+        var next = Object.assign({}, this.value);
+        next[key] = value;
+        this.$emit('update:modelValue', next);
+      },
+
+      setPart: function (group, key, value) {
+        var next = Object.assign({}, this.value),
+          current = Object.assign({}, window.EvaAdvanced.object(next[group])),
+          linkKey = group === 'width' ? 'linked_width' : 'linked_radius';
+        current[key] = value;
+        if (next[linkKey]) {
+          Object.keys(current).forEach(function (k) {
+            current[k] = value;
+          });
+        }
+        next[group] = current;
+        this.$emit('update:modelValue', next);
+      }
+    },
+    template: [
       '<div class="eva-advanced-card eva-border-field"><div class="eva-advanced-grid">',
       '<label v-if="visible(\'style\')" class="eva-advanced-control eva-advanced-col-3"><span>边框样式</span><eva-select :options="{none:\'无\',solid:\'实线\',dashed:\'虚线\',dotted:\'点线\',double:\'双线\'}" :model-value="get(\'style\',\'solid\')" @update:model-value="set(\'style\',$event)"></eva-select></label>',
       '<div v-if="visible(\'color\')" class="eva-advanced-control eva-advanced-col-3"><span>边框颜色</span><eva-field :field="colorField" :model-value="get(\'color\',\'\')" @update:model-value="set(\'color\',$event)"></eva-field></div>',

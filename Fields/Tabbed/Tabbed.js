@@ -13,16 +13,20 @@
  */
 (function () {
   'use strict';
-  window.EvaFields = window.EvaFields || {};
 
+  window.EvaFields = window.EvaFields || {};
   window.EvaFields.tabbed = {
     props: ['field', 'modelValue'],
     emits: ['update:modelValue'],
+
     // 功能：初始化组件响应式状态与对外数据。
     data: function () {
-      return { active: '' };
+      return {
+        active: ''
+      };
     },
     computed: {
+
       // 功能：把字段配置里的 tabs 转成 <eva-tabs> 需要的结构。
       tabs: function () {
         var self = this;
@@ -30,7 +34,7 @@
           tab = tab || {};
           return {
             key: String(index),
-            label: tab.title || tab.label || ('Tab ' + (index + 1)),
+            label: tab.title || tab.label || 'Tab ' + (index + 1),
             icon: self.iconOf(tab.icon),
             badge: tab.badge,
             disabled: !!tab.disabled,
@@ -38,26 +42,36 @@
           };
         });
       },
+
       // 功能：当前值（始终按对象处理）。
       value: function () {
         return window.EvaAdvanced.object(this.modelValue);
       }
     },
+
     // 功能：组件创建时定位默认标签页。
     created: function () {
       var index = Number(this.field.default_tab || this.field.defaultTab || 0);
       this.active = String(isFinite(index) && index >= 0 ? Math.floor(index) : 0);
     },
     methods: {
+
       // 功能：处理 tv 相关逻辑。
-      tv: function (value) { return window.EvaI18n.tv(value); },
+      tv: function (value) {
+        return window.EvaI18n.tv(value);
+      },
+
       // 功能：外壳只加载了 Remix 与 Dashicons 字体；CSF 写法里的 Font Awesome 类名画不出来，干脆不显示。
       iconOf: function (icon) {
         icon = String(icon || '').trim();
         return /^(ri-|dashicons)/.test(icon) ? icon : '';
       },
+
       // 功能：取子字段当前值，没存过时用它自己的 default。
-      valueFor: function (child) { return window.EvaAdvanced.value(this.value, child); },
+      valueFor: function (child) {
+        return window.EvaAdvanced.value(this.value, child);
+      },
+
       // 功能：更新子字段值并整体回传。
       updateChild: function (child, value) {
         var next = Object.assign({}, this.value);
@@ -68,7 +82,7 @@
     },
     template: [
       // 外观沿用 group / repeater 的卡片与 12 栅格（AdvancedFields.css），不另起一套样式。
-      '<div class="eva-advanced-card eva-tabbed-field" :class="{ \'is-disabled\': field.disabled }">',
+'<div class="eva-advanced-card eva-tabbed-field" :class="{ \'is-disabled\': field.disabled }">',
       '  <eva-tabs :tabs="tabs" v-model="active" :disabled="!!field.disabled">',
       '    <template #default="{ tab }">',
       '      <div class="eva-advanced-grid">',

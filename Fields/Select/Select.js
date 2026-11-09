@@ -17,6 +17,7 @@
  *   会在这里转换为 select 配置，仅作为向后兼容入口。
  */
 (function () {
+
   function legacySource(type) {
     var sources = {
       ajax_select: 'posts',
@@ -41,7 +42,6 @@
     var type = String(field.type || 'select').toLowerCase();
     var source = field.source || field.data_source || legacySource(type);
     var relationship = type === 'relationship' || String(field.variant || '').toLowerCase() === 'relationship';
-
     next.type = 'select';
     if (source) {
       next.source = source;
@@ -52,36 +52,50 @@
       next.source = field.source || field.data_source || field.resource || 'posts';
       next.ajax = true;
       next.multiple = true;
-      if (typeof field.sortable === 'undefined') { next.sortable = true; }
+      if (typeof field.sortable === 'undefined') {
+        next.sortable = true;
+      }
     }
     return next;
   }
-
   window.EvaFields = window.EvaFields || {};
   window.EvaFields.select = {
     props: ['field', 'modelValue'],
     emits: ['update:modelValue'],
     computed: {
+
       normalizedField: function () {
         return normalizedField(this.field);
       },
+
       isRelationship: function () {
         return this.normalizedField.variant === 'relationship';
       },
+
       // 普通远程数据使用 ResourceSelect；双栏模式复用 Relationship。
       remoteComponent: function () {
         var fields = window.EvaFields || {};
-        if (this.isRelationship) { return fields.relationship || null; }
+        if (this.isRelationship) {
+          return fields.relationship || null;
+        }
         var source = this.normalizedField.source;
-        if (source && fields.resource_select) { return fields.resource_select; }
+        if (source && fields.resource_select) {
+          return fields.resource_select;
+        }
         return fields.ajax_select || null;
       },
+
       isRemote: function () {
         var field = this.normalizedField;
         return !!(field.ajax || field.source || field.data_source || this.isRelationship);
       }
     },
-    methods: { t: function (k) { return window.EvaI18n.t(k); } },
+    methods: {
+
+      t: function (k) {
+        return window.EvaI18n.t(k);
+      }
+    },
     template: [
       '<component v-if="isRemote && remoteComponent" :is="remoteComponent" :field="normalizedField" :model-value="modelValue" @update:model-value="$emit(\'update:modelValue\', $event)"></component>',
       '<eva-select v-else :options="normalizedField.options" :placeholder="normalizedField.placeholder || t(\'please_select\')"',

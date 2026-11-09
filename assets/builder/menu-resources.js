@@ -4,6 +4,7 @@
   var cfg = runtime.config;
 
   runtime.menuResources = {
+
     queueMenuAddSearch: function (type) {
       var state = this.menuAddRequestState(), timerKey = type || 'all';
       if (!type) { this.menuAddQueries = {}; }
@@ -26,17 +27,21 @@
         }.bind(this));
       }.bind(this), 180);
     },
+
     menuAddRequestState: function () {
       if (!this._menuAddState) { this._menuAddState = { cache: {}, pending: {}, queued: {}, keys: {}, batches: [], searchTimers: {}, timer: null, disposed: false }; }
       return this._menuAddState;
     },
+
     menuAddCacheKey: function (type, query) { return JSON.stringify([type, String(query || '').trim()]); },
+
     menuAddCached: function (type, query) {
       var state = this.menuAddRequestState(), key = this.menuAddCacheKey(type, query), entry = state.cache[key];
       if (entry && Date.now() - entry.time < 30000) { return entry; }
       delete state.cache[key];
       return null;
     },
+
     cacheMenuAddItems: function (type, query, items) {
       var state = this.menuAddRequestState();
       state.cache[this.menuAddCacheKey(type, query)] = { time: Date.now(), items: items };
@@ -46,6 +51,7 @@
         keys.slice(0, keys.length - 60).forEach(function (key) { delete state.cache[key]; });
       }
     },
+
     abortUnusedMenuAddBatches: function () {
       var state = this.menuAddRequestState();
       state.batches.forEach(function (batch) {
@@ -54,6 +60,7 @@
         batch.entries.forEach(function (entry) { if (state.pending[entry.key] === batch) { delete state.pending[entry.key]; } });
       });
     },
+
     pauseMenuAddRequests: function () {
       var state = this._menuAddState;
       if (!state) { return; }
@@ -67,10 +74,12 @@
       state.batches.forEach(function (batch) { batch.controller.abort(); });
       this.menuAddLoading = {};
     },
+
     stopMenuAddRequests: function () {
       this.pauseMenuAddRequests();
       if (this._menuAddState) { this._menuAddState.disposed = true; }
     },
+
     loadMenuAddItems: function (type) {
       if (!cfg.restActions) { this.menuAddErrors[type] = '资源接口不可用'; return; }
       var query = String(this.menuAddQueries[type] || this.menuAddSearch || '').trim();
@@ -89,6 +98,7 @@
       state.pending[key] = entry;
       if (!state.timer) { state.timer = setTimeout(this.fetchMenuAddBatch, 0); }
     },
+
     fetchMenuAddBatch: function () {
       var state = this.menuAddRequestState();
       state.timer = null;
@@ -126,28 +136,35 @@
         }.bind(this));
       }.bind(this));
     },
+
     menuAddIsSelected: function (type, item) {
       return (this.menuAddSelected[type] || []).some(function (entry) { return String(entry.value) === String(item.value); });
     },
+
     menuAddResourceMeta: function (resource) {
       var statuses = { publish: '已发布', draft: '草稿', private: '私密', pending: '待审核', future: '定时发布' };
       return statuses[resource.meta] || resource.meta || '';
     },
+
     toggleMenuAddSelected: function (type, item, checked) {
       var selected = (this.menuAddSelected[type] || []).filter(function (entry) { return String(entry.value) !== String(item.value); });
       if (checked) { selected.push(item); }
       this.menuAddSelected[type] = selected;
     },
+
     menuAddAllSelected: function (type) {
       var items = this.menuAddItems[type] || [];
       return items.length > 0 && items.every(function (item) { return this.menuAddIsSelected(type, item); }.bind(this));
     },
+
     toggleMenuAddAll: function (type, checked) {
       (this.menuAddItems[type] || []).forEach(function (item) { this.toggleMenuAddSelected(type, item, checked); }.bind(this));
     },
+
     menuAddCustomField: function () {
       return { id: 'new_menu_link', motion: this.menuMotionProps, type: 'link', internal_picker: false, show_url: true, show_text: true, show_target: true, show_rel: false, show_title: false, show_page: false, preview: false, placeholder: 'https://' };
     },
+
     addMenuEditorItems: function (items) {
       if (!this.menuEditor || !items.length) { return false; }
       var parent = this.menuEditorFind(this.menuAddParentKey), parentId = parent ? Number(parent.id) : 0;
@@ -166,6 +183,7 @@
       this.markMenuEditorDirty();
       return true;
     },
+
     addMenuCustomLink: function () {
       var value = this.menuAddCustom, url = String(value.url || '').trim(), title = String(value.text || '').trim();
       if (!title || !url || !/^(https?:|mailto:|tel:|#)/i.test(url)) { this.menuAddErrors.custom = '请填写链接文字和有效的链接地址'; return; }
@@ -174,6 +192,7 @@
         this.menuAddErrors.custom = '';
       }
     },
+
     addMenuResources: function (type) {
       var selected = this.menuAddSelected[type] || [];
       var isTerm = ['category', 'post_tag', 'post_format'].indexOf(type) !== -1;

@@ -5,6 +5,7 @@
   var clone = runtime.clone;
 
   runtime.modules = {
+
     // 功能：构建器模块分组。
     moduleTabs: function () {
       return [
@@ -14,6 +15,7 @@
         { id: 'container', label: '容器设置', icon: 'ri-settings-3-line' }
       ];
     },
+
     modulesForTab: function () {
       if (this.moduleTab !== 'components') { return []; }
       return this.moduleList().filter(function (item) {
@@ -34,6 +36,7 @@
       });
       return Object.keys(groups).map(function (key) { return groups[key]; });
     },
+
     // 功能：可构建的页面清单。字段传了 pages 就是多页面模式，
     // 顶栏出现页面下拉，每个页面各有自己的 slots 与预览地址。
     pages: function () {
@@ -48,6 +51,7 @@
         };
       });
     },
+
     // 功能：当前正在编辑的页面；未选择时取第一个。
     currentPage: function () {
       var pages = this.pages();
@@ -57,6 +61,7 @@
       }
       return pages[0];
     },
+
     // 功能：切换页面，同时把 slot 与选中项复位。
     switchPage: function (id) {
       this.previewReady = false;
@@ -67,6 +72,7 @@
       this.pageMenuOpen = false;
       this.queuePreview(0);
     },
+
     // 功能：Builder 可编辑的 hook slot 清单（多页面模式下取当前页面的）。
     slots: function () {
       var page = this.currentPage();
@@ -81,6 +87,7 @@
         };
       });
     },
+
     // 功能：当前正在编辑的 hook slot。
     currentSlotId: function () {
       var slots = this.slots();
@@ -89,11 +96,13 @@
       }
       return this.activeSlot || 'main';
     },
+
     // 功能：判断当前字段是否启用 slots 保存结构。
     usesSlots: function () {
       if (Array.isArray(this.field.pages) && this.field.pages.length) { return true; }
       return Array.isArray(this.field.slots) && this.field.slots.length > 0;
     },
+
     // 功能：把旧数组或新 slots 值统一成 slots 对象。
     builderValue: function () {
       var slots = {};
@@ -107,6 +116,7 @@
       }
       return { slots: slots };
     },
+
     // 功能：左侧模块清单。
     moduleList: function () {
       var reg = this.registry();
@@ -138,14 +148,17 @@
         };
       });
     },
+
     // 功能：取指定分组下的模块。
     modulesByGroup: function (group) {
       return this.modulesForTab().filter(function (item) { return item.group === group; });
     },
+
     // 功能：判断组件分组是否展开。
     isGroupOpen: function (group) {
       return this.collapsedGroups[group] !== true;
     },
+
     // 功能：折叠或展开组件分组。
     toggleGroup: function (group) {
       this.collapsedGroups[group] = !this.collapsedGroups[group];
@@ -156,10 +169,12 @@
       var reg = this.registry();
       return reg[type] && reg[type].label ? reg[type].label : type;
     },
+
     moduleIcon: function (type) {
       var reg = this.registry();
       return reg[type] && reg[type].icon ? reg[type].icon : 'ri-layout-line';
     },
+
     // 功能：当前页面实例数组（读取用，保持响应式）。
     items: function () {
       if (!this.usesSlots()) {
@@ -169,6 +184,7 @@
       var slot = this.currentSlotId();
       return Array.isArray(value.slots[slot]) ? value.slots[slot] : [];
     },
+
     // 功能：发出更新。
     emitItems: function (next) {
       if (!this.usesSlots()) {
@@ -181,6 +197,7 @@
       this.postPreviewHtml(this.optimisticSlotsFromValue(value));
       this.$emit('update:modelValue', value);
     },
+
     // 功能：按模块定义生成默认值。
     defaultsFor: function (type) {
       var reg = this.registry();
@@ -196,6 +213,7 @@
       });
       return values;
     },
+
     // 功能：从左侧加入一个模块实例。
     addModule: function (type) {
       this.selectedStructureId = '';
@@ -205,6 +223,7 @@
       this.emitItems(next);
       this.selectedUid = uid;
     },
+
     // 功能：按指定位置插入模块实例。
     addModuleAt: function (type, index) {
       this.selectedStructureId = '';
@@ -225,6 +244,7 @@
         this.rightTab = 'page';
       }
     },
+
     // 功能：上移 / 下移实例（dir = -1 / 1）。
     moveItem: function (uid, dir) {
       var next = clone(this.items());
@@ -237,6 +257,7 @@
       next[target] = tmp;
       this.emitItems(next);
     },
+
     // 功能：复制实例。
     duplicateItem: function (uid) {
       var next = clone(this.items());
@@ -249,6 +270,7 @@
       this.emitItems(next);
       this.selectedUid = copy.uid;
     },
+
     // 功能：渲染实例预览 HTML。
     renderHtml: function (item) {
       var reg = this.registry();

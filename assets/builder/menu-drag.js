@@ -4,6 +4,7 @@
 
 
   runtime.menuDrag = {
+
     moveMenuEditorBlock: function (sourceKey, targetKey, side) {
       var items = this.menuEditor && this.menuEditor.items || [];
       var source = items.find(function (item, i) { return this.menuEditorItemKey(item, i) === sourceKey; }.bind(this));
@@ -21,6 +22,7 @@
       this.menuEditor.items = remaining;
       this.markMenuEditorDirty();
     },
+
     startMenuEditorDrag: function (event, item, index) {
       this.closeMenuActions(false);
       if (this.menuEditorSaving || (event.button !== undefined && event.button !== 0)) { return; }
@@ -29,6 +31,7 @@
       event.currentTarget.focus({ preventScroll: true });
       if (event.currentTarget.setPointerCapture) { event.currentTarget.setPointerCapture(event.pointerId); }
     },
+
     onMenuEditorPointerMove: function (event) {
       var drag = this._menuDrag;
       if (!drag || event.pointerId !== drag.pointerId) { return; }
@@ -58,11 +61,13 @@
         if (event.clientY > bounds.bottom - 36) { scroller.scrollTop += 14; }
       }
     },
+
     onMenuEditorPointerUp: function (event) {
       if (!this._menuDrag || event.pointerId !== this._menuDrag.pointerId) { return; }
       if (this.menuEditorDraggingKey && this.menuEditorDropKey) { this.moveMenuEditorBlock(this.menuEditorDraggingKey, this.menuEditorDropKey, this.menuEditorDropSide); }
       this.cancelMenuEditorDrag();
     },
+
     cancelMenuEditorDrag: function () {
       var drag = this._menuDrag;
       if (drag && drag.handle && drag.handle.hasPointerCapture && drag.handle.hasPointerCapture(drag.pointerId)) { drag.handle.releasePointerCapture(drag.pointerId); }
@@ -72,6 +77,7 @@
       this.menuEditorDropSide = '';
       document.body.classList.remove('eva-menu-dragging');
     },
+
     keyboardMenuEditorMove: function (item, delta) {
       var siblings = (this.menuEditor.items || []).filter(function (entry) { return Number(entry.parent || 0) === Number(item.parent || 0) && !this.menuEditorItemIsRemoved(entry); }.bind(this));
       var target = siblings[siblings.indexOf(item) + delta];

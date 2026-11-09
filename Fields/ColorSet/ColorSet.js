@@ -22,11 +22,13 @@
     props: ['field', 'modelValue'],
     emits: ['update:modelValue'],
     computed: {
+
       // 功能：当前值（始终按对象处理；列表等其它结构视为空）。
       value: function () {
         var value = this.modelValue;
         return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
       },
+
       // 功能：为每个选项合成一个 color 子字段，交给现成的 color 组件渲染。
       items: function () {
         var field = this.field || {};
@@ -47,12 +49,15 @@
       }
     },
     methods: {
+
       // 功能：处理 tv 相关逻辑。
       tv: function (value) { return window.EvaI18n.tv(value); },
+
       // 功能：取某个颜色的当前值，没存过时用它的默认值。
       valueFor: function (item) {
         return Object.prototype.hasOwnProperty.call(this.value, item.key) ? this.value[item.key] : item.child.default;
       },
+
       // 功能：更新一个颜色并整体回传。
       update: function (item, color) {
         var next = Object.assign({}, this.value);
