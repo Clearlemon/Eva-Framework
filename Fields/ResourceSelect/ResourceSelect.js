@@ -37,7 +37,13 @@
       },
       maxItems: function () { return Math.max(0, parseInt(this.field.max_items || this.field.max || 0, 10) || 0); },
       limitReached: function () { return this.isMultiple && this.maxItems > 0 && this.values.length >= this.maxItems; },
-      minChars: function () { var fallback = this.resource === 'menus' || this.resource === 'sidebars' ? 0 : 2; return Math.max(0, parseInt(this.field.min_chars || this.field.minChars || fallback, 10) || 0); },
+      minChars: function () {
+        var fallback = this.resource === 'menus' || this.resource === 'sidebars' ? 0 : 2;
+        var value = this.field.min_chars;
+        if (value === undefined || value === null || value === '') { value = this.field.minChars; }
+        var count = parseInt(value, 10);
+        return Number.isFinite(count) ? Math.max(0, count) : fallback;
+      },
       canSort: function () { return this.isMultiple && this.field.sortable !== false; },
       triggerLabel: function () { if (this.isMultiple) { return this.selected.length ? '' : text(this.field.placeholder || '请选择'); } return this.selected[0] ? this.selected[0].label : (this.values.length ? '#' + this.values[0] : text(this.field.placeholder || '请选择')); }
     },
@@ -46,7 +52,19 @@
     methods: {
       text: text,
       onDocDown: function (event) { if (this.open && this.$el && !this.$el.contains(event.target)) { this.close(); } },
-      openMenu: function () { if (this.field.disabled) { return; } this.open = true; this.error = ''; var self = this; this.$nextTick(function () { if (self.$refs.search && self.$refs.search.focus) { self.$refs.search.focus(); } }); this.fetchItems('', this.values.join(',')); },
+      openMenu: function () {
+        if (this.field.disabled) { return; }
+        this.open = true; this.error = '';
+        var self = this;
+        this.$nextTick(function () { if (self.$refs.search && self.$refs.search.focus) { self.$refs.search.focus(); } });
+        // 零字符模式先展示一批选项；已选值在列表之外时仍保留正确的回填名称。
+        if (this.minChars === 0 && (!this.values.length || this.selected.length)) { this.fetchItems('', ''); return; }
+        var lookup = this.fetchItems('', this.values.join(','));
+        var seq = this._searchSeq;
+        if (this.minChars === 0 && lookup) {
+          lookup.then(function () { if (seq === self._searchSeq && self.open && !self.query) { self.fetchItems('', ''); } });
+        }
+      },
       cancelSearch: function () {
         if (this.timer) { clearTimeout(this.timer); this.timer = null; }
         this._searchSeq = (this._searchSeq || 0) + 1;
