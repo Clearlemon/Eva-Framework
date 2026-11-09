@@ -3,7 +3,7 @@
  *
  * 迁移说明：
  * - 该字段承载主题侧“备份恢复中心”的核心交互，并改造成 EvaFields 字段组件。
- * - 原主题实现中的 axios / Qmsg / Element 弹窗依赖被移除，统一使用 fetch / alert / confirm。
+ * - 请求复用 EvaApi 的 Axios REST 客户端，提示沿用 alert / confirm。
  * - FontAwesome 图标改为 Remix Icon，样式统一放在 `eva.css` 的 `.eva-backup` 命名空间。
  *
  * 多语言：
@@ -13,11 +13,7 @@
  * 数据接口：
  * - `GET  lf/v2/backupData`：读取统计卡、历史备份、自动备份、活动记录等页面数据。
  * - `GET  lf/v2/downloadBackup?id=...`：下载指定备份文件。
- * - `POST admin-ajax.php?action=create_backup`：创建手动备份。
- * - `POST admin-ajax.php?action=delete_backup`：删除备份。
- * - `POST admin-ajax.php?action=restore_backup`：从历史备份恢复。
- * - `POST admin-ajax.php?action=restore_backup_from_file`：从上传文件恢复。
- * - `POST admin-ajax.php?action=save_auto_backup_settings`：保存自动备份设置。
+ * - 写入统一走 `eva/v1/integrations/lentasy/backups`，保留主题原有备份存储。
  *
  * 注意：
  * - 这是整页型字段，通常搭配 section 的 `flush` 布局铺满内容区。
@@ -26,10 +22,8 @@
 (function () {
   window.EvaFields = window.EvaFields || {};
 
-  // 读取 Eva 注入的运行时配置，主要用于 REST 根地址、REST nonce 和 admin-ajax 地址。
+  // 读取 Eva 注入的展示配置。
   function Cfg() { return (window.EvaFW && window.EvaFW.config) || {}; }
-  // 功能：处理 Rest Base 相关逻辑。
-  function Rest_Base() { return (Cfg().restUrl || '/wp-json/').replace(/\/+$/, '') + '/'; }
 
   window.EvaFields.theme_backup = {
     props: ['field', 'modelValue'],
@@ -167,8 +161,8 @@
       // 拉取完整备份面板数据，成功后同步自动备份设置；失败时只显示错误，不破坏旧数据。
       fetchData: function () {
         var self = this; self.loading = true;
-        fetch(Rest_Base() + 'lf/v2/backupData', { credentials: 'same-origin', headers: { 'X-WP-Nonce': Cfg().restNonce || '' } })
-          .then(function (r) { if (!r.ok) { throw new Error('HTTP ' + r.status); } return r.json(); })
+        window.EvaApi.rest('lf/v2/backupData')
+          .then(function (r) { return r.data; })
           .then(function (j) {
             self.data = (j && j[0]) ? j[0] : { card: {}, list: [], auto: {} };
             var a = self.data.auto || {};
@@ -183,17 +177,15 @@
           .catch(function (e) { self.error = self.t('bk_read_fail') + (e && e.message ? e.message : e); })
           .then(function () { self.loading = false; });
       },
-      // admin-ajax POST 统一封装。支持普通字段和数组字段（自动追加 []）。
+      // 主题备份适配器保持原有存储，所有写入通过带 nonce 的 REST 完成。
       post: function (action, payload) {
-        var fd = new FormData();
-        fd.append('action', action);
-        Object.keys(payload || {}).forEach(function (k) {
-          var v = payload[k];
-          if (Array.isArray(v)) { v.forEach(function (x) { fd.append(k + '[]', x); }); }
-          else { fd.append(k, v); }
-        });
-        return fetch(Cfg().ajaxUrl, { method: 'POST', credentials: 'same-origin', body: fd })
-          .then(function (r) { return r.json().catch(function () { return {}; }); });
+        var path = 'eva/v1/integrations/lentasy/backups', method = 'POST', data = payload;
+        if (action === 'delete_backup') { path += '/' + encodeURIComponent(payload.id); method = 'DELETE'; }
+        else if (action === 'restore_backup') path += '/' + encodeURIComponent(payload.id) + '/restore';
+        else if (action === 'save_auto_backup_settings') path += '/schedule';
+        else if (action === 'restore_backup_from_file') { path += '/restore'; data = new FormData(); data.append('backup_file', payload.backup_file); }
+        else if (action !== 'create_backup') return Promise.reject(new Error('Unknown backup operation'));
+        return window.EvaApi.rest(path, { method: method, data: data, timeout: 60000 }).then(function (response) { return { success: true, data: response.data }; });
       },
       // 创建手动备份；成功后刷新面板数据，失败时在页面顶部显示错误。
       createBackup: function () {
@@ -239,10 +231,8 @@
       // 下载备份文件：接口返回 blob 后临时创建 <a download> 触发浏览器下载。
       downloadBackup: function (id, name) {
         var self = this;
-        fetch(Rest_Base() + 'lf/v2/downloadBackup?id=' + encodeURIComponent(id), {
-          credentials: 'same-origin', headers: { 'X-WP-Nonce': Cfg().restNonce || '' }
-        })
-          .then(function (r) { return r.blob(); })
+        window.EvaApi.rest('lf/v2/downloadBackup', { params: { id: id }, responseType: 'blob' })
+          .then(function (r) { return r.data; })
           .then(function (blob) {
             var link = document.createElement('a');
             link.href = URL.createObjectURL(blob);

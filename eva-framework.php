@@ -104,6 +104,8 @@ require_once EVA_FW_DIR . 'includes/core/class-eva-csf-compat.php';
 require_once EVA_FW_DIR . 'includes/core/class-eva-csf-shapes.php';
 // 数据层：清洗 + 保存
 require_once EVA_FW_DIR . 'includes/core/class-eva-data.php';
+require_once EVA_FW_DIR . 'includes/class-eva-rest.php';
+\Eva\Framework\Rest::init();
 // 后台呈现：设置页渲染 / 独立页路由 / 后台悬浮窗
 require_once EVA_FW_DIR . 'includes/admin/class-eva-assets.php';
 require_once EVA_FW_DIR . 'includes/admin/class-eva-admin.php';

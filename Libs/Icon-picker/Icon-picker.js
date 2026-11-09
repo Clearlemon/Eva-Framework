@@ -130,12 +130,9 @@
     var config = window.EvaFW && window.EvaFW.config || {};
     var sheet = document.querySelector('link[href*="remixicon.css"]');
     var url = config.remixCssUrl || (sheet && sheet.href) || (pickerScript ? new URL('../../assets/vendor/remixicon.css', pickerScript).href : '');
-    if (!url || !window.fetch) { return Promise.reject(new Error('Remixicon source unavailable')); }
-    REMIX_PROMISE = window.fetch(new URL(url, document.baseURI).href)
-      .then(function (res) {
-        if (!res.ok) { throw new Error('Remixicon load failed'); }
-        return res.text();
-      })
+    if (!url || !window.EvaApi) { return Promise.reject(new Error('Remixicon source unavailable')); }
+    REMIX_PROMISE = window.EvaApi.request({ url: new URL(url, document.baseURI).href, responseType: 'text', rest: false })
+      .then(function (res) { return res.data; })
       .then(function (css) {
         var seen = {}, labels = {}, items = [], match;
         REMIX_ITEMS.forEach(function (item) { labels[item[0]] = item[1]; });

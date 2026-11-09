@@ -186,6 +186,7 @@ class Admin
         }
 
         $current = \Eva::get_resolved($current['option_id']);
+        \Eva\Framework\Rest::enqueue();
         $payload = \Eva::page_payload($current);
         $selective = ($current['asset_loading'] ?? '') === 'used';
         $types = \Eva\Framework\Admin\Assets::field_types($payload['sections'] ?? []);
@@ -226,14 +227,14 @@ class Admin
         \Eva::add_theme_color_inline_style();
 
         // UI 库（Libs/<name>/，含同名 js/css）：先于字段与外壳加载，逐个累积为 eva-app 的依赖。
-        $lib_deps = ['eva-vue3'];
+        $lib_deps = ['eva-vue3', 'eva-api'];
         foreach (\Eva::lib_assets() as $lib_name => $lib) {
             if ($lib['css']) {
                 wp_enqueue_style('eva-lib-' . $lib_name, $lib['css'], ['eva-framework'], \Eva::asset_ver($lib['cssRel']));
             }
             if ($lib['js']) {
                 $lib_handle = 'eva-lib-' . $lib_name;
-                wp_enqueue_script($lib_handle, $lib['js'], ['eva-vue3'], \Eva::asset_ver($lib['jsRel']), true);
+                wp_enqueue_script($lib_handle, $lib['js'], ['eva-vue3', 'eva-api'], \Eva::asset_ver($lib['jsRel']), true);
                 $lib_deps[] = $lib_handle;
             }
         }
@@ -247,7 +248,7 @@ class Admin
         $field_deps = $lib_deps;
         foreach ($scripts as $name => $field_url) {
             $handle = 'eva-field-' . $name;
-            wp_enqueue_script($handle, $field_url, ['eva-vue3'], \Eva::asset_ver(\Eva::field_asset_rel($name, 'js')), true);
+            wp_enqueue_script($handle, $field_url, ['eva-vue3', 'eva-api'], \Eva::asset_ver(\Eva::field_asset_rel($name, 'js')), true);
             $field_deps[] = $handle;
         }
         // 外壳脚本：依赖以上所有，确保库与字段先就绪。
@@ -278,7 +279,7 @@ class Admin
 
         // 开发期热刷新（可删；或 wp-config 设 EVA_FW_DEV=false 关闭）。
         if (defined('EVA_FW_DEV') && EVA_FW_DEV) {
-            wp_enqueue_script('eva-livereload', EVA_FW_URL . 'assets/eva-livereload.js', [], \Eva::asset_ver('assets/eva-livereload.js'), true);
+            wp_enqueue_script('eva-livereload', EVA_FW_URL . 'assets/eva-livereload.js', ['eva-api'], \Eva::asset_ver('assets/eva-livereload.js'), true);
             wp_localize_script('eva-livereload', 'EvaFWDev', \Eva::dev_config());
         }
     }
@@ -301,17 +302,21 @@ class Admin
      */
     public function ajax_set_guide()
     {
+        check_ajax_referer('eva_fw_guide', 'nonce');
+        \Eva\Framework\Rest::legacy(self::request_set_guide($_POST));
+    }
+
+    /** Shared domain operation for REST and legacy AJAX callers. */
+    public static function request_set_guide($input)
+    {
         // 校验 nonce 与权限。
-        if (! check_ajax_referer('eva_fw_guide', 'nonce', false)) {
-            wp_send_json_error(['msg' => 'bad_nonce'], 403);
-        }
         if (! current_user_can('manage_options')) {
-            wp_send_json_error(['msg' => 'forbidden'], 403);
+            return \Eva\Framework\Rest::error(['msg' => 'forbidden'], 403);
         }
         // 规整为 '1'/'0' 后持久化。
-        $visible = (isset($_POST['visible']) && $_POST['visible'] === '1') ? '1' : '0';
+        $visible = (isset($input['visible']) && $input['visible'] === '1') ? '1' : '0';
         update_option('eva_fw_guide_visible', $visible);
-        wp_send_json_success(['visible' => $visible === '1']);
+        return ['visible' => $visible === '1'];
     }
 
     /**
@@ -321,17 +326,21 @@ class Admin
      */
     public function ajax_set_floating()
     {
+        check_ajax_referer('eva_fw_guide', 'nonce');
+        \Eva\Framework\Rest::legacy(self::request_set_floating($_POST));
+    }
+
+    /** Shared domain operation for REST and legacy AJAX callers. */
+    public static function request_set_floating($input)
+    {
         // 校验 nonce 与权限。
-        if (! check_ajax_referer('eva_fw_guide', 'nonce', false)) {
-            wp_send_json_error(['msg' => 'bad_nonce'], 403);
-        }
         if (! current_user_can('manage_options')) {
-            wp_send_json_error(['msg' => 'forbidden'], 403);
+            return \Eva\Framework\Rest::error(['msg' => 'forbidden'], 403);
         }
         // 规整为 '1'/'0' 后持久化。
-        $enabled = (isset($_POST['enabled']) && $_POST['enabled'] === '1') ? '1' : '0';
+        $enabled = (isset($input['enabled']) && $input['enabled'] === '1') ? '1' : '0';
         update_option('eva_fw_floating', $enabled);
-        wp_send_json_success(['enabled' => $enabled === '1']);
+        return ['enabled' => $enabled === '1'];
     }
 
     /**
@@ -345,19 +354,23 @@ class Admin
      */
     public function ajax_set_accent()
     {
-        if (! check_ajax_referer('eva_fw_guide', 'nonce', false)) {
-            wp_send_json_error(['msg' => 'bad_nonce'], 403);
-        }
+        check_ajax_referer('eva_fw_guide', 'nonce');
+        \Eva\Framework\Rest::legacy(self::request_set_accent($_POST));
+    }
+
+    /** Shared domain operation for REST and legacy AJAX callers. */
+    public static function request_set_accent($input)
+    {
         if (! is_user_logged_in()) {
-            wp_send_json_error(['msg' => 'forbidden'], 403);
+            return \Eva\Framework\Rest::error(['msg' => 'forbidden'], 403);
         }
         $saved = \Eva::saveUserAccent([
-            'key'   => isset($_POST['key']) ? wp_unslash($_POST['key']) : '',
-            'color' => isset($_POST['color']) ? wp_unslash($_POST['color']) : '',
-            'c600'  => isset($_POST['c600']) ? wp_unslash($_POST['c600']) : '',
-            'c050'  => isset($_POST['c050']) ? wp_unslash($_POST['c050']) : '',
+            'key'   => isset($input['key']) ? wp_unslash($input['key']) : '',
+            'color' => isset($input['color']) ? wp_unslash($input['color']) : '',
+            'c600'  => isset($input['c600']) ? wp_unslash($input['c600']) : '',
+            'c050'  => isset($input['c050']) ? wp_unslash($input['c050']) : '',
         ]);
-        wp_send_json_success(['accent' => $saved]);
+        return ['accent' => $saved];
     }
 
     /**
@@ -367,14 +380,18 @@ class Admin
      */
     public function ajax_set_dark()
     {
-        if (! check_ajax_referer('eva_fw_guide', 'nonce', false)) {
-            wp_send_json_error(['msg' => 'bad_nonce'], 403);
-        }
+        check_ajax_referer('eva_fw_guide', 'nonce');
+        \Eva\Framework\Rest::legacy(self::request_set_dark($_POST));
+    }
+
+    /** Shared domain operation for REST and legacy AJAX callers. */
+    public static function request_set_dark($input)
+    {
         if (! is_user_logged_in()) {
-            wp_send_json_error(['msg' => 'forbidden'], 403);
+            return \Eva\Framework\Rest::error(['msg' => 'forbidden'], 403);
         }
-        $dark = (isset($_POST['dark']) && $_POST['dark'] === '1');
+        $dark = (isset($input['dark']) && $input['dark'] === '1');
         \Eva::saveUserDarkMode($dark);
-        wp_send_json_success(['dark' => $dark]);
+        return ['dark' => $dark];
     }
 }

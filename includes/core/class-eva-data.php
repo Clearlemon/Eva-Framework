@@ -42,24 +42,28 @@ class Data
      */
     public function ajax_save()
     {
-        // 1) 校验 nonce：用与前端 EvaFW.config.nonce 同名的 'eva_fw_guide' 动作，防 CSRF。
-        if (! check_ajax_referer('eva_fw_guide', 'nonce', false)) {
-            wp_send_json_error(['msg' => 'bad_nonce'], 403);
-        }
+        check_ajax_referer('eva_fw_guide', 'nonce');
+        \Eva\Framework\Rest::legacy(self::request_save($_POST));
+    }
+
+    /** Shared domain operation for REST and legacy AJAX callers. */
+    public static function request_save($input)
+    {
+        // 1) nonce 由入口验证：REST 使用 wp_rest，旧 AJAX 使用 eva_fw_guide。
 
         // 2) 反查已注册设置页（已应用 eva_{id}_args / eva_{id}_sections 过滤器，与渲染时是同一份），
         //    并使用该设置页声明的 capability。
-        $option_id = isset($_POST['option_id']) ? sanitize_text_field(wp_unslash($_POST['option_id'])) : '';
+        $option_id = isset($input['option_id']) ? sanitize_text_field(wp_unslash($input['option_id'])) : '';
         $opt = \Eva::get_resolved($option_id);
         if (! $opt) {
-            wp_send_json_error(['msg' => 'unknown_option'], 400);
+            return \Eva\Framework\Rest::error(['msg' => 'unknown_option'], 400);
         }
         if (! current_user_can(self::option_capability($opt))) {
-            wp_send_json_error(['msg' => 'forbidden'], 403);
+            return \Eva\Framework\Rest::error(['msg' => 'forbidden'], 403);
         }
 
         // 4) 解析前端提交的值（JSON 字符串 → 关联数组）；非数组一律视为空，保证后续遍历安全。
-        $raw = isset($_POST['values']) ? json_decode(wp_unslash($_POST['values']), true) : [];
+        $raw = \Eva\Framework\Rest::decode($input['values'] ?? []);
         if (! is_array($raw)) {
             $raw = [];
         }
@@ -101,7 +105,7 @@ class Data
         if (! empty($errors)) {
             $response['errors'] = $errors;
         }
-        wp_send_json_success($response);
+        return $response;
     }
 
     /**

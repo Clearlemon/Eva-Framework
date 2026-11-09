@@ -11,21 +11,27 @@ class WidgetEditor
 {
   public static function ajax_change()
   {
-    check_ajax_referer('eva_fw_guide', 'nonce');
+      check_ajax_referer('eva_fw_guide', 'nonce');
+      \Eva\Framework\Rest::legacy(self::request_change($_POST));
+  }
+
+  /** Shared domain operation for REST and legacy AJAX callers. */
+  public static function request_change($input)
+  {
     if (!current_user_can('edit_theme_options')) {
-      wp_send_json_error(array('message' => '您没有管理小工具的权限。'), 403);
+      return \Eva\Framework\Rest::error(array('message' => '您没有管理小工具的权限。'), 403);
       return;
     }
     $args = array();
     foreach (array('operation', 'area', 'widget', 'before') as $key) {
-      $args[$key] = isset($_POST[$key]) && is_string($_POST[$key]) ? sanitize_key(wp_unslash($_POST[$key])) : '';
+      $args[$key] = isset($input[$key]) && is_string($input[$key]) ? sanitize_key(wp_unslash($input[$key])) : '';
     }
     $result = self::change($args['operation'], $args['area'], $args['widget'], $args['before']);
     if (is_wp_error($result)) {
-      wp_send_json_error(array('message' => $result->get_error_message()), 400);
+      return \Eva\Framework\Rest::error(array('message' => $result->get_error_message()), 400);
       return;
     }
-    wp_send_json_success($result);
+    return $result;
   }
 
   public static function change($operation, $area, $widget_id, $before = '')

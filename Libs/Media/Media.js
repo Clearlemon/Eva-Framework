@@ -5,7 +5,6 @@
   window.EvaUI = window.EvaUI || {};
 
   function cfg() { return (window.EvaFW && window.EvaFW.config) || {}; }
-  function restBase() { return (cfg().restUrl || '/wp-json/').replace(/\/+$/, '') + '/'; }
   function fileName(url) {
     url = String(url || '');
     try { return decodeURIComponent((url.split('/').pop() || '').split('?')[0] || 'media'); }
@@ -215,19 +214,17 @@
       closeLibrary: function () { this.browserOpen = false; this.browserError = ''; },
       loadLibrary: function () {
         var self = this;
-        if (!window.fetch) { this.browserError = '当前浏览器不支持媒体库接口。'; return; }
+        if (!window.EvaApi) { this.browserError = '媒体库请求接口未加载。'; return; }
         var params = new URLSearchParams(); params.set('per_page', '24'); params.set('page', String(this.browserPage));
         if (['image','video','audio'].indexOf(this.mode) !== -1) { params.set('media_type', this.mode); }
         if (this.mode === 'document' || this.mode === 'application') { params.set('media_type', 'application'); }
         if (this.browserQuery.trim()) { params.set('search', this.browserQuery.trim()); }
         this.browserLoading = true; this.browserError = '';
-        window.fetch(restBase() + 'wp/v2/media?' + params.toString(), { credentials: 'same-origin', headers: { 'X-WP-Nonce': cfg().restNonce || '' } })
+        window.EvaApi.rest('wp/v2/media', { params: Object.fromEntries(params) })
           .then(function (res) {
-            self.browserTotalPages = Math.max(1, parseInt(res.headers.get('X-WP-TotalPages') || '1', 10) || 1);
-            return res.json().then(function (json) {
-              if (!res.ok) { throw new Error(json && json.message ? json.message : '媒体库加载失败'); }
+            self.browserTotalPages = Math.max(1, parseInt(res.headers['x-wp-totalpages'] || '1', 10) || 1);
+            var json = res.data;
             self.browserItems = (Array.isArray(json) ? json.map(formatItem) : []).filter(function (item) { return self.itemAllowed(item); });
-            });
           }).catch(function (err) { self.browserItems = []; self.browserError = err && err.message ? err.message : '媒体库加载失败'; })
           .finally(function () { self.browserLoading = false; });
       },
@@ -349,10 +346,10 @@
       importBatchUrls: function () {
         var self = this, urls = String(this.batchUrls || '').split(/\r\n|\r|\n/).map(function (url) { return url.trim(); }).filter(Boolean);
         if (!urls.length) { this.error = '请至少输入一个 URL。'; return; }
-        if (!window.fetch) { this.error = '当前浏览器不支持批量导入。'; return; }
+        if (!window.EvaApi) { this.error = '批量导入请求接口未加载。'; return; }
         this.batchImporting = true; this.error = '';
         var form = new FormData(); form.append('action', 'eva_fw_import_media_urls'); form.append('nonce', cfg().nonce || ''); form.append('urls', JSON.stringify(urls));
-        window.fetch(cfg().ajaxUrl || '/wp-admin/admin-ajax.php', { method: 'POST', credentials: 'same-origin', body: form }).then(function (res) { return res.json(); }).then(function (json) {
+        window.EvaApi.action(form, { timeout: 120000 }).then(function (json) {
           if (!json || !json.success) { throw new Error(json && json.data && json.data.msg ? json.data.msg : '批量导入失败'); }
           var imported = (json.data && Array.isArray(json.data.items)) ? json.data.items : [], failed = (json.data && Array.isArray(json.data.failed)) ? json.data.failed : [];
           if (imported.length) { self.emitItems(self.multiple ? self.items.concat(imported) : imported.slice(0, 1)); }
@@ -371,10 +368,9 @@
         if (!item) { return; }
         var key = String(item.id || item.url || '');
         var next = this.items.map(function (current) { return String(current.id || current.url || '') === key ? Object.assign({}, current, self.editForm) : current; });
-        if (!item.id || !window.fetch) { this.emitItems(next); this.closeEdit(); return; }
+        if (!item.id || !window.EvaApi) { this.emitItems(next); this.closeEdit(); return; }
         this.editSaving = true;
-        window.fetch(restBase() + 'wp/v2/media/' + encodeURIComponent(item.id), { method: 'POST', credentials: 'same-origin', headers: { 'X-WP-Nonce': cfg().restNonce || '', 'Content-Type': 'application/json' }, body: JSON.stringify({ title: self.editForm.title, alt_text: self.editForm.alt, caption: self.editForm.caption, description: self.editForm.description }) })
-          .then(function (res) { return res.json().then(function (json) { if (!res.ok) { throw new Error(json && json.message ? json.message : '媒体信息保存失败'); } return json; }); })
+        window.EvaApi.rest('wp/v2/media/' + encodeURIComponent(item.id), { method: 'POST', data: { title: self.editForm.title, alt_text: self.editForm.alt, caption: self.editForm.caption, description: self.editForm.description } })
           .then(function () { self.emitItems(next); self.closeEdit(); })
           .catch(function (err) { self.error = err && err.message ? err.message : '媒体信息保存失败'; })
           .finally(function () { self.editSaving = false; });
@@ -387,7 +383,7 @@
         files = files.filter(function (file) { if (self.itemAllowed({ filename: file.name, mime: file.type })) { return true; } self.error = '文件类型不受支持：' + file.name; return false; });
         if (!this.multiple) { files = files.slice(0, 1); }
         if (this.maxCount) { var room = Math.max(0, this.maxCount - (this.multiple ? this.items.length : 0)); if (files.length > room) { this.error = '最多只能上传 ' + this.maxCount + ' 个文件。'; } files = files.slice(0, room); }
-        if (!files.length || !window.fetch) { return; }
+        if (!files.length || !window.EvaApi) { return; }
         this.uploading = true;
         Promise.all(files.map(function (file) { return self.uploadFile(file); })).then(function (uploaded) {
           self.emitItems(self.multiple ? self.items.concat(uploaded.filter(Boolean)) : uploaded.filter(Boolean).slice(0, 1)); if (self.browserOpen) { self.closeLibrary(); }
@@ -408,8 +404,8 @@
         if (this.maxBytes && file.size > this.maxBytes) { return Promise.reject(new Error('文件大小超过限制：' + this.maxSize + 'MB')); }
         var headers = { 'X-WP-Nonce': cfg().restNonce || '', 'Content-Disposition': 'attachment; filename="' + encodeURIComponent(file.name) + '"' };
         if (file.type) { headers['Content-Type'] = file.type; }
-        return this.validateImageDimensions(file).then(function () { return window.fetch(restBase() + 'wp/v2/media', { method: 'POST', headers: headers, credentials: 'same-origin', body: file }); }).then(function (res) {
-          return res.json().then(function (json) { if (!res.ok) { throw new Error(json && json.message ? json.message : '上传失败'); } var item = formatItem(json); item.filename = item.filename || file.name; item.size = item.size || Math.round(file.size / 1024) + ' KB'; return item; });
+        return this.validateImageDimensions(file).then(function () { return window.EvaApi.rest('wp/v2/media', { method: 'POST', headers: headers, data: file, timeout: 120000 }); }).then(function (res) {
+          var item = formatItem(res.data); item.filename = item.filename || file.name; item.size = item.size || Math.round(file.size / 1024) + ' KB'; return item;
         });
       },
       removeAt: function (index) { var next = this.items.slice(); next.splice(index, 1); this.emitItems(next); },

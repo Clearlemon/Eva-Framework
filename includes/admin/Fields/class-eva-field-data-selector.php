@@ -92,40 +92,43 @@ class Data_Selector
         }
         return $id;
     }
-
     public static function ajax_search()
     {
-        if (! check_ajax_referer('eva_fw_guide', 'nonce', false)) {
-            wp_send_json_error(['msg' => 'bad_nonce'], 403);
-        }
-        $resource = self::resource_from_request();
+        check_ajax_referer('eva_fw_guide', 'nonce');
+        \Eva\Framework\Rest::legacy(self::request_search($_GET));
+    }
+
+    /** Shared domain operation for REST and legacy AJAX callers. */
+    public static function request_search($input)
+    {
+        $resource = self::resource_from_request($input);
         if (! self::can_search($resource)) {
-            wp_send_json_error(['msg' => 'forbidden'], 403);
+            return \Eva\Framework\Rest::error(['msg' => 'forbidden'], 403);
         }
-        $query = isset($_GET['q']) ? sanitize_text_field(wp_unslash($_GET['q'])) : '';
-        $include_raw = isset($_GET['include']) ? wp_unslash($_GET['include']) : '';
+        $query = isset($input['q']) ? sanitize_text_field(wp_unslash($input['q'])) : '';
+        $include_raw = isset($input['include']) ? wp_unslash($input['include']) : '';
         $include = self::include_ids($include_raw);
         $include_values = self::include_values($include_raw);
-        $limit = isset($_GET['limit']) ? max(1, min(50, absint($_GET['limit']))) : 20;
+        $limit = isset($input['limit']) ? max(1, min(50, absint($input['limit']))) : 20;
         $items = [];
         if ($resource === 'posts') {
-            $items = self::search_posts($query, $include, $limit);
+            $items = self::search_posts($query, $include, $limit, self::post_types_from_request($input));
         } elseif ($resource === 'terms') {
-            $items = self::search_terms($query, $include, $limit);
+            $items = self::search_terms($query, $include, $limit, self::first_taxonomy_from_request($input));
         } elseif ($resource === 'users') {
-            $items = self::search_users($query, $include, $limit);
+            $items = self::search_users($query, $include, $limit, $input['role'] ?? '');
         } elseif ($resource === 'menus') {
             $items = self::search_menus($query, $include, $limit);
         } elseif ($resource === 'sidebars') {
             $items = self::search_sidebars($query, $include_values, $limit);
         }
-        wp_send_json_success(['items' => $items, 'resource' => $resource]);
+        return ['items' => $items, 'resource' => $resource];
     }
 
     public static function ajax_search_posts()
     {
-        $_GET['resource'] = 'posts';
-        self::ajax_search();
+        check_ajax_referer('eva_fw_guide', 'nonce');
+        \Eva\Framework\Rest::legacy(self::request_search(array_merge($_GET, ['resource' => 'posts'])));
     }
 
     /** Fetch menu insertion groups in one authenticated request without changing global request data. */
@@ -194,10 +197,10 @@ class Data_Selector
         return $items;
     }
 
-    private static function search_users($query, $include, $limit)
+    private static function search_users($query, $include, $limit, $role = '')
     {
         $args = ['number' => $limit, 'orderby' => 'display_name', 'order' => 'ASC', 'fields' => ['ID', 'display_name', 'user_login']];
-        $roles = isset($_GET['role']) ? array_filter(array_map('sanitize_key', explode(',', (string) wp_unslash($_GET['role'])))) : [];
+        $roles = array_filter(array_map('sanitize_key', explode(',', (string) wp_unslash($role))));
         if ($roles) { $args['role__in'] = $roles; }
         if ($include) { $args['include'] = $include; } elseif ($query !== '') { $args['search'] = '*' . $query . '*'; }
         $items = [];
@@ -234,9 +237,9 @@ class Data_Selector
         return $items;
     }
 
-    private static function resource_from_request()
+    private static function resource_from_request($input)
     {
-        $resource = sanitize_key(isset($_GET['resource']) ? wp_unslash($_GET['resource']) : 'posts');
+        $resource = sanitize_key(isset($input['resource']) ? wp_unslash($input['resource']) : 'posts');
         return in_array($resource, ['posts', 'terms', 'users', 'menus', 'sidebars'], true) ? $resource : 'posts';
     }
 
@@ -263,7 +266,7 @@ class Data_Selector
         return in_array($value, ['posts', 'terms', 'users', 'menus', 'sidebars'], true) ? $value : 'posts';
     }
 
-    private static function can_search($resource)
+    public static function can_search($resource)
     {
         if ($resource === 'users') { return current_user_can('list_users') || current_user_can('edit_users'); }
         if ($resource === 'menus') { return current_user_can('edit_theme_options'); }
@@ -272,9 +275,9 @@ class Data_Selector
         return current_user_can('edit_posts');
     }
 
-    private static function post_types_from_request()
+    private static function post_types_from_request($input = [])
     {
-        $raw = isset($_GET['post_type']) ? wp_unslash($_GET['post_type']) : 'post,page';
+        $raw = isset($input['post_type']) ? wp_unslash($input['post_type']) : 'post,page';
         $types = is_array($raw) ? $raw : explode(',', (string) $raw);
         $valid = [];
         foreach ($types as $type) {
@@ -290,9 +293,9 @@ class Data_Selector
         return sanitize_key(is_array($taxonomy) ? reset($taxonomy) : $taxonomy) ?: 'category';
     }
 
-    private static function first_taxonomy_from_request()
+    private static function first_taxonomy_from_request($input = [])
     {
-        $taxonomy = isset($_GET['taxonomy']) ? wp_unslash($_GET['taxonomy']) : 'category';
+        $taxonomy = isset($input['taxonomy']) ? wp_unslash($input['taxonomy']) : 'category';
         return sanitize_key(is_array($taxonomy) ? reset($taxonomy) : explode(',', (string) $taxonomy)[0]) ?: 'category';
     }
 

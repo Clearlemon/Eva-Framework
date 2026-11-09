@@ -411,16 +411,11 @@
       });
 
       // 个人外观偏好（暗色 / 主题色）落 user_meta：抽屉里改完立刻发一条，失败回滚。
-      // 与「使用指南」「悬浮窗」那两个全站开关共用 eva_fw_guide 这个 nonce。
+      // 与全站开关复用 EvaApi，由客户端统一发送 wp_rest nonce。
       function savePref(body, rollback) {
-        var url = cfg.ajaxUrl || ((boot.adminUrl || '') + 'admin-ajax.php');
+        var url = cfg.restActions;
         if (!url) { return; }
-        fetch(url, {
-          method: 'POST',
-          credentials: 'same-origin',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
-          body: body + '&nonce=' + encodeURIComponent(cfg.nonce || ''),
-        }).then(function (r) { return r.json(); }).then(function (res) {
+        window.EvaApi.action(body + '&nonce=' + encodeURIComponent(cfg.nonce || '')).then(function (res) {
           if (!res || !res.success) { rollback(); }
         }).catch(rollback);
       }
@@ -700,16 +695,11 @@
         if (!isAdmin) return;
         var next = !guideVisible.value;
         guideVisible.value = next; // 乐观更新
-        var url = cfg.ajaxUrl || ((boot.adminUrl || '') + 'admin-ajax.php');
+        var url = cfg.restActions;
         if (!url) return;
         var body = 'action=eva_fw_set_guide&nonce=' + encodeURIComponent(cfg.nonce || '') +
           '&visible=' + (next ? '1' : '0');
-        fetch(url, {
-          method: 'POST',
-          credentials: 'same-origin',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
-          body: body,
-        }).then(function (r) { return r.json(); }).then(function (res) {
+        window.EvaApi.action(body).then(function (res) {
           if (!res || !res.success) { guideVisible.value = !next; } // 保存失败回滚
         }).catch(function () { guideVisible.value = !next; });
       }
@@ -720,16 +710,11 @@
         if (!isAdmin) return;
         var next = !floatingEnabled.value;
         floatingEnabled.value = next; // 乐观更新
-        var url = cfg.ajaxUrl || ((boot.adminUrl || '') + 'admin-ajax.php');
+        var url = cfg.restActions;
         if (!url) return;
         var body = 'action=eva_fw_set_floating&nonce=' + encodeURIComponent(cfg.nonce || '') +
           '&enabled=' + (next ? '1' : '0');
-        fetch(url, {
-          method: 'POST',
-          credentials: 'same-origin',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
-          body: body,
-        }).then(function (r) { return r.json(); }).then(function (res) {
+        window.EvaApi.action(body).then(function (res) {
           if (!res || !res.success) { floatingEnabled.value = !next; } // 保存失败回滚
         }).catch(function () { floatingEnabled.value = !next; });
       }
@@ -2113,7 +2098,7 @@
       function saveGroups() {
         return cfg.saveGroups && cfg.saveGroups.length > 1 ? cfg.saveGroups : [{ optionId: optionId, fieldIds: Object.keys(model) }];
       }
-      // 保存设置页字段：通过 admin-ajax 调用 Data::ajax_save，后端按 schema 清洗未知字段。
+      // 保存设置页字段：通过 REST 调用共享数据层，后端按 schema 清洗未知字段。
       function saveOptions() {
         if (saving.value) { return; }
         var submitted = JSON.parse(JSON.stringify(model));
@@ -2126,7 +2111,7 @@
         saving.value = true;
         saveMsg.value = '保存中…';
         Clear_Field_Errors();
-        var url = cfg.ajaxUrl || ((boot.adminUrl || '') + 'admin-ajax.php');
+        var url = cfg.restActions;
         // 同一外壳可展示多个容器，仅提交有修改的容器；每次请求仍独立校验和清洗。
         return Promise.all(groups.map(function (group) {
           var values = {};
@@ -2134,12 +2119,7 @@
           var body = 'action=eva_fw_save_options&nonce=' + encodeURIComponent(cfg.nonce || '') +
             '&option_id=' + encodeURIComponent(group.optionId) +
             '&values=' + encodeURIComponent(JSON.stringify(values));
-          return fetch(url, {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
-            body: body
-          }).then(function (r) { return r.json(); }).then(function (res) {
+          return window.EvaApi.action(body).then(function (res) {
             return { group: group, response: res };
           }).catch(function () { return { group: group, response: null }; });
         }).concat(participants.map(function (participant) {

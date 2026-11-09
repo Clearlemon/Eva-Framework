@@ -1,4 +1,4 @@
-﻿/** Eva field: Relationship selector with searchable available and selected columns. */
+/** Eva field: Relationship selector with searchable available and selected columns. */
 (function () {
   'use strict';
   window.EvaFields = window.EvaFields || {};
@@ -20,11 +20,11 @@
       search: function (query, include) {
         var q = String(query || '').trim(); var min = parseInt(this.field.min_chars || 2, 10) || 0;
         if (!include && q.length < min) { this.items = []; return; }
-        var url = cfg().ajaxUrl || '/wp-admin/admin-ajax.php'; var params = new URLSearchParams(); params.set('action', 'eva_fw_search_data'); params.set('nonce', cfg().nonce || ''); params.set('resource', this.resource); params.set('limit', this.field.limit || 20); params.set('q', include ? '' : q); if (include) { params.set('include', include); }
+        var params = new URLSearchParams(); params.set('action', 'eva_fw_search_data'); params.set('nonce', cfg().nonce || ''); params.set('resource', this.resource); params.set('limit', this.field.limit || 20); params.set('q', include ? '' : q); if (include) { params.set('include', include); }
         if (this.field.post_type) { params.set('post_type', Array.isArray(this.field.post_type) ? this.field.post_type.join(',') : this.field.post_type); }
         if (this.field.taxonomy) { params.set('taxonomy', Array.isArray(this.field.taxonomy) ? this.field.taxonomy.join(',') : this.field.taxonomy); }
         if (this.field.role) { params.set('role', Array.isArray(this.field.role) ? this.field.role.join(',') : this.field.role); }
-        var self = this; this.loading = true; this.error = ''; fetch(url + '?' + params.toString(), { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (result) { var found = result && result.success && result.data && Array.isArray(result.data.items) ? result.data.items : []; if (include) { self.selected = self.order(found, self.ids); } else { self.items = found; } }).catch(function () { self.error = '搜索失败'; }).then(function () { self.loading = false; });
+        var self = this; this.loading = true; this.error = ''; window.EvaApi.action(params).then(function (result) { var found = result && result.success && result.data && Array.isArray(result.data.items) ? result.data.items : []; if (include) { self.selected = self.order(found, self.ids); } else { self.items = found; } }).catch(function () { self.error = '搜索失败'; }).then(function () { self.loading = false; });
       },
       order: function (items, ids) { return ids.map(function (id) { return items.filter(function (item) { return String(item.value) === id; })[0]; }).filter(Boolean); },
       onInput: function () { var self = this; clearTimeout(this.timer); this.timer = setTimeout(function () { self.search(self.query, ''); }, 220); },

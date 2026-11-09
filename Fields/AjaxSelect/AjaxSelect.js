@@ -151,7 +151,6 @@
           return;
         }
 
-        var ajaxUrl = Cfg().ajaxUrl || ((window.EvaFW && window.EvaFW.adminUrl) ? window.EvaFW.adminUrl + 'admin-ajax.php' : '/wp-admin/admin-ajax.php');
         var params = new URLSearchParams();
         params.set('action', 'eva_fw_search_posts');
         params.set('nonce', Cfg().nonce || '');
@@ -166,8 +165,7 @@
         var self = this;
         this.loading = true;
         this.error = '';
-        fetch(ajaxUrl + '?' + params.toString(), { credentials: 'same-origin' })
-          .then(function (r) { return r.json(); })
+        window.EvaApi.action(params)
           .then(function (res) {
             var items = (res && res.success && res.data && Array.isArray(res.data.items)) ? res.data.items : [];
             if (includeId) {

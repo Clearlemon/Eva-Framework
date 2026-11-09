@@ -3,6 +3,24 @@
 
 独立安装并启用插件后，可在插件列表点击「设置」进入框架内置演示页，也可使用顶部工具栏的「Eva Framework」入口。主题实际设置页与演示页分别注册、分别保存。主题内嵌框架不自动加载演示。可通过 `eva_fw_demo_enabled` 过滤器关闭独立插件的默认演示，此时「设置」链接沿用已注册的实际设置容器。
 
+## 异步请求规范
+
+框架内置 Vue 字段统一复用本地 Axios 1.20.0 和 `window.EvaApi`；新调用使用 WordPress REST API，不直接请求 `admin-ajax.php`。接口地址由 `rest_url()` 生成，兼容子目录和普通固定链接。后台、独立设置页与嵌入式容器加载同一份 `eva-api` 依赖。
+
+- `eva/v1/resources`：文章、分类、标签、用户、菜单和侧栏查询。
+- `eva/v1/options`：按注册 schema 清洗并保存设置。
+- `eva/v1/builder/history`、`builder/preview`：保存历史与未保存预览。
+- `eva/v1/menus`、`menus/resources`、`menus/items`、`menus/assignment`：原生菜单读写。
+- `eva/v1/widgets`、`widgets/assignment`：原生小工具读取与分配。
+- `eva/v1/preferences/*`：个人外观及全站开关。
+- `eva/v1/development/stamp`：仅开发模式注册的指纹接口。
+
+同源 REST 请求统一携带 `X-WP-Nonce`。接口通过 schema 校验参数，按资源或设置容器的 capability 授权，成功直接返回数据，失败使用带 HTTP 状态码的 `WP_Error`。响应中的字段校验错误继续沿用保存层的逐字段回滚逻辑。客户端适配器保留旧组件内部的 `success/data` 结果形状，网络接口不增加 AJAX 包装。
+
+媒体上传和编辑通过 `wp/v2/media`。Lentasy `theme_backup` 字段的写入使用 `eva/v1/integrations/lentasy/backups`，保留原主题的备份记录和自动任务；只有提供 `LF\Modules\Settings\Backups` 的主题可使用。备份文件恢复限定写入该主题自己的设置，不允许文件指定任意 option。地图第三方 REST 与图标 CSS 资源不携带本站 nonce。
+
+旧 `wp_ajax_eva_fw_*` 入口作为第三方兼容层保留，与 REST 复用相同业务方法；内置字段已全部切到 REST。新增业务请直接注册 REST 接口，并复用 `EvaApi.action()` 或 `EvaApi.rest()`。
+
 ## 管理 / 设置菜单切换
 
 设置容器配置 `management_menu` 后，Logo 右侧显示切换按钮。切换只替换侧栏菜单，当前内容、设置草稿和页签保持原样，并在当前标签页中记住所选模式。

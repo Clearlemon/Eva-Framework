@@ -107,20 +107,25 @@ class SaveHistory
         }
         return null;
     }
-
     public static function ajax_get()
     {
         check_ajax_referer('eva_fw_guide', 'nonce');
-        $option_id = isset($_POST['option_id']) ? sanitize_text_field(wp_unslash($_POST['option_id'])) : '';
-        $field_id = isset($_POST['field_id']) ? sanitize_text_field(wp_unslash($_POST['field_id'])) : '';
+        \Eva\Framework\Rest::legacy(self::request_get($_POST));
+    }
+
+    /** Shared domain operation for REST and legacy AJAX callers. */
+    public static function request_get($input)
+    {
+        $option_id = isset($input['option_id']) ? sanitize_text_field(wp_unslash($input['option_id'])) : '';
+        $field_id = isset($input['field_id']) ? sanitize_text_field(wp_unslash($input['field_id'])) : '';
         $builder = self::builder($option_id, $field_id);
-        if (!$builder) { wp_send_json_error(['message' => '构建器不存在。'], 404); }
+        if (!$builder) { return \Eva\Framework\Rest::error(['message' => '构建器不存在。'], 404); }
         $cap = trim((string) ($builder['option']['capability'] ?? 'manage_options')) ?: 'manage_options';
-        if (!current_user_can($cap)) { wp_send_json_error(['message' => '没有读取历史的权限。'], 403); }
+        if (!current_user_can($cap)) { return \Eva\Framework\Rest::error(['message' => '没有读取历史的权限。'], 403); }
         $rows = self::rows('builder:' . $option_id . ':' . $field_id);
         if (current_user_can('edit_theme_options')) { $rows = array_merge($rows, self::rows('menus')); }
         usort($rows, static function ($a, $b) { return $b['time'] <=> $a['time']; });
-        $id = isset($_POST['history_id']) ? sanitize_text_field(wp_unslash($_POST['history_id'])) : '';
+        $id = isset($input['history_id']) ? sanitize_text_field(wp_unslash($input['history_id'])) : '';
         if ($id !== '') {
             foreach ($rows as $row) {
                 if ($row['id'] !== $id) { continue; }
@@ -128,13 +133,13 @@ class SaveHistory
                 if ($row['kind'] === 'builder') { $payload['values'] = self::builder_values($builder['field'], $payload['values']); }
                 if ($row['kind'] === 'menu') {
                     $current = MenuEditor::history_payload($payload['location_id'], $payload['menu_id']);
-                    if (is_wp_error($current)) { wp_send_json_error(['message' => '该菜单或菜单位置已不存在。'], 409); }
+                    if (is_wp_error($current)) { return \Eva\Framework\Rest::error(['message' => '该菜单或菜单位置已不存在。'], 409); }
                     $row['current'] = $current;
                 }
                 $row['payload'] = $payload; unset($row['hash']);
-                wp_send_json_success(['entry' => $row]);
+                return ['entry' => $row];
             }
-            wp_send_json_error(['message' => '这条历史已过期，请刷新列表。'], 404);
+            return \Eva\Framework\Rest::error(['message' => '这条历史已过期，请刷新列表。'], 404);
         }
         $list = array_map(static function ($row) {
             $menu = $row['kind'] === 'menu';
@@ -144,6 +149,6 @@ class SaveHistory
                 'summary' => $menu ? count($row['payload']['items']) . ' 个菜单项 · ' . count($row['payload']['assigned_locations']) . ' 个位置' : '页面内容与布局设置',
             ];
         }, array_slice($rows, 0, self::LIMIT));
-        wp_send_json_success(['entries' => $list, 'limit' => self::LIMIT]);
+        return ['entries' => $list, 'limit' => self::LIMIT];
     }
 }

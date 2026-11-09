@@ -6,7 +6,7 @@
  * - 生产环境应关闭 `EVA_FW_DEV`，避免额外轮询请求。
  *
  * 工作方式：
- * - PHP 把指纹接口地址注入到 `window.EvaFWDev.url`（wp_ajax_eva_fw_dev_stamp）。
+ * - 指纹通过 Axios 读取 `eva/v1/development/stamp`，使用相同 REST nonce。
  * - 接口在服务端 stat 全部被监听的 CSS/JS，返回一个总指纹（md5）。
  * - 本脚本定时取这一个指纹，变了就刷新页面。
  *
@@ -51,8 +51,8 @@
     }
 
     busy = true;
-    fetch(cfg.url + '&_t=' + Date.now(), { method: 'GET', cache: 'no-store', credentials: 'same-origin' })
-      .then(function (r) { return r.ok ? r.text() : Promise.reject(r.status); })
+    window.EvaApi.rest('eva/v1/development/stamp', { params: { _t: Date.now() } })
+      .then(function (r) { return r.data.stamp; })
       .then(function (text) {
         busy = false;
         fails = 0;

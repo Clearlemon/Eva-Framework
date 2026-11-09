@@ -494,7 +494,7 @@
     event.preventDefault(); nodes[next].focus();
   },
   loadSaveHistory: function (id) {
-    if (!cfg.ajaxUrl || !this.historyOptionId) { this.historyError = '当前构建器不支持保存历史。'; return; }
+    if (!cfg.restActions || !this.historyOptionId) { this.historyError = '当前构建器不支持保存历史。'; return; }
     if (this._historyController) { this._historyController.abort(); }
     var controller = new AbortController(), seq = this._historySeq = (this._historySeq || 0) + 1;
     this._historyController = controller; this.historyError = ''; this.historyNotice = '';
@@ -504,7 +504,7 @@
     fd.append('action', 'eva_fw_builder_history'); fd.append('nonce', cfg.nonce || '');
     fd.append('option_id', this.historyOptionId); fd.append('field_id', this.field.id || '');
     if (id) { fd.append('history_id', id); }
-    return fetch(cfg.ajaxUrl, { method: 'POST', credentials: 'same-origin', body: fd, signal: controller.signal }).then(function (response) { return response.json(); }).then(function (json) {
+    return window.EvaApi.action(fd, { signal: controller.signal }).then(function (json) {
       if (seq !== this._historySeq) { return; }
       if (!json || !json.success || !json.data) { throw new Error(json && json.data && json.data.message || '历史读取失败，请重试。'); }
       if (id) { this.historyDetail = json.data.entry; } else { this.historyEntries = json.data.entries || []; }
@@ -930,7 +930,7 @@
       },
       // 功能：请求 PHP 渲染未保存内容，再 postMessage 给 iframe。
       renderPreview: function () {
-        if (!this.usesSlots() || !cfg.ajaxUrl || !this.previewReady) { return; }
+        if (!this.usesSlots() || !cfg.restActions || !this.previewReady) { return; }
         var frame = this.$refs.previewFrame;
         if (!frame || !frame.contentWindow) { return; }
 
@@ -961,15 +961,7 @@
         fd.append('page_id', this.currentPage() ? this.currentPage().id : '');
         fd.append('structure_values', JSON.stringify(structureValues));
 
-        fetch(cfg.ajaxUrl, {
-          method: 'POST',
-          credentials: 'same-origin',
-          body: fd,
-          signal: controller ? controller.signal : undefined
-        }).then(function (res) {
-          if (!res.ok) { throw new Error('Preview request failed'); }
-          return res.json();
-        }).then(function (json) {
+        window.EvaApi.action(fd, { signal: controller ? controller.signal:undefined }).then(function (json) {
           if (seq !== this.previewSeq) { return; }
           if (!json || !json.success || !json.data) { return; }
           this._previewCache.set(key, { slots: json.data.slots || {}, structures: json.data.structures || {} });
@@ -1049,7 +1041,7 @@
         return this.changeWidget('move', item.id, area.id, before);
       },
       changeWidget: function (operation, id, area, before) {
-        if (this.widgetsSaving || this.widgetsLoading || !cfg.ajaxUrl || !this.widgetAreas.some(function (entry) { return entry.id === area; })) { return Promise.resolve(); }
+        if (this.widgetsSaving || this.widgetsLoading || !cfg.restActions || !this.widgetAreas.some(function (entry) { return entry.id === area; })) { return Promise.resolve(); }
         this.widgetsSaving = true;
         this.widgetsError = '';
         this.widgetsStatus = '正在保存…';
@@ -1060,7 +1052,7 @@
         fd.append('widget', id);
         fd.append('area', area);
         fd.append('before', before || '');
-        return fetch(cfg.ajaxUrl, { method: 'POST', credentials: 'same-origin', body: fd }).then(function (res) { return res.json(); }).then(function (json) {
+        return window.EvaApi.action(fd).then(function (json) {
           if (this._widgetsDisposed) { return; }
           if (!json || !json.success || !json.data) { throw new Error((json && json.data && json.data.message) || '小工具保存失败'); }
           this.widgetAreas = Array.isArray(json.data.areas) ? json.data.areas : [];
@@ -1078,7 +1070,7 @@
       },
       loadWidgets: function () {
         if (this.widgetsLoading || this.widgetsSaving) { return; }
-        if (!cfg.ajaxUrl) { this.widgetsError = '小工具读取接口不可用。'; return; }
+        if (!cfg.restActions) { this.widgetsError = '小工具读取接口不可用。'; return; }
         var controller = new AbortController();
         this._widgetsController = controller;
         this.widgetsLoading = true;
@@ -1086,10 +1078,7 @@
         var fd = new FormData();
         fd.append('action', 'eva_fw_builder_widgets_get');
         fd.append('nonce', cfg.nonce || '');
-        fetch(cfg.ajaxUrl, { method: 'POST', credentials: 'same-origin', body: fd, signal: controller.signal }).then(function (res) {
-          if (!res.ok) { throw new Error('读取失败'); }
-          return res.json();
-        }).then(function (json) {
+        window.EvaApi.action(fd, { signal: controller.signal }).then(function (json) {
           if (!json || !json.success || !json.data) { throw new Error((json && json.data && json.data.message) || '小工具读取失败'); }
           this.widgetAreas = Array.isArray(json.data.areas) ? json.data.areas : [];
           this.availableWidgets = Array.isArray(json.data.available) ? json.data.available : [];
@@ -1150,7 +1139,7 @@
         if (this.menuLocation) { this.loadMenuEditor(); }
       },
       loadMenuEditor: function () {
-        if (!cfg.ajaxUrl || !this.menuLocation) { return; }
+        if (!cfg.restActions || !this.menuLocation) { return; }
         if (this._menuEditorReadController) { this._menuEditorReadController.abort(); }
         var seq = ++this.menuEditorLoadSeq;
         var location = this.menuLocation;
@@ -1172,9 +1161,7 @@
         if (this.menuAddGroups().some(function (group) { return group.id !== 'custom' && !this.menuAddCached(group.id, ''); }.bind(this))) {
           fd.append('include_resources', '1');
         }
-        fetch(cfg.ajaxUrl, { method: 'POST', credentials: 'same-origin', body: fd, signal: controller.signal }).then(function (res) {
-          return res.json();
-        }).then(function (json) {
+        window.EvaApi.action(fd, { signal: controller.signal }).then(function (json) {
           if (seq !== this.menuEditorLoadSeq) { return; }
           if (!json || !json.success || !json.data) {
             this.menuEditorError = (json && json.data && json.data.message) || '菜单读取失败';
@@ -1238,7 +1225,7 @@
         var option = this.existingMenuOptions().find(function (entry) { return entry.value === String(this.menuExistingId); }, this);
         this.menuAssignError = '';
         if (!option || option.disabled) { this.menuAssignError = '请选择未使用的菜单。'; return; }
-        if (!cfg.ajaxUrl) { this.menuAssignError = '菜单绑定接口不可用。'; return; }
+        if (!cfg.restActions) { this.menuAssignError = '菜单绑定接口不可用。'; return; }
         var location = this.menuLocation;
         var fd = new FormData();
         fd.append('action', 'eva_fw_builder_menu_assign');
@@ -1246,9 +1233,7 @@
         fd.append('location_id', location);
         fd.append('menu_id', option.value);
         this.menuAssigning = true;
-        return fetch(cfg.ajaxUrl, { method: 'POST', credentials: 'same-origin', body: fd }).then(function (res) {
-          return res.json();
-        }).then(function (json) {
+        return window.EvaApi.action(fd).then(function (json) {
           if (!json || !json.success || !json.data) { throw new Error((json && json.data && json.data.message) || '菜单绑定失败，请重试。'); }
           this._menuEditorCache = {};
           if (Array.isArray(json.data.menu_location_data)) { this.menuLocationDataOverride = json.data.menu_location_data; }
@@ -1272,7 +1257,7 @@
         var name = String(this.menuCreateName || '').trim();
         this.menuCreateError = '';
         if (!name) { this.menuCreateError = '请输入菜单名称。'; return; }
-        if (!cfg.ajaxUrl) { this.menuCreateError = '菜单创建接口不可用。'; return; }
+        if (!cfg.restActions) { this.menuCreateError = '菜单创建接口不可用。'; return; }
         var location = this.menuLocation;
         var fd = new FormData();
         fd.append('action', 'eva_fw_builder_menu_create');
@@ -1280,9 +1265,7 @@
         fd.append('location_id', location);
         fd.append('menu_name', name);
         this.menuCreating = true;
-        fetch(cfg.ajaxUrl, { method: 'POST', credentials: 'same-origin', body: fd }).then(function (res) {
-          return res.json();
-        }).then(function (json) {
+        window.EvaApi.action(fd).then(function (json) {
           if (!json || !json.success || !json.data) { throw new Error((json && json.data && json.data.message) || '菜单创建失败，请重试。'); }
           this._menuEditorCache = {};
           if (Array.isArray(json.data.menu_location_data)) { this.menuLocationDataOverride = json.data.menu_location_data; }
@@ -1904,7 +1887,7 @@
         if (this._menuAddState) { this._menuAddState.disposed = true; }
       },
       loadMenuAddItems: function (type) {
-        if (!cfg.ajaxUrl) { this.menuAddErrors[type] = '资源接口不可用'; return; }
+        if (!cfg.restActions) { this.menuAddErrors[type] = '资源接口不可用'; return; }
         var query = String(this.menuAddQueries[type] || this.menuAddSearch || '').trim();
         var state = this.menuAddRequestState(), key = this.menuAddCacheKey(type, query), cached = this.menuAddCached(type, query);
         if (state.disposed) { return; }
@@ -1936,7 +1919,7 @@
         fd.append('action', 'eva_fw_builder_menu_resources');
         fd.append('nonce', cfg.nonce || '');
         fd.append('queries', JSON.stringify(queries));
-        fetch(cfg.ajaxUrl, { method: 'POST', credentials: 'same-origin', body: fd, signal: batch.controller.signal }).then(function (response) { return response.json(); }).then(function (json) {
+        window.EvaApi.action(fd, { signal: batch.controller.signal }).then(function (json) {
           if (state.disposed || batch.controller.signal.aborted) { return; }
           if (!json || !json.success || !json.data || !json.data.resources) { throw new Error('菜单项读取失败'); }
           entries.forEach(function (entry) {
@@ -2292,7 +2275,7 @@
         }.bind(this));
       },
       saveMenuDraft: function (draft) {
-        if (!cfg.ajaxUrl) { return Promise.reject(new Error('菜单保存接口不可用')); }
+        if (!cfg.restActions) { return Promise.reject(new Error('菜单保存接口不可用')); }
         var local = draft.data, key = String(local.menu_id), removedIds = draft.removedIds;
         var items = (local.items || []).filter(function (item) { return removedIds.indexOf(Number(item.id || 0)) === -1; });
         if (items.some(function (item) { return !String(item.title || '').trim() || (!Number(item.id || 0) && !String(item.url || '').trim()); })) { return Promise.reject(new Error('请填写菜单项的名称和链接后再保存')); }
@@ -2306,7 +2289,7 @@
         fd.append('items', JSON.stringify(items));
         fd.append('removed_ids', JSON.stringify(removedIds));
         fd.append('assigned_locations', JSON.stringify((local.locations || []).filter(function (location) { return !!location.checked; }).map(function (location) { return location.id; })));
-        return fetch(cfg.ajaxUrl, { method: 'POST', credentials: 'same-origin', body: fd }).then(function (res) { return res.json(); }).then(function (json) {
+        return window.EvaApi.action(fd).then(function (json) {
           if (!json || !json.success || !json.data) { throw new Error((json && json.data && json.data.message) || '菜单保存失败'); }
           var saved = json.data, latest = this.menuEditorDrafts[key];
           if (latest) { delete latest.data.history_restore_id; }

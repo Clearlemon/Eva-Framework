@@ -159,6 +159,7 @@ class Standalone
      */
     private function render($opt)
     {
+        \Eva\Framework\Rest::enqueue();
         // 清掉可能已有的输出缓冲，确保我们输出的是完整、干净的文档。
         if (ob_get_length()) {
             @ob_end_clean();

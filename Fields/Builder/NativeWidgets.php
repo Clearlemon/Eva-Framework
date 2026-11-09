@@ -33,12 +33,18 @@ class NativeWidgets
   /** 只读取区域和小工具摘要，不执行小工具输出或修改配置。 */
   public static function ajax_get()
   {
-    check_ajax_referer('eva_fw_guide', 'nonce');
+      check_ajax_referer('eva_fw_guide', 'nonce');
+      \Eva\Framework\Rest::legacy(self::request_get($_POST));
+  }
+
+  /** Shared domain operation for REST and legacy AJAX callers. */
+  public static function request_get($input)
+  {
     if (!current_user_can('edit_theme_options')) {
-      wp_send_json_error(array('message' => '您没有管理小工具的权限。'), 403);
+      return \Eva\Framework\Rest::error(array('message' => '您没有管理小工具的权限。'), 403);
       return;
     }
-    wp_send_json_success(self::data());
+    return self::data();
   }
 
   public static function data()

@@ -12,18 +12,22 @@ class Media
     /** 批量下载远程 URL 并注册为 WordPress 媒体附件。 */
     public static function ajax_import_urls()
     {
-        if (! check_ajax_referer('eva_fw_guide', 'nonce', false)) {
-            wp_send_json_error(['msg' => 'bad_nonce'], 403);
-        }
+        check_ajax_referer('eva_fw_guide', 'nonce');
+        \Eva\Framework\Rest::legacy(self::request_import_urls($_POST));
+    }
+
+    /** Shared domain operation for REST and legacy AJAX callers. */
+    public static function request_import_urls($input)
+    {
         if (! current_user_can('upload_files')) {
-            wp_send_json_error(['msg' => 'forbidden'], 403);
+            return \Eva\Framework\Rest::error(['msg' => 'forbidden'], 403);
         }
 
-        $raw = isset($_POST['urls']) ? json_decode(wp_unslash($_POST['urls']), true) : [];
+        $raw = \Eva\Framework\Rest::decode($input['urls'] ?? []);
         $urls = is_array($raw) ? $raw : preg_split('/\r\n|\r|\n/', (string) $raw);
         $urls = array_values(array_unique(array_filter(array_map('trim', $urls))));
         if (! $urls) {
-            wp_send_json_error(['msg' => 'empty_urls'], 400);
+            return \Eva\Framework\Rest::error(['msg' => 'empty_urls'], 400);
         }
         if (count($urls) > 30) {
             $urls = array_slice($urls, 0, 30);
@@ -88,7 +92,7 @@ class Media
             $items[] = self::attachment_item((int) $attachment_id);
         }
 
-        wp_send_json_success(['items' => array_values(array_filter($items)), 'failed' => $failed]);
+        return ['items' => array_values(array_filter($items)), 'failed' => $failed];
     }
 
     /** 生成前端媒体控件使用的附件摘要。 */

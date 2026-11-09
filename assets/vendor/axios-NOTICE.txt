@@ -1,0 +1,9 @@
+Axios 1.20.0
+License: MIT (see LICENSE).
+Upstream: https://github.com/axios/axios
+Package: https://registry.npmjs.org/axios/-/axios-1.20.0.tgz
+Package integrity (SHA-512): sha512-r8aOh8j9cGKpgQAqpzrUHnSIc6a59Y3Xf/cv8sy1DrHCkZHzQGEuoq1tARk6qSyDdtQGSDgpb9kFlruzPvrgwg==
+
+The browser bundle, source map and license were copied unchanged from the
+official npm package after verifying its registry integrity value.
+The theme loads axios.min.js locally using the len-axios WordPress handle.

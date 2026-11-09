@@ -15,22 +15,28 @@ class MenuEditor
     public static function ajax_create()
     {
         check_ajax_referer('eva_fw_guide', 'nonce');
-        self::authorize();
+        \Eva\Framework\Rest::legacy(self::request_create($_POST));
+    }
+
+    /** Shared domain operation for REST and legacy AJAX callers. */
+    public static function request_create($input)
+    {
+        if (!current_user_can('edit_theme_options')) { return \Eva\Framework\Rest::error(['message' => 'You are not allowed to edit menus.'], 403); }
         self::load_menu_api();
 
-        $location_id = isset($_POST['location_id']) && is_string($_POST['location_id']) ? sanitize_key(wp_unslash($_POST['location_id'])) : '';
+        $location_id = isset($input['location_id']) && is_string($input['location_id']) ? sanitize_key(wp_unslash($input['location_id'])) : '';
         $registered = get_registered_nav_menus();
         if ($location_id === '' || !isset($registered[$location_id])) {
-            wp_send_json_error(['message' => '请选择有效的菜单位置。'], 400);
+            return \Eva\Framework\Rest::error(['message' => '请选择有效的菜单位置。'], 400);
         }
-        $menu_name = isset($_POST['menu_name']) && is_string($_POST['menu_name']) ? trim(sanitize_text_field(wp_unslash($_POST['menu_name']))) : '';
+        $menu_name = isset($input['menu_name']) && is_string($input['menu_name']) ? trim(sanitize_text_field(wp_unslash($input['menu_name']))) : '';
         if ($menu_name === '') {
-            wp_send_json_error(['message' => '请输入菜单名称。'], 400);
+            return \Eva\Framework\Rest::error(['message' => '请输入菜单名称。'], 400);
         }
 
         $locations = get_nav_menu_locations();
         if (!empty($locations[$location_id]) && wp_get_nav_menu_object($locations[$location_id])) {
-            wp_send_json_error(['message' => '这个位置已分配菜单，请重新选择位置以读取最新内容。'], 409);
+            return \Eva\Framework\Rest::error(['message' => '这个位置已分配菜单，请重新选择位置以读取最新内容。'], 409);
         }
         $menu_id = wp_create_nav_menu(wp_slash($menu_name));
         if (is_wp_error($menu_id) || !$menu_id) {
@@ -38,120 +44,140 @@ class MenuEditor
             if (is_wp_error($menu_id) && $menu_id->get_error_code() === 'menu_exists') {
                 $message = '菜单名称已存在，请换一个名称。';
             }
-            wp_send_json_error(['message' => $message], 400);
+            return \Eva\Framework\Rest::error(['message' => $message], 400);
         }
 
         // 重新读取位置，保留其他位置的分配；若此位置已被另一请求占用，不覆盖它。
         $locations = get_nav_menu_locations();
         if (!empty($locations[$location_id]) && wp_get_nav_menu_object($locations[$location_id])) {
-            wp_send_json_error(['message' => '菜单已创建，但当前位置刚被其他菜单占用，请到 WordPress 菜单编辑器分配。'], 409);
+            return \Eva\Framework\Rest::error(['message' => '菜单已创建，但当前位置刚被其他菜单占用，请到 WordPress 菜单编辑器分配。'], 409);
         }
         $locations[$location_id] = absint($menu_id);
         set_theme_mod('nav_menu_locations', $locations);
         $data = self::payload($location_id, $menu_id);
         if (is_wp_error($data)) {
-            wp_send_json_error(['message' => $data->get_error_message()], 400);
+            return \Eva\Framework\Rest::error(['message' => $data->get_error_message()], 400);
         }
-        wp_send_json_success($data);
+        return $data;
     }
 
     /** 将已有且未使用的菜单绑定到空位置，不移动或覆盖其他位置的菜单。 */
     public static function ajax_assign()
     {
         check_ajax_referer('eva_fw_guide', 'nonce');
-        self::authorize();
+        \Eva\Framework\Rest::legacy(self::request_assign($_POST));
+    }
+
+    /** Shared domain operation for REST and legacy AJAX callers. */
+    public static function request_assign($input)
+    {
+        if (!current_user_can('edit_theme_options')) { return \Eva\Framework\Rest::error(['message' => 'You are not allowed to edit menus.'], 403); }
         self::load_menu_api();
 
-        $location_id = isset($_POST['location_id']) && is_string($_POST['location_id']) ? sanitize_key(wp_unslash($_POST['location_id'])) : '';
+        $location_id = isset($input['location_id']) && is_string($input['location_id']) ? sanitize_key(wp_unslash($input['location_id'])) : '';
         $registered = get_registered_nav_menus();
         if ($location_id === '' || !isset($registered[$location_id])) {
-            wp_send_json_error(['message' => '请选择有效的菜单位置。'], 400);
+            return \Eva\Framework\Rest::error(['message' => '请选择有效的菜单位置。'], 400);
         }
-        $menu_id = isset($_POST['menu_id']) && is_scalar($_POST['menu_id']) ? absint(wp_unslash($_POST['menu_id'])) : 0;
+        $menu_id = isset($input['menu_id']) && is_scalar($input['menu_id']) ? absint(wp_unslash($input['menu_id'])) : 0;
         if (!$menu_id || !wp_get_nav_menu_object($menu_id)) {
-            wp_send_json_error(['message' => '所选菜单不存在，请刷新菜单列表。'], 400);
+            return \Eva\Framework\Rest::error(['message' => '所选菜单不存在，请刷新菜单列表。'], 400);
         }
 
         // 以提交时的实际分配为准，防止过期列表或直接请求绕过禁用状态。
         $locations = get_nav_menu_locations();
         if (!empty($locations[$location_id]) && wp_get_nav_menu_object($locations[$location_id])) {
-            wp_send_json_error(['message' => '这个位置已分配菜单，请刷新菜单列表。'], 409);
+            return \Eva\Framework\Rest::error(['message' => '这个位置已分配菜单，请刷新菜单列表。'], 409);
         }
         if (in_array($menu_id, array_map('absint', $locations), true)) {
-            wp_send_json_error(['message' => '这个菜单已用于其他位置，请刷新列表后选择未使用的菜单。'], 409);
+            return \Eva\Framework\Rest::error(['message' => '这个菜单已用于其他位置，请刷新列表后选择未使用的菜单。'], 409);
         }
         $locations[$location_id] = $menu_id;
         set_theme_mod('nav_menu_locations', $locations);
         $data = self::payload($location_id, $menu_id);
         if (is_wp_error($data)) {
-            wp_send_json_error(['message' => $data->get_error_message()], 400);
+            return \Eva\Framework\Rest::error(['message' => $data->get_error_message()], 400);
         }
-        wp_send_json_success($data);
+        return $data;
     }
-
     public static function ajax_get()
     {
         check_ajax_referer('eva_fw_guide', 'nonce');
-        self::authorize();
+        \Eva\Framework\Rest::legacy(self::request_get($_POST));
+    }
+
+    /** Shared domain operation for REST and legacy AJAX callers. */
+    public static function request_get($input)
+    {
+        if (!current_user_can('edit_theme_options')) { return \Eva\Framework\Rest::error(['message' => 'You are not allowed to edit menus.'], 403); }
         self::load_menu_api();
 
-        $location_id = isset($_POST['location_id']) ? sanitize_key(wp_unslash($_POST['location_id'])) : '';
+        $location_id = isset($input['location_id']) ? sanitize_key(wp_unslash($input['location_id'])) : '';
         $data = self::payload($location_id);
         if (is_wp_error($data)) {
-            wp_send_json_error(['message' => $data->get_error_message()], 400);
+            return \Eva\Framework\Rest::error(['message' => $data->get_error_message()], 400);
         }
-        if (!empty($_POST['include_resources'])) {
+        if (!empty($input['include_resources'])) {
             $resources = \Eva\Framework\Admin\Fields\Data_Selector::menu_resources(array_fill_keys(['page', 'post', 'category', 'post_tag'], ''));
             if (!is_wp_error($resources)) { $data['resources'] = $resources; }
         }
 
-        wp_send_json_success($data);
+        return $data;
     }
-
     public static function ajax_resources()
     {
         check_ajax_referer('eva_fw_guide', 'nonce');
-        self::authorize();
-        $queries = isset($_POST['queries']) ? json_decode(wp_unslash((string) $_POST['queries']), true) : [];
-        $resources = \Eva\Framework\Admin\Fields\Data_Selector::menu_resources($queries);
-        if (is_wp_error($resources)) {
-            wp_send_json_error(['message' => $resources->get_error_message()], $resources->get_error_code() === 'forbidden' ? 403 : 400);
-        }
-        wp_send_json_success(['resources' => $resources]);
+        \Eva\Framework\Rest::legacy(self::request_resources($_POST));
     }
 
+    /** Shared domain operation for REST and legacy AJAX callers. */
+    public static function request_resources($input)
+    {
+        if (!current_user_can('edit_theme_options')) { return \Eva\Framework\Rest::error(['message' => 'You are not allowed to edit menus.'], 403); }
+        $queries = \Eva\Framework\Rest::decode($input['queries'] ?? []);
+        $resources = \Eva\Framework\Admin\Fields\Data_Selector::menu_resources($queries);
+        if (is_wp_error($resources)) {
+            return \Eva\Framework\Rest::error(['message' => $resources->get_error_message()], $resources->get_error_code() === 'forbidden' ? 403 : 400);
+        }
+        return ['resources' => $resources];
+    }
     public static function ajax_save()
     {
         check_ajax_referer('eva_fw_guide', 'nonce');
-        self::authorize();
+        \Eva\Framework\Rest::legacy(self::request_save($_POST));
+    }
+
+    /** Shared domain operation for REST and legacy AJAX callers. */
+    public static function request_save($input)
+    {
+        if (!current_user_can('edit_theme_options')) { return \Eva\Framework\Rest::error(['message' => 'You are not allowed to edit menus.'], 403); }
         self::load_menu_api();
 
-        $location_id = isset($_POST['location_id']) ? sanitize_key(wp_unslash($_POST['location_id'])) : '';
+        $location_id = isset($input['location_id']) ? sanitize_key(wp_unslash($input['location_id'])) : '';
         $registered   = get_registered_nav_menus();
         if ($location_id === '' || ! isset($registered[$location_id])) {
-            wp_send_json_error(['message' => 'Invalid menu location.'], 400);
+            return \Eva\Framework\Rest::error(['message' => 'Invalid menu location.'], 400);
         }
 
-        $menu_id = isset($_POST['menu_id']) ? absint($_POST['menu_id']) : 0;
+        $menu_id = isset($input['menu_id']) ? absint($input['menu_id']) : 0;
         $menu    = $menu_id ? wp_get_nav_menu_object($menu_id) : false;
         if (! $menu) {
-            wp_send_json_error(['message' => 'No menu is selected for this location.'], 400);
+            return \Eva\Framework\Rest::error(['message' => 'No menu is selected for this location.'], 400);
         }
 
         $history_before = self::payload($location_id, $menu_id);
-        $restore_id = isset($_POST['history_restore_id']) ? sanitize_text_field(wp_unslash($_POST['history_restore_id'])) : '';
+        $restore_id = isset($input['history_restore_id']) ? sanitize_text_field(wp_unslash($input['history_restore_id'])) : '';
         $history_restore = $restore_id !== '' ? SaveHistory::menu_snapshot($restore_id, $menu_id) : null;
-        if ($restore_id !== '' && !$history_restore) { wp_send_json_error(['message' => '历史已过期，请重新选择版本。'], 409); }
+        if ($restore_id !== '' && !$history_restore) { return \Eva\Framework\Rest::error(['message' => '历史已过期，请重新选择版本。'], 409); }
         $history_by_id = [];
         foreach ((array) ($history_restore['items'] ?? []) as $historic) { $history_by_id[absint($historic['id'])] = $historic; }
         $history_missing = [];
         $history_id_map = [];
         $history_parent_links = [];
 
-        $items_json = isset($_POST['items']) ? wp_unslash((string) $_POST['items']) : '[]';
-        $items      = json_decode($items_json, true);
+        $items = \Eva\Framework\Rest::decode($input['items'] ?? []);
         if (! is_array($items) || count($items) > 500) {
-            wp_send_json_error(['message' => 'Invalid menu items.'], 400);
+            return \Eva\Framework\Rest::error(['message' => 'Invalid menu items.'], 400);
         }
 
         $current_items = (array) wp_get_nav_menu_items($menu_id, [
@@ -164,17 +190,16 @@ class MenuEditor
             $current_by_id[absint($current_item->ID)] = $current_item;
         }
 
-        $removed_json = isset($_POST['removed_ids']) ? wp_unslash((string) $_POST['removed_ids']) : '[]';
-        $removed_ids  = json_decode($removed_json, true);
+        $removed_ids = \Eva\Framework\Rest::decode($input['removed_ids'] ?? []);
         if (! is_array($removed_ids)) {
-            wp_send_json_error(['message' => 'Invalid removed menu items.'], 400);
+            return \Eva\Framework\Rest::error(['message' => 'Invalid removed menu items.'], 400);
         }
         $removed_lookup = [];
         foreach ($removed_ids as $removed_id) {
             $removed_id = absint($removed_id);
             if (!isset($current_by_id[$removed_id]) && isset($history_by_id[$removed_id])) { continue; }
             if (! $removed_id || ! isset($current_by_id[$removed_id]) || isset($removed_lookup[$removed_id])) {
-                wp_send_json_error(['message' => 'A menu item cannot be removed from this menu.'], 400);
+                return \Eva\Framework\Rest::error(['message' => 'A menu item cannot be removed from this menu.'], 400);
             }
             $removed_lookup[$removed_id] = true;
         }
@@ -199,34 +224,33 @@ class MenuEditor
             $item_id = isset($item['id']) ? absint($item['id']) : 0;
             if ($item_id > 0) {
                 if (! isset($current_by_id[$item_id]) || isset($submitted_ids[$item_id]) || isset($removed_lookup[$item_id])) {
-                    wp_send_json_error(['message' => 'The menu changed. Reload it and try again.'], 409);
+                    return \Eva\Framework\Rest::error(['message' => 'The menu changed. Reload it and try again.'], 409);
                 }
                 $submitted_ids[$item_id] = true;
             }
         }
         if (count($submitted_ids) !== count($current_by_id) - count($removed_lookup)) {
-            wp_send_json_error(['message' => 'The menu changed. Reload it and try again.'], 409);
+            return \Eva\Framework\Rest::error(['message' => 'The menu changed. Reload it and try again.'], 409);
         }
 
-        $raw_assigned = isset($_POST['assigned_locations']) ? wp_unslash((string) $_POST['assigned_locations']) : '';
-        $requested_locations = json_decode($raw_assigned, true);
+        $requested_locations = \Eva\Framework\Rest::decode($input['assigned_locations'] ?? []);
         if (! is_array($requested_locations)) {
-            wp_send_json_error(['message' => 'Invalid menu locations.'], 400);
+            return \Eva\Framework\Rest::error(['message' => 'Invalid menu locations.'], 400);
         }
         $requested_locations = array_values(array_unique(array_map('sanitize_key', $requested_locations)));
         foreach ($requested_locations as $requested_id) {
             if (! isset($registered[$requested_id])) {
-                wp_send_json_error(['message' => 'Invalid menu location.'], 400);
+                return \Eva\Framework\Rest::error(['message' => 'Invalid menu location.'], 400);
             }
         }
 
-        $menu_name = isset($_POST['menu_name']) ? sanitize_text_field(wp_unslash($_POST['menu_name'])) : '';
+        $menu_name = isset($input['menu_name']) ? sanitize_text_field(wp_unslash($input['menu_name'])) : '';
         if ($menu_name === '') {
-            wp_send_json_error(['message' => 'Menu name cannot be empty.'], 400);
+            return \Eva\Framework\Rest::error(['message' => 'Menu name cannot be empty.'], 400);
         }
         $menu_result = wp_update_nav_menu_object($menu_id, wp_slash(['menu-name' => $menu_name]));
         if (is_wp_error($menu_result)) {
-            wp_send_json_error(['message' => $menu_result->get_error_message()], 400);
+            return \Eva\Framework\Rest::error(['message' => $menu_result->get_error_message()], 400);
         }
 
         $client_keys = [];
@@ -253,7 +277,7 @@ class MenuEditor
             if ($resource_id > 0 && in_array($resource_type, ['post', 'page'], true)) {
                 $resource = get_post($resource_id);
                 if (! $resource || $resource->post_type !== $resource_type) {
-                    wp_send_json_error(['message' => 'The selected page or post no longer exists.'], 400);
+                    return \Eva\Framework\Rest::error(['message' => 'The selected page or post no longer exists.'], 400);
                 }
                 $native_type = 'post_type';
                 $native_object = $resource_type;
@@ -261,7 +285,7 @@ class MenuEditor
             } elseif ($resource_id > 0 && in_array($resource_type, ['category', 'post_tag', 'post_format'], true)) {
                 $resource = get_term($resource_id, $resource_type);
                 if (! $resource || is_wp_error($resource)) {
-                    wp_send_json_error(['message' => 'The selected taxonomy term no longer exists.'], 400);
+                    return \Eva\Framework\Rest::error(['message' => 'The selected taxonomy term no longer exists.'], 400);
                 }
                 $native_type = 'taxonomy';
                 $native_object = $resource_type;
@@ -298,7 +322,7 @@ class MenuEditor
                 continue;
             }
             if ($title === '') {
-                wp_send_json_error(['message' => 'Menu item names cannot be empty.'], 400);
+                return \Eva\Framework\Rest::error(['message' => 'Menu item names cannot be empty.'], 400);
             }
 
             $target = isset($item['target']) ? sanitize_text_field((string) $item['target']) : ($current && isset($current->target) ? sanitize_text_field($current->target) : '_self');
@@ -319,7 +343,7 @@ class MenuEditor
                 $attr_title = $link['title'];
             }
             if ($type === 'custom' && $url === '') {
-                wp_send_json_error(['message' => 'Custom links need a valid URL.'], 400);
+                return \Eva\Framework\Rest::error(['message' => 'Custom links need a valid URL.'], 400);
             }
 
             $parent_id = isset($item['parent']) ? absint($item['parent']) : ($current ? absint($current->menu_item_parent) : 0);
@@ -358,7 +382,7 @@ class MenuEditor
             $saved_id = wp_update_nav_menu_item($menu_id, $item_id, wp_slash($args));
             if (is_wp_error($saved_id) || ! $saved_id) {
                 $message = is_wp_error($saved_id) ? $saved_id->get_error_message() : 'Could not save a menu item.';
-                wp_send_json_error(['message' => $message], 500);
+                return \Eva\Framework\Rest::error(['message' => $message], 500);
             }
 
             $saved_id = absint($saved_id);
@@ -383,11 +407,11 @@ class MenuEditor
         foreach ($custom_field_saves as $saved_id => $fields) { MenuFields::save($menu_id, $saved_id, $fields, $field_containers); }
 
         if ($removed_lookup && ! EMPTY_TRASH_DAYS) {
-            wp_send_json_error(['message' => 'Trash is disabled, so menu items were not removed.'], 409);
+            return \Eva\Framework\Rest::error(['message' => 'Trash is disabled, so menu items were not removed.'], 409);
         }
         foreach (array_keys($removed_lookup) as $removed_id) {
             if (! wp_trash_post($removed_id)) {
-                wp_send_json_error(['message' => 'Could not move a menu item to the trash.'], 500);
+                return \Eva\Framework\Rest::error(['message' => 'Could not move a menu item to the trash.'], 500);
             }
         }
 
@@ -403,7 +427,7 @@ class MenuEditor
 
         $data = self::payload($location_id, $menu_id);
         if (is_wp_error($data)) {
-            wp_send_json_error(['message' => $data->get_error_message()], 400);
+            return \Eva\Framework\Rest::error(['message' => $data->get_error_message()], 400);
         }
         foreach ($data['items'] as &$saved_item) {
             $saved_id = absint($saved_item['id']);
@@ -414,7 +438,7 @@ class MenuEditor
         unset($saved_item);
         if (!is_wp_error($history_before)) { SaveHistory::record_menu($history_before, $data); }
 
-        wp_send_json_success($data);
+        return $data;
     }
 
     public static function history_payload($location_id, $menu_id)

@@ -1077,6 +1077,7 @@ if (! class_exists('Eva')) {
                 'nonce'           => wp_create_nonce('eva_fw_guide'),
                 'restUrl'         => esc_url_raw(rest_url()),
                 'restNonce'       => wp_create_nonce('wp_rest'),
+                'restActions'     => \Eva\Framework\Rest::config(),
                 'builderPreviewUrl' => esc_url_raw(add_query_arg('eva_builder_preview', '1', home_url('/'))),
                 'builderPreviewRoles' => self::builder_preview_roles(),
                 'builderPreviewRole'  => 'current',
@@ -2003,15 +2004,20 @@ if (! class_exists('Eva')) {
         public static function ajax_render_builder_preview()
         {
             check_ajax_referer('eva_fw_guide', 'nonce');
+            \Eva\Framework\Rest::legacy(self::request_render_builder_preview($_POST));
+        }
+
+        /** Shared domain operation for REST and legacy AJAX callers. */
+        public static function request_render_builder_preview($input)
+        {
             if (! current_user_can('manage_options')) {
-                wp_send_json_error(['message' => 'forbidden'], 403);
+                return \Eva\Framework\Rest::error(['message' => 'forbidden'], 403);
             }
 
-            $preview_role = isset($_POST['preview_role']) ? wp_unslash($_POST['preview_role']) : 'current';
+            $preview_role = isset($input['preview_role']) ? wp_unslash($input['preview_role']) : 'current';
             self::apply_builder_preview_role(self::builder_preview_role($preview_role));
 
-            $raw = isset($_POST['value']) ? wp_unslash((string) $_POST['value']) : '';
-            $value = json_decode($raw, true);
+            $value = \Eva\Framework\Rest::decode($input['value'] ?? []);
             if (! is_array($value)) {
                 $value = [];
             }
@@ -2022,12 +2028,12 @@ if (! class_exists('Eva')) {
                 $slots[$slot] = self::render_builder_slot_value($builder, $slot, true);
             }
 
-            $option_id = isset($_POST['option_id']) && is_scalar($_POST['option_id']) ? sanitize_key(wp_unslash($_POST['option_id'])) : '';
-            $field_id = isset($_POST['field_id']) && is_scalar($_POST['field_id']) ? sanitize_key(wp_unslash($_POST['field_id'])) : '';
-            $page_id = isset($_POST['page_id']) && is_scalar($_POST['page_id']) ? sanitize_key(wp_unslash($_POST['page_id'])) : '';
-            $raw_structure = isset($_POST['structure_values']) && is_string($_POST['structure_values']) ? json_decode(wp_unslash($_POST['structure_values']), true) : [];
+            $option_id = isset($input['option_id']) && is_scalar($input['option_id']) ? sanitize_key(wp_unslash($input['option_id'])) : '';
+            $field_id = isset($input['field_id']) && is_scalar($input['field_id']) ? sanitize_key(wp_unslash($input['field_id'])) : '';
+            $page_id = isset($input['page_id']) && is_scalar($input['page_id']) ? sanitize_key(wp_unslash($input['page_id'])) : '';
+            $raw_structure = \Eva\Framework\Rest::decode($input['structure_values'] ?? []);
             $structures = \Eva\Framework\Builder\FixedStructure::render_preview($option_id, $field_id, is_array($raw_structure) ? $raw_structure : [], $page_id);
-            wp_send_json_success(['slots' => $slots, 'structures' => $structures]);
+            return ['slots' => $slots, 'structures' => $structures];
         }
 
         /**
@@ -2755,7 +2761,7 @@ if (! class_exists('Eva')) {
         {
             return [
                 'enabled'  => true,
-                'url'      => admin_url('admin-ajax.php?action=eva_fw_dev_stamp'),
+                'url'      => rest_url('eva/v1/development/stamp'),
                 'interval' => 2000,
             ];
         }
@@ -2813,6 +2819,7 @@ if (! class_exists('Eva')) {
          */
         public static function enqueue_runtime()
         {
+            \Eva\Framework\Rest::enqueue();
             // 媒体库支持：image_select 的“媒体库”按钮用 wp.media 原生弹窗挑图。
             if (function_exists('wp_enqueue_media') && is_admin()) {
                 wp_enqueue_media();
@@ -2825,13 +2832,13 @@ if (! class_exists('Eva')) {
             self::add_theme_color_inline_style();
 
             // UI 库：css 依赖框架样式，js 依赖 Vue；js 句柄逐个累积为外壳依赖。
-            $deps = ['eva-vue3'];
+            $deps = ['eva-vue3', 'eva-api'];
             foreach (self::lib_assets() as $name => $lib) {
                 if ($lib['css']) {
                     wp_enqueue_style('eva-lib-' . $name, $lib['css'], ['eva-framework'], self::asset_ver($lib['cssRel']));
                 }
                 if ($lib['js']) {
-                    wp_enqueue_script('eva-lib-' . $name, $lib['js'], ['eva-vue3'], self::asset_ver($lib['jsRel']), true);
+                    wp_enqueue_script('eva-lib-' . $name, $lib['js'], ['eva-vue3', 'eva-api'], self::asset_ver($lib['jsRel']), true);
                     $deps[] = 'eva-lib-' . $name;
                 }
             }
@@ -2842,7 +2849,7 @@ if (! class_exists('Eva')) {
             // 字段脚本逐个登记，并累积为外壳依赖。
             foreach (self::field_scripts() as $name => $url) {
                 $handle = 'eva-field-' . $name;
-                wp_enqueue_script($handle, $url, ['eva-vue3'], self::asset_ver(self::field_asset_rel($name, 'js')), true);
+                wp_enqueue_script($handle, $url, ['eva-vue3', 'eva-api'], self::asset_ver(self::field_asset_rel($name, 'js')), true);
                 $deps[] = $handle;
             }
             // 外壳脚本：依赖以上库与字段全部就绪。
@@ -2866,7 +2873,7 @@ if (! class_exists('Eva')) {
 
             // 开发期热刷新脚本与指纹接口地址。
             if (defined('EVA_FW_DEV') && EVA_FW_DEV) {
-                wp_enqueue_script('eva-livereload', EVA_FW_URL . 'assets/eva-livereload.js', [], self::asset_ver('assets/eva-livereload.js'), true);
+                wp_enqueue_script('eva-livereload', EVA_FW_URL . 'assets/eva-livereload.js', ['eva-api'], self::asset_ver('assets/eva-livereload.js'), true);
                 wp_localize_script('eva-livereload', 'EvaFWDev', self::dev_config());
             }
         }

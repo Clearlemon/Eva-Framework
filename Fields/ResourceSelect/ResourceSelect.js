@@ -78,7 +78,7 @@
         this.cancelSearch();
         var q = String(query || '').trim();
         if (!include && q.length < this.minChars) { this.items = []; this.loading = false; return; }
-        var url = cfg().ajaxUrl || ((window.EvaFW && window.EvaFW.adminUrl) ? window.EvaFW.adminUrl + 'admin-ajax.php' : '/wp-admin/admin-ajax.php');
+
         var params = new URLSearchParams(); params.set('action', 'eva_fw_search_data'); params.set('nonce', cfg().nonce || ''); params.set('resource', this.resource); params.set('limit', this.field.limit || 20);
         if (this.field.post_type || this.field.postType) { params.set('post_type', normalizeTypes(this.field.post_type || this.field.postType)); }
         if (this.field.taxonomy) { params.set('taxonomy', normalizeTypes(this.field.taxonomy)); }
@@ -87,10 +87,7 @@
         var self = this, seq = this._searchSeq;
         var controller = typeof AbortController === 'function' ? new AbortController() : null;
         this._searchController = controller; this.loading = true; this.error = '';
-        return fetch(url + '?' + params.toString(), { credentials: 'same-origin', signal: controller ? controller.signal : undefined }).then(function (response) {
-          if (!response.ok) { throw new Error('search_failed'); }
-          return response.json();
-        }).then(function (result) {
+        return window.EvaApi.action(params, { signal: controller ? controller.signal:undefined }).then(function (result) {
           if (seq !== self._searchSeq) { return; }
           if (!result || !result.success || !result.data || !Array.isArray(result.data.items)) { throw new Error('search_failed'); }
           var found = result.data.items;

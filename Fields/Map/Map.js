@@ -180,8 +180,8 @@
         var self = this;
         var keyword = this.query.trim();
         this.searching = true;
-        fetch('https://nominatim.openstreetmap.org/search?format=json&limit=6&q=' + encodeURIComponent(keyword), { headers: { Accept: 'application/json' } })
-          .then(function (response) { return response.ok ? response.json() : []; })
+        window.EvaApi.request({ url: 'https://nominatim.openstreetmap.org/search', params: { format: 'json', limit: 6, q: keyword }, rest: false })
+          .then(function (response) { return response.data; })
           .then(function (items) {
             if (keyword !== self.query.trim()) { return; }
             self.results = (Array.isArray(items) ? items : []).map(function (item) { return { label: item.display_name, lat: item.lat, lng: item.lon }; });
